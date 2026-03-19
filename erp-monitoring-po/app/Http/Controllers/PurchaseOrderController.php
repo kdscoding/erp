@@ -66,6 +66,29 @@ class PurchaseOrderController extends Controller
             ->orderBy('poi.id')
             ->get();
 
+        $itemSummary = [
+            'total' => $items->count(),
+            'waiting' => $items->where('monitoring_status', 'Waiting')->count(),
+            'confirmed' => $items->where('monitoring_status', 'Confirmed')->count(),
+            'late' => $items->where('monitoring_status', 'Late')->count(),
+            'partial' => $items->where('monitoring_status', 'Partial')->count(),
+            'closed' => $items->where('monitoring_status', 'Closed')->count(),
+            'cancelled' => $items->where('monitoring_status', 'Cancelled')->count(),
+        ];
+
+        $itemSummary['active'] = $itemSummary['total'] - $itemSummary['cancelled'];
+        $itemSummary['progress_label'] = match (true) {
+            $itemSummary['active'] === 0 => 'Semua item dibatalkan',
+            $itemSummary['partial'] > 0 && ($itemSummary['waiting'] > 0 || $itemSummary['confirmed'] > 0 || $itemSummary['late'] > 0) => 'Receiving berjalan, masih ada item belum selesai',
+            $itemSummary['partial'] > 0 => 'Receiving parsial',
+            $itemSummary['confirmed'] > 0 && ($itemSummary['waiting'] > 0 || $itemSummary['late'] > 0) => 'Konfirmasi supplier masih campuran',
+            $itemSummary['late'] > 0 => 'Ada item overdue ETD',
+            $itemSummary['confirmed'] > 0 => 'Seluruh item aktif sudah terkonfirmasi',
+            $itemSummary['waiting'] === $itemSummary['active'] => 'Menunggu konfirmasi supplier',
+            $itemSummary['closed'] === $itemSummary['active'] => 'Semua item selesai',
+            default => 'Perlu review manual',
+        };
+
         $histories = DB::table('po_status_histories as h')
             ->leftJoin('users as u', 'u.id', '=', 'h.changed_by')
             ->where('h.purchase_order_id', $id)
@@ -73,7 +96,7 @@ class PurchaseOrderController extends Controller
             ->select('h.*', 'u.name as changed_by_name')
             ->get();
 
-        return view('po.show', compact('po', 'items', 'histories'));
+        return view('po.show', compact('po', 'items', 'itemSummary', 'histories'));
     }
 
     public function store(Request $request): RedirectResponse
