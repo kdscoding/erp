@@ -185,135 +185,12 @@
             </div>
         </div>
 
-        <!-- On-Time Items -->
-        <div class="col-lg-6">
-            <div class="card border-success">
-                <div class="card-header">
-                    <h3 class="card-title">On-Time Items (ETD Belum Lewat)</h3>
-                </div>
-                <div class="card-body table-responsive p-0">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>PO</th>
-                                <th>Item</th>
-                                <th>Supplier</th>
-                                <th>ETD</th>
-                                <th>OS Qty</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($onTimeItems as $ok)
-                                <tr>
-                                    <td>{{ $ok->po_number }}</td>
-                                    <td>{{ $ok->item_code }} - {{ $ok->item_name }}</td>
-                                    <td>{{ $ok->supplier_name }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($ok->etd_date)->format('d-m-Y') }}</td>
-                                    <td>{{ number_format($ok->outstanding_qty, 2, ',', '.') }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted">Tidak ada item on-time.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- At-Risk Items -->
-        <div class="col-lg-6">
-            <div class="card border-warning">
-                <div class="card-header">
-                    <h3 class="card-title">At-Risk Items (ETD Lewat)</h3>
-                </div>
-                <div class="card-body table-responsive p-0">
-                    <table class="table table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>PO</th>
-                                <th>Item</th>
-                                <th>Supplier</th>
-                                <th>ETD</th>
-                                <th>OS Qty</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($atRiskItems as $risk)
-                                <tr class="table-warning">
-                                    <td>{{ $risk->po_number }}</td>
-                                    <td>{{ $risk->item_code }} - {{ $risk->item_name }}</td>
-                                    <td>{{ $risk->supplier_name }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($risk->etd_date)->format('d-m-Y') }}</td>
-                                    <td>{{ number_format($risk->outstanding_qty, 2, ',', '.') }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted">Tidak ada item berisiko.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Open PO -->
+        <!-- Comprehensive Item Monitoring -->
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">Open PO Terdekat ETA</h3>
-                    <a href="{{ route('po.index') }}" class="btn btn-sm btn-primary">Lihat Semua PO</a>
-                </div>
-                <div class="card-body table-responsive p-0">
-                    <table class="table table-striped mb-0">
-                        <thead>
-                            <tr>
-                                <th>PO Number</th>
-                                <th>Tanggal PO</th>
-                                <th>Supplier</th>
-                                <th>Status</th>
-                                <th>ETA</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($openPoList as $row)
-                                <tr>
-                                    <td><a href="{{ route('po.show', $row->id) }}"
-                                            class="fw-semibold text-decoration-none">{{ $row->po_number }}</a></td>
-                                    <td>{{ \Carbon\Carbon::parse($row->po_date)->format('d-m-Y') }}</td>
-                                    <td>{{ $row->supplier_name }}</td>
-                                    <td>
-                                        <span
-                                            class="badge {{ match ($row->status) {
-                                                'Closed' => 'bg-success',
-                                                'Partial', 'Confirmed', 'PO Issued', 'Waiting' => 'bg-warning text-dark',
-                                                'Late', 'Cancelled' => 'bg-danger',
-                                                default => 'bg-secondary',
-                                            } }}">{{ $row->status }}</span>
-                                    </td>
-                                    <td>{{ $row->eta_date ? \Carbon\Carbon::parse($row->eta_date)->format('d-m-Y') : '-' }}
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted">Tidak ada open PO.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Monitoring Versi Item -->
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">Monitoring Versi Item</h3>
-                    <span class="text-muted small">Dipakai untuk melihat campuran item tanpa membuka PO satu per
-                        satu.</span>
+                    <h3 class="card-title">Comprehensive Item Monitoring</h3>
+                    <span class="text-muted small">Melihat semua item dari PO open dengan status monitoring dan ETD.</span>
                 </div>
                 <div class="card-body table-responsive p-0">
                     <table class="table table-hover mb-0">
@@ -323,6 +200,7 @@
                                 <th>Item</th>
                                 <th>Supplier</th>
                                 <th>Status Item</th>
+                                <th>Status ETD</th>
                                 <th>Keterangan</th>
                                 <th>ETD</th>
                                 <th>Outstanding</th>
@@ -347,6 +225,17 @@
                                                 default => 'bg-secondary',
                                             } }}">{{ $item->monitoring_status }}</span>
                                     </td>
+                                    <td>
+                                        @if ($item->etd_date)
+                                            @if (\Carbon\Carbon::parse($item->etd_date)->isBefore(now()))
+                                                <span class="badge bg-danger">At-Risk</span>
+                                            @else
+                                                <span class="badge bg-success">On-Time</span>
+                                            @endif
+                                        @else
+                                            <span class="badge bg-secondary">N/A</span>
+                                        @endif
+                                    </td>
                                     <td>{{ $item->monitoring_note }}</td>
                                     <td>{{ $item->etd_date ? \Carbon\Carbon::parse($item->etd_date)->format('d-m-Y') : '-' }}
                                     </td>
@@ -354,7 +243,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted">Tidak ada item monitoring.</td>
+                                    <td colspan="8" class="text-center text-muted">Tidak ada item monitoring.</td>
                                 </tr>
                             @endforelse
                         </tbody>
