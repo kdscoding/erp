@@ -64,6 +64,30 @@
     </div>
 
     <div class="col-lg-6">
+        <div class="card border-success">
+            <div class="card-header"><h3 class="card-title">On-Time Items (ETD Belum Lewat)</h3></div>
+            <div class="card-body table-responsive p-0">
+                <table class="table table-hover mb-0">
+                    <thead><tr><th>PO</th><th>Item</th><th>Supplier</th><th>ETD</th><th>OS Qty</th></tr></thead>
+                    <tbody>
+                    @forelse($onTimeItems as $ok)
+                        <tr>
+                            <td>{{ $ok->po_number }}</td>
+                            <td>{{ $ok->item_code }} - {{ $ok->item_name }}</td>
+                            <td>{{ $ok->supplier_name }}</td>
+                            <td>{{ \Carbon\Carbon::parse($ok->etd_date)->format('d-m-Y') }}</td>
+                            <td>{{ number_format($ok->outstanding_qty, 2, ',', '.') }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5" class="text-center text-muted">Tidak ada item on-time.</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
         <div class="card border-warning">
             <div class="card-header"><h3 class="card-title">At-Risk Items (ETD Lewat)</h3></div>
             <div class="card-body table-responsive p-0">

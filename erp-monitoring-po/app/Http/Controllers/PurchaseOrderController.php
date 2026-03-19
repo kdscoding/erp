@@ -10,20 +10,6 @@ use Illuminate\View\View;
 
 class PurchaseOrderController extends Controller
 {
-    private function transitionMap(): array
-    {
-        return [
-            'Draft' => ['Submitted', 'Cancelled'],
-            'Submitted' => ['Approved', 'Cancelled', 'On Hold / Discrepancy'],
-            'Approved' => ['Sent to Supplier', 'On Hold / Discrepancy', 'Cancelled'],
-            'Sent to Supplier' => ['Supplier Confirmed', 'Shipped', 'On Hold / Discrepancy'],
-            'Supplier Confirmed' => ['Shipped', 'On Hold / Discrepancy'],
-            'Shipped' => ['Partial Received', 'Closed', 'On Hold / Discrepancy'],
-            'Partial Received' => ['Closed', 'On Hold / Discrepancy'],
-            'On Hold / Discrepancy' => ['Submitted', 'Approved', 'Sent to Supplier', 'Cancelled'],
-        ];
-    }
-
     public function index(Request $request): View
     {
         $rows = DB::table('purchase_orders as po')
@@ -63,10 +49,19 @@ class PurchaseOrderController extends Controller
             ->where('po.id', $id)
             ->firstOrFail();
 
+        $today = now()->toDateString();
         $items = DB::table('purchase_order_items as poi')
             ->join('items as i', 'i.id', '=', 'poi.item_id')
             ->leftJoin('units as u', 'u.id', '=', 'i.unit_id')
             ->select('poi.*', 'i.item_code', 'i.item_name', 'u.unit_name')
+            ->selectRaw("CASE
+                WHEN poi.item_status = 'Cancelled' THEN 'Cancelled'
+                WHEN poi.outstanding_qty <= 0 THEN 'Closed'
+                WHEN poi.received_qty > 0 THEN 'Partial'
+                WHEN poi.etd_date IS NULL THEN 'Waiting'
+                WHEN poi.etd_date < ? THEN 'Late'
+                ELSE 'Confirmed'
+            END as monitoring_status", [$today])
             ->where('poi.purchase_order_id', $id)
             ->orderBy('poi.id')
             ->get();
@@ -78,9 +73,7 @@ class PurchaseOrderController extends Controller
             ->select('h.*', 'u.name as changed_by_name')
             ->get();
 
-        $allowedTransitions = $this->transitionMap()[trim((string) $po->status)] ?? [];
-
-        return view('po.show', compact('po', 'items', 'histories', 'allowedTransitions'));
+        return view('po.show', compact('po', 'items', 'histories'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -108,7 +101,7 @@ class PurchaseOrderController extends Controller
                 'po_number' => $poNumber,
                 'po_date' => $validated['po_date'],
                 'supplier_id' => $validated['supplier_id'],
-                'status' => 'Draft',
+                'status' => 'PO Issued',
                 'notes' => $request->input('notes'),
                 'created_by' => $userId,
                 'updated_by' => $userId,
@@ -131,8 +124,8 @@ class PurchaseOrderController extends Controller
                 ]);
             }
 
-            ErpFlow::pushPoStatus($poId, null, 'Draft', $userId, 'PO dibuat.');
-            ErpFlow::audit('purchase_orders', $poId, 'create', null, ['status' => 'Draft'], $userId, $request->ip());
+            ErpFlow::pushPoStatus($poId, null, 'PO Issued', $userId, 'PO direct entry (tanpa approval internal).');
+            ErpFlow::audit('purchase_orders', $poId, 'create', null, ['status' => 'PO Issued'], $userId, $request->ip());
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -140,60 +133,8 @@ class PurchaseOrderController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
-        return redirect()->route('po.index')->with('success', 'PO berhasil dibuat.');
+        return redirect()->route('po.index')->with('success', 'PO berhasil dibuat dengan status PO Issued.');
     }
-
-    public function transition(Request $request, int $id): RedirectResponse
-    {
-        $validated = $request->validate([
-            'to_status' => 'required|string|max:50',
-            'note' => 'nullable|string|max:500',
-        ]);
-
-        $po = DB::table('purchase_orders')->where('id', $id)->firstOrFail();
-        $userId = optional($request->user())->id;
-        $currentStatus = trim((string) $po->status);
-        $targetStatus = trim((string) $validated['to_status']);
-        $allowedMap = $this->transitionMap();
-        $allowedTransitions = $allowedMap[$currentStatus] ?? [];
-
-        if ($currentStatus === $targetStatus) {
-            return back()->with('success', 'Status PO tidak berubah.');
-        }
-
-        if (! in_array($targetStatus, $allowedTransitions, true)) {
-            $allowedText = empty($allowedTransitions) ? 'tidak ada transisi tersedia' : implode(', ', $allowedTransitions);
-
-            return back()->with('error', "Transisi tidak valid dari {$currentStatus} ke {$targetStatus}. Opsi yang diizinkan: {$allowedText}.");
-        }
-
-        DB::table('purchase_orders')->where('id', $id)->update([
-            'status' => $targetStatus,
-            'approved_by' => $targetStatus === 'Approved' ? $userId : $po->approved_by,
-            'approved_at' => $targetStatus === 'Approved' ? now() : $po->approved_at,
-            'sent_to_supplier_at' => $targetStatus === 'Sent to Supplier' ? now() : $po->sent_to_supplier_at,
-            'updated_by' => $userId,
-            'updated_at' => now(),
-        ]);
-
-        ErpFlow::pushPoStatus($id, $currentStatus, $targetStatus, $userId, $validated['note'] ?? null);
-        ErpFlow::audit('purchase_orders', $id, 'status_change', ['status' => $currentStatus], ['status' => $targetStatus, 'note' => $validated['note'] ?? null], $userId, $request->ip());
-
-        if ($targetStatus === 'Approved') {
-            DB::table('po_approvals')->insert([
-                'purchase_order_id' => $id,
-                'approver_id' => $userId,
-                'status' => 'Approved',
-                'note' => $validated['note'] ?? null,
-                'approved_at' => now(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        return back()->with('success', 'Status PO berhasil diperbarui ke '.$targetStatus.'.');
-    }
-
 
     public function updateItemSchedule(Request $request, int $itemId): RedirectResponse
     {
@@ -201,29 +142,162 @@ class PurchaseOrderController extends Controller
 
         $v = $request->validate([
             'etd_date' => 'nullable|date',
-            'eta_date' => 'nullable|date|after_or_equal:etd_date',
-            'item_status' => 'required|string|in:Waiting,Confirmed,Shipped,Partial Received,Received,On Hold',
             'remarks' => 'nullable|string|max:500',
-        ], [
-            'item_status.required' => 'Status item wajib dipilih.',
         ]);
+
+        if ($item->item_status === 'Cancelled') {
+            return back()->with('error', 'Item yang sudah dibatalkan tidak dapat diubah ETD-nya.');
+        }
+
+        $newStatus = $item->outstanding_qty <= 0
+            ? 'Closed'
+            : (($item->received_qty > 0) ? 'Partial' : (($v['etd_date'] ?? null) ? 'Confirmed' : 'Waiting'));
 
         DB::table('purchase_order_items')->where('id', $itemId)->update([
             'etd_date' => $v['etd_date'] ?? null,
-            'eta_date' => $v['eta_date'] ?? null,
-            'item_status' => $v['item_status'],
+            'item_status' => $newStatus,
             'remarks' => $v['remarks'] ?? DB::table('purchase_order_items')->where('id', $itemId)->value('remarks'),
             'updated_at' => now(),
         ]);
 
-        ErpFlow::audit('purchase_order_items', $itemId, 'item_schedule_update',
-            ['etd_date' => $item->etd_date, 'eta_date' => $item->eta_date, 'item_status' => $item->item_status],
-            ['etd_date' => $v['etd_date'] ?? null, 'eta_date' => $v['eta_date'] ?? null, 'item_status' => $v['item_status']],
+        ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
+
+        ErpFlow::audit(
+            'purchase_order_items',
+            $itemId,
+            'item_schedule_update',
+            ['etd_date' => $item->etd_date, 'item_status' => $item->item_status],
+            ['etd_date' => $v['etd_date'] ?? null, 'item_status' => $newStatus],
             optional($request->user())->id,
             $request->ip()
         );
 
-        return back()->with('success', 'Jadwal item berhasil diperbarui.');
+        return back()->with('success', 'ETD item berhasil diperbarui.');
     }
 
+    public function cancelItem(Request $request, int $itemId): RedirectResponse
+    {
+        $validated = $request->validate([
+            'cancel_reason' => 'required|string|max:1000',
+        ], [
+            'cancel_reason.required' => 'Alasan pembatalan wajib diisi.',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $item = DB::table('purchase_order_items')->where('id', $itemId)->lockForUpdate()->firstOrFail();
+
+            DB::table('purchase_order_items')->where('id', $itemId)->update([
+                'item_status' => 'Cancelled',
+                'cancel_reason' => $validated['cancel_reason'],
+                'outstanding_qty' => 0,
+                'updated_at' => now(),
+            ]);
+
+            ErpFlow::audit(
+                'purchase_order_items',
+                $itemId,
+                'item_cancelled',
+                ['item_status' => $item->item_status, 'cancel_reason' => $item->cancel_reason],
+                ['item_status' => 'Cancelled', 'cancel_reason' => $validated['cancel_reason']],
+                optional($request->user())->id,
+                $request->ip()
+            );
+
+            ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Item berhasil dibatalkan.');
+    }
+
+    public function forceCloseItem(Request $request, int $itemId): RedirectResponse
+    {
+        $validated = $request->validate([
+            'cancel_reason' => 'required|string|max:1000',
+        ], [
+            'cancel_reason.required' => 'Alasan force close wajib diisi.',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $item = DB::table('purchase_order_items')->where('id', $itemId)->lockForUpdate()->firstOrFail();
+
+            if (! in_array($item->item_status, ['Confirmed', 'Partial'], true)) {
+                throw new \RuntimeException('Force close hanya boleh untuk item status Confirmed atau Partial.');
+            }
+
+            DB::table('purchase_order_items')->where('id', $itemId)->update([
+                'item_status' => 'Cancelled',
+                'cancel_reason' => $validated['cancel_reason'],
+                'outstanding_qty' => 0,
+                'updated_at' => now(),
+            ]);
+
+            ErpFlow::audit(
+                'purchase_order_items',
+                $itemId,
+                'item_force_close',
+                ['item_status' => $item->item_status, 'cancel_reason' => $item->cancel_reason],
+                ['item_status' => 'Cancelled', 'cancel_reason' => $validated['cancel_reason']],
+                optional($request->user())->id,
+                $request->ip()
+            );
+
+            ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Force close item berhasil. Status item menjadi Cancelled.');
+    }
+
+    public function cancelPo(Request $request, int $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'cancel_reason' => 'required|string|max:1000',
+        ], [
+            'cancel_reason.required' => 'Alasan pembatalan PO wajib diisi.',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $po = DB::table('purchase_orders')->where('id', $id)->lockForUpdate()->firstOrFail();
+            $userId = optional($request->user())->id;
+
+            DB::table('purchase_orders')->where('id', $id)->update([
+                'status' => 'Cancelled',
+                'cancel_reason' => $validated['cancel_reason'],
+                'updated_at' => now(),
+                'updated_by' => $userId,
+            ]);
+
+            DB::table('purchase_order_items')
+                ->where('purchase_order_id', $id)
+                ->where('item_status', '!=', 'Closed')
+                ->update([
+                    'item_status' => 'Cancelled',
+                    'cancel_reason' => $validated['cancel_reason'],
+                    'outstanding_qty' => 0,
+                    'updated_at' => now(),
+                ]);
+
+            ErpFlow::pushPoStatus($id, (string) $po->status, 'Cancelled', $userId, $validated['cancel_reason']);
+            ErpFlow::audit('purchase_orders', $id, 'po_cancelled', ['status' => $po->status], ['status' => 'Cancelled', 'cancel_reason' => $validated['cancel_reason']], $userId, $request->ip());
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'PO berhasil dibatalkan.');
+    }
 }

@@ -6,6 +6,7 @@
     <title>{{ $title ?? 'Portal Dokumen BC 4.0 - Internal' }}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
     <style>
         :root{--bc-blue:#2c2a4a;--bc-blue-2:#5a3d7a;--bc-bg:#f4f2f8;--bc-line:#d9d2e6;}
         body{font-size:12.5px;background:var(--bc-bg)}
@@ -99,5 +100,21 @@
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+<script>
+$(function(){
+    $('table.data-table').each(function(){
+        if (!$.fn.DataTable.isDataTable(this)) {
+            $(this).DataTable({
+                paging: false,
+                info: false,
+                ordering: true,
+                language: { search: "Cari:", zeroRecords: "Data tidak ditemukan" }
+            });
+        }
+    });
+});
+</script>
 </body>
 </html>

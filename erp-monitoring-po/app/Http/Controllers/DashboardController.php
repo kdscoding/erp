@@ -13,7 +13,7 @@ class DashboardController extends Controller
 
         $metrics = [
             'open_po' => DB::table('purchase_orders')->whereNotIn('status', ['Closed', 'Cancelled'])->count(),
-            'overdue_po' => DB::table('purchase_orders')->whereDate('eta_date', '<', $today)->whereNotIn('status', ['Closed', 'Cancelled'])->count(),
+            'overdue_po' => DB::table('purchase_order_items')->whereNotNull('etd_date')->whereDate('etd_date', '<', $today)->where('outstanding_qty', '>', 0)->where('item_status', '!=', 'Cancelled')->count(),
             'shipped_today' => DB::table('shipments')->whereDate('shipment_date', $today)->count(),
             'received_today' => DB::table('goods_receipts')->whereDate('receipt_date', $today)->count(),
             'partial_po' => DB::table('purchase_orders')->where('status', 'Partial Received')->count(),
@@ -53,6 +53,20 @@ class DashboardController extends Controller
             ->limit(8)
             ->get();
 
+
+        $onTimeItems = DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->join('items as i', 'i.id', '=', 'poi.item_id')
+            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->select('po.po_number', 'i.item_code', 'i.item_name', 'poi.etd_date', 'poi.outstanding_qty', 's.supplier_name')
+            ->where('poi.outstanding_qty', '>', 0)
+            ->whereNotNull('poi.etd_date')
+            ->whereDate('poi.etd_date', '>=', $today)
+            ->where('poi.item_status', '!=', 'Cancelled')
+            ->orderBy('poi.etd_date')
+            ->limit(8)
+            ->get();
+
         $atRiskItems = DB::table('purchase_order_items as poi')
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
             ->join('items as i', 'i.id', '=', 'poi.item_id')
@@ -66,6 +80,6 @@ class DashboardController extends Controller
             ->limit(8)
             ->get();
 
-        return view('dashboard', compact('metrics', 'supplierDelay', 'openPoList', 'recentReceivings', 'atRiskItems'));
+        return view('dashboard', compact('metrics', 'supplierDelay', 'openPoList', 'recentReceivings', 'atRiskItems', 'onTimeItems'));
     }
 }

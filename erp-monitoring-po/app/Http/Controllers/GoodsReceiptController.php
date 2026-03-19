@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Support\ErpFlow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class GoodsReceiptController extends Controller
@@ -21,11 +22,12 @@ class GoodsReceiptController extends Controller
         $openPoList = DB::table('purchase_orders as po')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->select('po.id', 'po.po_number', 'po.status', 's.supplier_name')
-            ->whereIn('po.status', ['Shipped', 'Partial Received', 'Supplier Confirmed', 'Sent to Supplier'])
+            ->whereIn('po.status', ['PO Issued', 'Confirmed', 'Partial'])
             ->orderByDesc('po.id')
             ->limit(200)
             ->get();
 
+        $today = now()->toDateString();
         $poItems = DB::table('purchase_order_items as poi')
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
             ->join('items as i', 'i.id', '=', 'poi.item_id')
@@ -36,16 +38,26 @@ class GoodsReceiptController extends Controller
                 'poi.ordered_qty',
                 'poi.received_qty',
                 'poi.outstanding_qty',
+                'poi.etd_date',
                 'po.po_number',
                 'po.status as po_status',
                 'i.item_code',
                 'i.item_name',
                 DB::raw('COALESCE(MAX(gri.created_at), NULL) as last_receipt_at')
             )
+            ->selectRaw("CASE
+                WHEN poi.item_status = 'Cancelled' THEN 'Cancelled'
+                WHEN poi.outstanding_qty <= 0 THEN 'Closed'
+                WHEN poi.received_qty > 0 THEN 'Partial'
+                WHEN poi.etd_date IS NULL THEN 'Waiting'
+                WHEN poi.etd_date < ? THEN 'Late'
+                ELSE 'Confirmed'
+            END as monitoring_status", [$today])
             ->where('poi.outstanding_qty', '>', 0)
-            ->whereIn('po.status', ['Shipped', 'Partial Received', 'Supplier Confirmed', 'Sent to Supplier'])
+            ->where('poi.item_status', '!=', 'Cancelled')
+            ->whereIn('po.status', ['PO Issued', 'Confirmed', 'Partial'])
             ->when($request->filled('po_id'), fn ($q) => $q->where('po.id', $request->integer('po_id')))
-            ->groupBy('poi.id', 'poi.purchase_order_id', 'poi.ordered_qty', 'poi.received_qty', 'poi.outstanding_qty', 'po.po_number', 'po.status', 'i.item_code', 'i.item_name')
+            ->groupBy('poi.id', 'poi.purchase_order_id', 'poi.ordered_qty', 'poi.received_qty', 'poi.outstanding_qty', 'poi.etd_date', 'po.po_number', 'po.status', 'i.item_code', 'i.item_name')
             ->orderBy('po.po_number')
             ->orderBy('i.item_code')
             ->get();
@@ -61,8 +73,9 @@ class GoodsReceiptController extends Controller
             'received_qty' => 'required|numeric|min:0.01',
             'accepted_qty' => 'nullable|numeric|min:0',
             'rejected_qty' => 'nullable|numeric|min:0',
-            'remark' => 'nullable|string|max:500',
+            'note' => 'nullable|string|max:500',
             'document_number' => 'nullable|string|max:100',
+            'attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:4096',
         ], [
             'required' => ':attribute wajib diisi.',
             'received_qty.min' => 'Qty terima minimal 0.01.',
@@ -70,13 +83,19 @@ class GoodsReceiptController extends Controller
 
         $allowOverReceipt = (bool) DB::table('settings')->where('key', 'allow_over_receipt')->value('value');
 
+        $storedPath = null;
+
         DB::beginTransaction();
         try {
             $poItem = DB::table('purchase_order_items')->where('id', $v['purchase_order_item_id'])->lockForUpdate()->firstOrFail();
             $po = DB::table('purchase_orders')->where('id', $poItem->purchase_order_id)->lockForUpdate()->firstOrFail();
 
-            if (in_array($po->status, ['Draft', 'Cancelled', 'Closed'], true)) {
+            if (in_array($po->status, ['Cancelled', 'Closed'], true)) {
                 throw new \RuntimeException('PO dengan status ini tidak dapat diproses receiving.');
+            }
+
+            if ($poItem->item_status === 'Cancelled') {
+                throw new \RuntimeException('Item sudah dibatalkan. Receiving tidak dapat diproses.');
             }
 
             if ($v['received_qty'] > $poItem->outstanding_qty && ! $allowOverReceipt) {
@@ -90,7 +109,7 @@ class GoodsReceiptController extends Controller
                 'warehouse_id' => $po->warehouse_id,
                 'received_by' => optional($request->user())->id,
                 'document_number' => $v['document_number'] ?? null,
-                'remark' => $v['remark'] ?? null,
+                'remark' => $v['note'] ?? null,
                 'status' => 'Posted',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -98,18 +117,34 @@ class GoodsReceiptController extends Controller
 
             $acceptedQty = $v['accepted_qty'] ?? $v['received_qty'];
             $rejectedQty = $v['rejected_qty'] ?? max(0, $v['received_qty'] - $acceptedQty);
+            $variance = (float) $poItem->ordered_qty - (float) $v['received_qty'];
 
             DB::table('goods_receipt_items')->insert([
                 'goods_receipt_id' => $grId,
                 'purchase_order_item_id' => $poItem->id,
                 'item_id' => $poItem->item_id,
                 'received_qty' => $v['received_qty'],
+                'qty_variance' => $variance,
+                'note' => $v['note'] ?? null,
                 'accepted_qty' => $acceptedQty,
                 'rejected_qty' => $rejectedQty,
-                'remark' => $v['remark'] ?? null,
+                'remark' => $v['note'] ?? null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
+            if ($request->hasFile('attachment')) {
+                $storedPath = $request->file('attachment')->store('attachments/receiving', 'public');
+                DB::table('attachments')->insert([
+                    'module' => 'goods_receipts',
+                    'record_id' => $grId,
+                    'file_path' => $storedPath,
+                    'file_name' => basename($storedPath),
+                    'uploaded_by' => optional($request->user())->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
 
             $newReceived = (float) $poItem->received_qty + (float) $v['received_qty'];
             $newOutstanding = max(0, (float) $poItem->ordered_qty - $newReceived);
@@ -117,7 +152,7 @@ class GoodsReceiptController extends Controller
             DB::table('purchase_order_items')->where('id', $poItem->id)->update([
                 'received_qty' => $newReceived,
                 'outstanding_qty' => $newOutstanding,
-                'item_status' => $newOutstanding > 0 ? 'Partial Received' : 'Received',
+                'item_status' => $newOutstanding > 0 ? 'Partial' : 'Closed',
                 'updated_at' => now(),
             ]);
 
@@ -127,6 +162,10 @@ class GoodsReceiptController extends Controller
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
+
+            if ($storedPath) {
+                Storage::disk('public')->delete($storedPath);
+            }
 
             return back()->withInput()->with('error', $e->getMessage());
         }

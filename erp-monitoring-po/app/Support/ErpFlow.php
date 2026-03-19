@@ -55,11 +55,26 @@ class ErpFlow
 
     public static function refreshPoStatusByOutstanding(int $poId, ?int $userId = null): string
     {
-        $hasReceived = DB::table('purchase_order_items')->where('purchase_order_id', $poId)->where('received_qty', '>', 0)->exists();
-        $hasOutstanding = DB::table('purchase_order_items')->where('purchase_order_id', $poId)->where('outstanding_qty', '>', 0)->exists();
+        $summary = DB::table('purchase_order_items')
+            ->where('purchase_order_id', $poId)
+            ->selectRaw('COUNT(*) total_items')
+            ->selectRaw("SUM(CASE WHEN item_status = 'Cancelled' THEN 1 ELSE 0 END) cancelled_items")
+            ->selectRaw('SUM(CASE WHEN outstanding_qty > 0 THEN 1 ELSE 0 END) outstanding_items')
+            ->selectRaw('SUM(CASE WHEN received_qty > 0 THEN 1 ELSE 0 END) received_items')
+            ->first();
 
-        $newStatus = $hasOutstanding ? ($hasReceived ? 'Partial Received' : 'Shipped') : 'Closed';
         $oldStatus = DB::table('purchase_orders')->where('id', $poId)->value('status');
+
+        $newStatus = 'PO Issued';
+        if ((int) ($summary->total_items ?? 0) > 0 && (int) ($summary->cancelled_items ?? 0) === (int) ($summary->total_items ?? 0)) {
+            $newStatus = 'Cancelled';
+        } elseif ((int) ($summary->outstanding_items ?? 0) === 0) {
+            $newStatus = 'Closed';
+        } elseif ((int) ($summary->received_items ?? 0) > 0) {
+            $newStatus = 'Partial';
+        } elseif (DB::table('purchase_order_items')->where('purchase_order_id', $poId)->whereNotNull('etd_date')->exists()) {
+            $newStatus = 'Confirmed';
+        }
 
         if ($oldStatus !== $newStatus) {
             DB::table('purchase_orders')->where('id', $poId)->update([
@@ -67,7 +82,7 @@ class ErpFlow
                 'updated_at' => now(),
                 'updated_by' => $userId,
             ]);
-            self::pushPoStatus($poId, $oldStatus, $newStatus, $userId, 'Status auto-update dari transaksi receiving.');
+            self::pushPoStatus($poId, $oldStatus, $newStatus, $userId, 'Status auto-update berdasarkan outstanding item.');
         }
 
         return $newStatus;

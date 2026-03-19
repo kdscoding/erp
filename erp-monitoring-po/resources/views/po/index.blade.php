@@ -18,7 +18,7 @@
                 <label class="form-label">Status</label>
                 <select name="status" class="form-select">
                     <option value="">Semua Status</option>
-                    @foreach(['Draft','Submitted','Approved','Sent to Supplier','Supplier Confirmed','Shipped','Partial Received','Closed','Cancelled','On Hold / Discrepancy'] as $status)
+                    @foreach(['PO Issued','Confirmed','Partial','Closed','Cancelled'] as $status)
                         <option value="{{ $status }}" @selected(request('status') === $status)>{{ $status }}</option>
                     @endforeach
                 </select>
@@ -29,7 +29,7 @@
     </div>
 </div>
 
-<div class="card"><div class="card-body table-responsive p-0"><table class="table table-hover text-nowrap mb-0">
+<div class="card"><div class="card-body table-responsive p-0"><table class="table table-hover text-nowrap mb-0 data-table">
 <thead><tr><th>PO Number</th><th>PO Date</th><th>Supplier</th><th>Status</th><th class="text-end">Aksi</th></tr></thead>
 <tbody>
 @forelse($rows as $r)
@@ -37,7 +37,7 @@
     <td>{{ $r->po_number }}</td>
     <td>{{ \Carbon\Carbon::parse($r->po_date)->format('d-m-Y') }}</td>
     <td>{{ $r->supplier_name }}</td>
-    <td><span class="badge bg-secondary">{{ $r->status }}</span></td>
+    <td><span class="badge {{ in_array($r->status,['Closed']) ? 'bg-success' : (in_array($r->status,['Cancelled','Late']) ? 'bg-danger' : 'bg-warning text-dark') }}">{{ $r->status }}</span></td>
     <td class="text-end"><a href="{{ route('po.show', $r->id) }}" class="btn btn-sm btn-outline-primary">Detail</a></td>
 </tr>
 @empty

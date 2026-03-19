@@ -245,7 +245,7 @@
 
                     <div class="col-md-4">
                         <label class="doc-label">Status</label>
-                        <input type="text" class="form-control field-readonly" value="Draft Entry" readonly>
+                        <input type="text" class="form-control field-readonly" value="PO Issued (Direct Entry)" readonly>
                     </div>
                 </div>
             </div>
