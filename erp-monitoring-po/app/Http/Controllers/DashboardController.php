@@ -9,8 +9,6 @@ class DashboardController extends Controller
 {
     public function __invoke(): View
     {
-        $today = now()->toDateString();
-
         $metrics = [
             'open_po' => DB::table('purchase_orders')
                 ->whereNotIn('status', ['Closed', 'Cancelled'])
@@ -18,17 +16,17 @@ class DashboardController extends Controller
 
             'overdue_po' => DB::table('purchase_order_items')
                 ->whereNotNull('etd_date')
-                ->whereDate('etd_date', '<', $today)
+                ->whereRaw('DATE(etd_date) < CURDATE()')
                 ->where('outstanding_qty', '>', 0)
                 ->where('item_status', '!=', 'Cancelled')
                 ->count(),
 
             'shipped_today' => DB::table('shipments')
-                ->whereDate('shipment_date', $today)
+                ->whereRaw('DATE(shipment_date) = CURDATE()')
                 ->count(),
 
             'received_today' => DB::table('goods_receipts')
-                ->whereDate('receipt_date', $today)
+                ->whereRaw('DATE(receipt_date) = CURDATE()')
                 ->count(),
 
             'partial_po' => DB::table('purchase_orders')
@@ -43,7 +41,7 @@ class DashboardController extends Controller
                 ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
                 ->where('poi.outstanding_qty', '>', 0)
                 ->whereNotNull('poi.etd_date')
-                ->whereDate('poi.etd_date', '<', $today)
+                ->whereRaw('DATE(poi.etd_date) < CURDATE()')
                 ->whereNotIn('po.status', ['Closed', 'Cancelled'])
                 ->count(),
         ];
@@ -51,7 +49,7 @@ class DashboardController extends Controller
         $supplierDelay = DB::table('purchase_orders as po')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->select('s.supplier_name', DB::raw('COUNT(*) as late_count'))
-            ->whereDate('po.eta_date', '<', $today)
+            ->whereRaw('DATE(po.eta_date) < CURDATE()')
             ->whereNotIn('po.status', ['Closed', 'Cancelled'])
             ->groupBy('s.supplier_name')
             ->orderByDesc('late_count')
@@ -73,8 +71,8 @@ class DashboardController extends Controller
             ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty > 0 THEN 1 ELSE 0 END) as partial_items")
             ->selectRaw("SUM(CASE WHEN poi.outstanding_qty <= 0 AND poi.item_status != 'Cancelled' THEN 1 ELSE 0 END) as closed_items")
             ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NULL AND poi.item_status != 'Cancelled' THEN 1 ELSE 0 END) as waiting_items")
-            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND poi.etd_date >= ? AND poi.item_status != 'Cancelled' THEN 1 ELSE 0 END) as confirmed_items", [$today])
-            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND poi.etd_date < ? AND poi.item_status != 'Cancelled' THEN 1 ELSE 0 END) as late_items", [$today])
+            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) >= CURDATE() AND poi.item_status != 'Cancelled' THEN 1 ELSE 0 END) as confirmed_items")
+            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) < CURDATE() AND poi.item_status != 'Cancelled' THEN 1 ELSE 0 END) as late_items")
             ->whereNotIn('po.status', ['Closed', 'Cancelled'])
             ->groupBy('po.id', 'po.po_number', 'po.po_date', 'po.status', 's.supplier_name', 'po.eta_date')
             ->orderBy('po.eta_date')
@@ -96,7 +94,7 @@ class DashboardController extends Controller
             ->select('po.po_number', 'i.item_code', 'i.item_name', 'poi.etd_date', 'poi.outstanding_qty', 's.supplier_name')
             ->where('poi.outstanding_qty', '>', 0)
             ->whereNotNull('poi.etd_date')
-            ->whereDate('poi.etd_date', '>=', $today)
+            ->whereRaw('DATE(poi.etd_date) >= CURDATE()')
             ->where('poi.item_status', '!=', 'Cancelled')
             ->orderBy('poi.etd_date')
             ->limit(8)
@@ -109,7 +107,7 @@ class DashboardController extends Controller
             ->select('po.po_number', 'i.item_code', 'i.item_name', 'poi.etd_date', 'poi.outstanding_qty', 's.supplier_name')
             ->where('poi.outstanding_qty', '>', 0)
             ->whereNotNull('poi.etd_date')
-            ->whereDate('poi.etd_date', '<', $today)
+            ->whereRaw('DATE(poi.etd_date) < CURDATE()')
             ->whereNotIn('po.status', ['Closed', 'Cancelled'])
             ->orderBy('poi.etd_date')
             ->limit(8)
@@ -137,24 +135,24 @@ class DashboardController extends Controller
                 WHEN poi.outstanding_qty <= 0 THEN 'Closed'
                 WHEN poi.received_qty > 0 THEN 'Partial'
                 WHEN poi.etd_date IS NULL THEN 'Waiting'
-                WHEN poi.etd_date < ? THEN 'Late'
+                WHEN DATE(poi.etd_date) < CURDATE() THEN 'Late'
                 ELSE 'Confirmed'
-            END as monitoring_status", [$today])
+            END as monitoring_status")
             ->selectRaw("CASE 
                 WHEN poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 'Sudah diterima sebagian'
                 WHEN poi.outstanding_qty <= 0 THEN 'Selesai'
                 WHEN poi.etd_date IS NULL THEN 'Belum ada konfirmasi supplier'
-                WHEN poi.etd_date < ? THEN 'Terlambat dari ETD'
+                WHEN DATE(poi.etd_date) < CURDATE() THEN 'Terlambat dari ETD'
                 ELSE 'Sudah dikonfirmasi supplier'
-            END as monitoring_note", [$today])
+            END as monitoring_note")
             ->whereNotIn('po.status', ['Closed', 'Cancelled'])
             ->where('poi.item_status', '!=', 'Cancelled')
             ->orderByRaw("CASE 
                 WHEN poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 1
                 WHEN poi.etd_date IS NULL THEN 2
-                WHEN poi.etd_date < ? THEN 3
+                WHEN DATE(poi.etd_date) < CURDATE() THEN 3
                 ELSE 4
-            END", [$today])
+            END")
             ->orderBy('po.po_number')
             ->orderBy('i.item_code')
             ->limit(5)
@@ -173,8 +171,6 @@ class DashboardController extends Controller
 
     public function monitoring(): View
     {
-        $today = now()->toDateString();
-
         $itemMonitoringList = DB::table('purchase_order_items as poi')
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
             ->join('items as i', 'i.id', '=', 'poi.item_id')
@@ -197,24 +193,24 @@ class DashboardController extends Controller
                 WHEN poi.outstanding_qty <= 0 THEN 'Closed'
                 WHEN poi.received_qty > 0 THEN 'Partial'
                 WHEN poi.etd_date IS NULL THEN 'Waiting'
-                WHEN poi.etd_date < ? THEN 'Late'
+                WHEN DATE(poi.etd_date) < CURDATE() THEN 'Late'
                 ELSE 'Confirmed'
-            END as monitoring_status", [$today])
+            END as monitoring_status")
             ->selectRaw("CASE 
                 WHEN poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 'Sudah diterima sebagian'
                 WHEN poi.outstanding_qty <= 0 THEN 'Selesai'
                 WHEN poi.etd_date IS NULL THEN 'Belum ada konfirmasi supplier'
-                WHEN poi.etd_date < ? THEN 'Terlambat dari ETD'
+                WHEN DATE(poi.etd_date) < CURDATE() THEN 'Terlambat dari ETD'
                 ELSE 'Sudah dikonfirmasi supplier'
-            END as monitoring_note", [$today])
+            END as monitoring_note")
             ->whereNotIn('po.status', ['Closed', 'Cancelled'])
             ->where('poi.item_status', '!=', 'Cancelled')
             ->orderByRaw("CASE 
                 WHEN poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 1
                 WHEN poi.etd_date IS NULL THEN 2
-                WHEN poi.etd_date < ? THEN 3
+                WHEN DATE(poi.etd_date) < CURDATE() THEN 3
                 ELSE 4
-            END", [$today])
+            END")
             ->orderBy('po.po_number')
             ->orderBy('i.item_code')
             ->get();

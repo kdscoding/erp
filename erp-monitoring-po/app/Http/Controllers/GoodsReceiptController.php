@@ -27,7 +27,6 @@ class GoodsReceiptController extends Controller
             ->limit(200)
             ->get();
 
-        $today = now()->toDateString();
         $poItems = DB::table('purchase_order_items as poi')
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
             ->join('items as i', 'i.id', '=', 'poi.item_id')
@@ -50,9 +49,9 @@ class GoodsReceiptController extends Controller
                 WHEN poi.outstanding_qty <= 0 THEN 'Closed'
                 WHEN poi.received_qty > 0 THEN 'Partial'
                 WHEN poi.etd_date IS NULL THEN 'Waiting'
-                WHEN poi.etd_date < ? THEN 'Late'
+                WHEN DATE(poi.etd_date) < CURDATE() THEN 'Late'
                 ELSE 'Confirmed'
-            END as monitoring_status", [$today])
+            END as monitoring_status")
             ->where('poi.outstanding_qty', '>', 0)
             ->where('poi.item_status', '!=', 'Cancelled')
             ->whereIn('po.status', ['PO Issued', 'Confirmed', 'Partial'])

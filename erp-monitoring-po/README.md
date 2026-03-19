@@ -8,7 +8,8 @@ Aplikasi internal ERP-like untuk kontrol proses purchasing hingga receiving mate
 - Shipment Tracking
 - Goods Receiving berbasis PO + kalkulasi outstanding otomatis
 - Traceability & monitoring
-- Dashboard KPI operasional
+- Dashboard KPI operasional dengan overview ringkas
+- Halaman Monitoring Item lengkap dengan filter dan pencarian real-time
 - Outstanding report (filter-first)
 - Audit trail
 - Settings (termasuk over-receipt)
@@ -43,6 +44,11 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
+## Format Dokumen Auto-Generate
+- PO: `PO-YYYYMMDD-####`
+- Shipment: `SHP-YYYYMMDD-####`
+- GR: `GR-YYYYMMDD-####`
+
 ## Akun Demo
 - Email: `admin@erp.local`
 - Password: `password`
@@ -61,13 +67,23 @@ DB_PASSWORD=
 4. Warehouse posting GR berbasis item outstanding.
 5. Sistem update `received_qty`, `outstanding_qty`, status item, lalu refresh status agregat PO.
 
+## Halaman Monitoring
+- **Dashboard**: Overview KPI dan ringkasan item monitoring (limit 5 item) dengan tombol "Lihat Semua"
+- **Monitoring Lengkap**: Tabel komprehensif semua item PO dengan status real-time, filter berdasarkan status item (Waiting/Confirmed/Partial/Late/Closed) dan status ETD (On-Time/At-Risk/N/A), serta pencarian real-time berdasarkan PO, item, atau supplier.
+
 ## Aturan Status Saat Ini
 ### Status item
 - `Waiting`: item belum dikonfirmasi supplier, ETD belum diisi.
 - `Confirmed`: item sudah dikonfirmasi supplier, ETD terisi, belum ada receiving.
 - `Partial`: item sudah diterima sebagian, outstanding masih ada.
+- `Late`: item sudah dikonfirmasi supplier, ETD terisi, tetapi ETD sudah lewat dan masih outstanding.
 - `Closed`: qty item sudah terpenuhi.
 - `Cancelled`: item dibatalkan atau force close.
+
+### Status ETD (Estimated Time of Delivery)
+- `On-Time`: ETD terisi dan masih di masa depan (>= hari ini).
+- `At-Risk`: ETD terisi tetapi sudah lewat (< hari ini).
+- `N/A`: ETD belum diisi supplier.
 
 ### Status PO
 - `PO Issued`: belum ada item yang dikonfirmasi dan belum ada receiving.

@@ -42,7 +42,7 @@
                 </thead>
                 <tbody>
                     @forelse($itemMonitoringList as $item)
-                        @php($etdStatus = $item->etd_date ? (\Carbon\Carbon::parse($item->etd_date)->isBefore(now()) ? 'At-Risk' : 'On-Time') : 'N/A')
+                        @php($etdStatus = $item->etd_date ? (\Carbon\Carbon::parse($item->etd_date)->isBefore(now()->timezone('Asia/Jakarta')) ? 'At-Risk' : 'On-Time') : 'N/A')
                         <tr data-status-item="{{ $item->monitoring_status }}" data-status-etd="{{ $etdStatus }}"
                             data-search="{{ strtolower($item->po_number . ' ' . $item->item_code . ' ' . $item->item_name . ' ' . $item->supplier_name) }}">
                             <td>
