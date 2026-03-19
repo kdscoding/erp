@@ -21,11 +21,7 @@ Route::get('/', fn () => redirect()->route('dashboard'));
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
-<<<<<<< ours
-    Route::middleware('role:admin|purchasing|purchasing_manager')->group(function () {
-=======
-    Route::middleware('role:administrator|admin')->group(function () {
->>>>>>> theirs
+    Route::middleware('role:administrator|admin|purchasing|purchasing_manager')->group(function () {
         Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
         Route::post('/suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
         Route::get('/suppliers/{id}/edit', [SupplierController::class, 'edit'])->name('suppliers.edit');
@@ -54,35 +50,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
         Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
 
-<<<<<<< ours
         Route::get('/reports/outstanding', [ReportController::class, 'outstanding'])->name('reports.outstanding');
     });
 
-    Route::middleware('role:admin|warehouse')->group(function () {
-=======
-    });
-
     Route::middleware('role:receiver|warehouse|administrator|admin')->group(function () {
->>>>>>> theirs
         Route::get('/receiving', [GoodsReceiptController::class, 'index'])->name('receiving.index');
         Route::post('/receiving', [GoodsReceiptController::class, 'store'])->name('receiving.store');
     });
 
-<<<<<<< ours
-    Route::middleware('role:admin|viewer|compliance|purchasing|purchasing_manager|warehouse')->group(function () {
-=======
-    Route::middleware('role:supervisor|administrator|admin|receiver|warehouse')->group(function () {
-        Route::get('/reports/outstanding', [ReportController::class, 'outstanding'])->name('reports.outstanding');
->>>>>>> theirs
+    Route::middleware('role:supervisor|administrator|admin|receiver|warehouse|viewer|compliance|purchasing|purchasing_manager')->group(function () {
         Route::get('/traceability', [TraceabilityController::class, 'index'])->name('traceability.index');
         Route::get('/audit-trail', [AuditTrailController::class, 'index'])->name('audit.index');
     });
 
-<<<<<<< ours
-    Route::middleware('role:admin')->group(function () {
-=======
     Route::middleware('role:administrator|admin')->group(function () {
->>>>>>> theirs
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
     });

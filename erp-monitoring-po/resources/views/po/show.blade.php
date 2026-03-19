@@ -19,7 +19,16 @@
         </div>
 
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
 =======
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
 
 
         <div class="card mb-3">
@@ -36,6 +45,15 @@
             </div>
         </div>
 
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
 >>>>>>> theirs
         <div class="card mb-3">
             <div class="card-header"><h3 class="card-title">Item PO & Monitoring ETD/ETA</h3></div>
@@ -52,6 +70,9 @@
                             <td>{{ number_format($item->outstanding_qty, 2, ',', '.') }} {{ $item->unit_name }}</td>
                             <td style="min-width:360px;">
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
                                 <form method="POST" action="{{ route('po.items.schedule', $item->id) }}" class="row g-1 align-items-center">
                                     @csrf @method('PATCH')
                                     <div class="col-md-4"><input type="date" name="etd_date" value="{{ $item->etd_date }}" class="form-control" title="ETD"></div>
@@ -63,6 +84,12 @@
                                             @endforeach
                                         </select>
 =======
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
                                 <form method="POST" action="{{ route('po.items.schedule', $item->id) }}" class="row g-1 align-items-center" title="Form update jadwal dan status item untuk supplier confirmation">
                                     @csrf @method('PATCH')
                                     <div class="col-md-4"><input type="date" name="etd_date" value="{{ $item->etd_date }}" class="form-control" title="ETD - Estimasi tanggal kirim dari supplier" aria-label="ETD item"><small class="text-muted">Masukkan ETD item ini.</small></div>
@@ -74,6 +101,15 @@
                                             @endforeach
                                         </select>
                                         <small class="text-muted">Status ini dipakai untuk monitoring item-level.</small>
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
 >>>>>>> theirs
                                     </div>
                                     <div class="col-md-8">
@@ -82,7 +118,19 @@
                                         <small class="text-muted">Progress Item: {{ $percent }}%</small>
                                     </div>
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
                                     <div class="col-md-4"><button class="btn btn-sm btn-primary w-100">Simpan Jadwal</button></div>
+=======
+                                    <div class="col-md-4"><button class="btn btn-sm btn-primary w-100" title="Simpan perubahan ETD/ETA/status item">Simpan Jadwal</button></div>
+>>>>>>> theirs
+=======
+                                    <div class="col-md-4"><button class="btn btn-sm btn-primary w-100" title="Simpan perubahan ETD/ETA/status item">Simpan Jadwal</button></div>
+>>>>>>> theirs
+=======
+                                    <div class="col-md-4"><button class="btn btn-sm btn-primary w-100" title="Simpan perubahan ETD/ETA/status item">Simpan Jadwal</button></div>
+>>>>>>> theirs
 =======
                                     <div class="col-md-4"><button class="btn btn-sm btn-primary w-100" title="Simpan perubahan ETD/ETA/status item">Simpan Jadwal</button></div>
 >>>>>>> theirs
@@ -101,17 +149,35 @@
             <div class="card-header"><h3 class="card-title">Transisi Status PO</h3></div>
             <div class="card-body">
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
                 <form method="POST" action="{{ route('po.transition', $po->id) }}">
                     @csrf
                     <div class="mb-2">
                         <label class="form-label">Status Tujuan</label>
                         <select name="to_status" class="form-select" required>
 =======
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
                 <form method="POST" action="{{ route('po.transition', $po->id) }}" title="Form perpindahan status dokumen PO sesuai aturan transisi">
                     @csrf
                     <div class="mb-2">
                         <label class="form-label">Status Tujuan</label><small class="text-muted d-block">Pilih transisi yang tersedia saja agar status valid.</small>
                         <select name="to_status" class="form-select" title="Pilih status tujuan PO" aria-label="Status tujuan PO" required>
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
+>>>>>>> theirs
+=======
 >>>>>>> theirs
                             @forelse($allowedTransitions as $status)
                                 <option value="{{ $status }}">{{ $status }}</option>
@@ -123,9 +189,27 @@
                     <div class="mb-2">
                         <label class="form-label">Catatan</label>
 <<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
+<<<<<<< ours
                         <textarea name="note" class="form-control" rows="2"></textarea>
                     </div>
                     <button class="btn btn-warning w-100" @disabled(empty($allowedTransitions))>Update Status</button>
+=======
+                        <textarea name="note" class="form-control" rows="2" title="Catatan alasan perubahan status PO" aria-label="Catatan transisi status"></textarea>
+                    </div>
+                    <button class="btn btn-warning w-100" title="Jalankan perubahan status PO" @disabled(empty($allowedTransitions))>Update Status</button>
+>>>>>>> theirs
+=======
+                        <textarea name="note" class="form-control" rows="2" title="Catatan alasan perubahan status PO" aria-label="Catatan transisi status"></textarea>
+                    </div>
+                    <button class="btn btn-warning w-100" title="Jalankan perubahan status PO" @disabled(empty($allowedTransitions))>Update Status</button>
+>>>>>>> theirs
+=======
+                        <textarea name="note" class="form-control" rows="2" title="Catatan alasan perubahan status PO" aria-label="Catatan transisi status"></textarea>
+                    </div>
+                    <button class="btn btn-warning w-100" title="Jalankan perubahan status PO" @disabled(empty($allowedTransitions))>Update Status</button>
+>>>>>>> theirs
 =======
                         <textarea name="note" class="form-control" rows="2" title="Catatan alasan perubahan status PO" aria-label="Catatan transisi status"></textarea>
                     </div>

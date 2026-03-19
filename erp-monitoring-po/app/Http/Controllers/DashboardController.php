@@ -13,9 +13,6 @@ class DashboardController extends Controller
 
         $metrics = [
             'open_po' => DB::table('purchase_orders')->whereNotIn('status', ['Closed', 'Cancelled'])->count(),
-<<<<<<< ours
-            'overdue_po' => DB::table('purchase_orders')->whereDate('eta_date', '<', $today)->whereNotIn('status', ['Closed', 'Cancelled'])->count(),
-=======
             'items_pending_etd' => DB::table('purchase_order_items as poi')
                 ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
                 ->where('poi.outstanding_qty', '>', 0)
@@ -29,7 +26,6 @@ class DashboardController extends Controller
                 ->whereDate('poi.eta_date', '<', $today)
                 ->whereNotIn('po.status', ['Closed', 'Cancelled'])
                 ->count(),
->>>>>>> theirs
             'shipped_today' => DB::table('shipments')->whereDate('shipment_date', $today)->count(),
             'received_today' => DB::table('goods_receipts')->whereDate('receipt_date', $today)->count(),
             'partial_po' => DB::table('purchase_orders')->where('status', 'Partial Received')->count(),

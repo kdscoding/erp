@@ -18,7 +18,12 @@ class PurchaseOrderController extends Controller
             'Approved' => ['Sent to Supplier', 'On Hold / Discrepancy', 'Cancelled'],
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
             'Sent to Supplier' => ['Supplier Confirmed', 'Shipped', 'On Hold / Discrepancy'],
+=======
+            'Sent to Supplier' => ['Partial Confirmed', 'Supplier Confirmed', 'Shipped', 'On Hold / Discrepancy'],
+            'Partial Confirmed' => ['Supplier Confirmed', 'Shipped', 'On Hold / Discrepancy'],
+>>>>>>> theirs
 =======
             'Sent to Supplier' => ['Partial Confirmed', 'Supplier Confirmed', 'Shipped', 'On Hold / Discrepancy'],
             'Partial Confirmed' => ['Supplier Confirmed', 'Shipped', 'On Hold / Discrepancy'],
@@ -44,9 +49,15 @@ class PurchaseOrderController extends Controller
             ->orderByDesc('po.id')
             ->paginate(20)
             ->withQueryString();
+<<<<<<< ours
 
         $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name']);
 
+=======
+
+        $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name']);
+
+>>>>>>> theirs
         return view('po.index', compact('rows', 'suppliers'));
     }
 
@@ -91,9 +102,12 @@ class PurchaseOrderController extends Controller
         $allowedTransitions = $this->transitionMap()[trim((string) $po->status)] ?? [];
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
 
         return view('po.show', compact('po', 'items', 'histories', 'allowedTransitions'));
 =======
+=======
+>>>>>>> theirs
 =======
 >>>>>>> theirs
         $totalItems = $items->count();
@@ -102,6 +116,9 @@ class PurchaseOrderController extends Controller
 
         return view('po.show', compact('po', 'items', 'histories', 'allowedTransitions', 'totalItems', 'confirmedItems', 'splitShipment'));
 <<<<<<< ours
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 =======
 >>>>>>> theirs
@@ -149,6 +166,10 @@ class PurchaseOrderController extends Controller
                     'outstanding_qty' => $row['ordered_qty'],
                     'item_status' => 'Waiting',
 <<<<<<< ours
+<<<<<<< ours
+=======
+                    'status_item' => 'Waiting',
+>>>>>>> theirs
 =======
                     'status_item' => 'Waiting',
 >>>>>>> theirs
@@ -170,6 +191,7 @@ class PurchaseOrderController extends Controller
 
         return redirect()->route('po.index')->with('success', 'PO berhasil dibuat.');
 <<<<<<< ours
+<<<<<<< ours
     }
 
     public function transition(Request $request, int $id): RedirectResponse
@@ -224,6 +246,8 @@ class PurchaseOrderController extends Controller
     }
 
 =======
+=======
+>>>>>>> theirs
     }
 
     public function transition(Request $request, int $id): RedirectResponse
@@ -277,6 +301,9 @@ class PurchaseOrderController extends Controller
         return back()->with('success', 'Status PO berhasil diperbarui ke '.$targetStatus.'.');
     }
 
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 
     public function updateItemSchedule(Request $request, int $itemId): RedirectResponse
@@ -287,15 +314,21 @@ class PurchaseOrderController extends Controller
             'etd_date' => 'nullable|date',
             'eta_date' => 'nullable|date|after_or_equal:etd_date',
 <<<<<<< ours
+<<<<<<< ours
             'item_status' => 'required|string|in:Waiting,Confirmed,Shipped,Partial Received,Received,On Hold',
             'remarks' => 'nullable|string|max:500',
         ], [
             'item_status.required' => 'Status item wajib dipilih.',
 =======
+=======
+>>>>>>> theirs
             'status_item' => 'required|string|in:Waiting,Confirmed,Shipped,Partial Received,Received,On Hold',
             'remarks' => 'nullable|string|max:500',
         ], [
             'status_item.required' => 'Status item wajib dipilih.',
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
         ]);
 
@@ -303,7 +336,12 @@ class PurchaseOrderController extends Controller
             'etd_date' => $v['etd_date'] ?? null,
             'eta_date' => $v['eta_date'] ?? null,
 <<<<<<< ours
+<<<<<<< ours
             'item_status' => $v['item_status'],
+=======
+            'item_status' => $v['status_item'],
+            'status_item' => $v['status_item'],
+>>>>>>> theirs
 =======
             'item_status' => $v['status_item'],
             'status_item' => $v['status_item'],
@@ -314,8 +352,13 @@ class PurchaseOrderController extends Controller
 
         ErpFlow::audit('purchase_order_items', $itemId, 'item_schedule_update',
 <<<<<<< ours
+<<<<<<< ours
             ['etd_date' => $item->etd_date, 'eta_date' => $item->eta_date, 'item_status' => $item->item_status],
             ['etd_date' => $v['etd_date'] ?? null, 'eta_date' => $v['eta_date'] ?? null, 'item_status' => $v['item_status']],
+=======
+            ['etd_date' => $item->etd_date, 'eta_date' => $item->eta_date, 'status_item' => $item->status_item ?? $item->item_status],
+            ['etd_date' => $v['etd_date'] ?? null, 'eta_date' => $v['eta_date'] ?? null, 'status_item' => $v['status_item']],
+>>>>>>> theirs
 =======
             ['etd_date' => $item->etd_date, 'eta_date' => $item->eta_date, 'status_item' => $item->status_item ?? $item->item_status],
             ['etd_date' => $v['etd_date'] ?? null, 'eta_date' => $v['eta_date'] ?? null, 'status_item' => $v['status_item']],
@@ -326,7 +369,10 @@ class PurchaseOrderController extends Controller
 
 <<<<<<< ours
 <<<<<<< ours
+<<<<<<< ours
 =======
+=======
+>>>>>>> theirs
 =======
 >>>>>>> theirs
         $poId = (int) $item->purchase_order_id;
@@ -353,6 +399,9 @@ class PurchaseOrderController extends Controller
         }
 
 <<<<<<< ours
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 =======
 >>>>>>> theirs

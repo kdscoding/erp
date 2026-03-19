@@ -5,6 +5,7 @@
 
 @section('content')
 <<<<<<< ours
+<<<<<<< ours
 <style>
     .kpi-card{border-radius:10px;color:#fff;position:relative;overflow:hidden;min-height:108px}
     .kpi-card .kpi-icon{position:absolute;right:12px;top:12px;font-size:34px;opacity:.25}
@@ -80,6 +81,21 @@
     <div class="alert alert-info border-0" style="border-radius:12px;background:#e0f2fe;color:#0c4a6e;">
         Mode Supervisor aktif: tampilan ini read-only dan berfokus pada KPI item-level.
     </div>
+=======
+@php
+    $isSupervisor = auth()->check()
+        ? \Illuminate\Support\Facades\DB::table('roles as r')
+            ->join('user_roles as ur', 'ur.role_id', '=', 'r.id')
+            ->where('ur.user_id', auth()->id())
+            ->where('r.slug', 'supervisor')
+            ->exists()
+        : false;
+@endphp
+@if($isSupervisor)
+    <div class="alert alert-info border-0" style="border-radius:12px;background:#e0f2fe;color:#0c4a6e;">
+        Mode Supervisor aktif: tampilan ini read-only dan berfokus pada KPI item-level.
+    </div>
+>>>>>>> theirs
 @endif
 <style>
     .kpi-card{border-radius:12px;color:#fff;position:relative;overflow:hidden;min-height:108px}
@@ -115,6 +131,9 @@
                         <tr><td>{{ $row->supplier_name }}</td><td class="text-end"><span class="badge bg-danger">{{ $row->late_count }}</span></td></tr>
                     @empty
                         <tr><td colspan="2" class="text-center text-muted">Belum ada keterlambatan.</td></tr>
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
                     @endforelse
                     </tbody>
@@ -124,6 +143,7 @@
     </div>
 
     <div class="col-lg-6">
+<<<<<<< ours
 <<<<<<< ours
 <<<<<<< ours
         <div class="card border-warning">
@@ -150,6 +170,8 @@
                     @empty
                         <tr><td colspan="5" class="text-center text-muted">Tidak ada item berisiko.</td></tr>
 =======
+=======
+>>>>>>> theirs
         <div class="card">
             <div class="card-header"><h3 class="card-title">Receiving Terbaru</h3></div>
             <div class="card-body table-responsive p-0">
@@ -160,6 +182,9 @@
                         <tr><td>{{ $row->gr_number }}</td><td>{{ $row->po_number }}</td><td>{{ $row->supplier_name }}</td><td>{{ \Carbon\Carbon::parse($row->receipt_date)->format('d-m-Y') }}</td></tr>
                     @empty
                         <tr><td colspan="4" class="text-center text-muted">Belum ada data receiving.</td></tr>
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
                     @endforelse
                     </tbody>
@@ -168,6 +193,7 @@
         </div>
     </div>
 
+<<<<<<< ours
 <<<<<<< ours
     <div class="col-12">
         <div class="card">
@@ -190,6 +216,8 @@
                     @empty
                         <tr><td colspan="5" class="text-center text-muted">Tidak ada open PO.</td></tr>
 =======
+=======
+>>>>>>> theirs
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header"><h3 class="card-title">At-Risk Items (ETD Lewat)</h3></div>
@@ -207,6 +235,9 @@
                         </tr>
                     @empty
                         <tr><td colspan="5" class="text-center text-muted">Tidak ada item berisiko.</td></tr>
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
                     @endforelse
                     </tbody>
@@ -215,7 +246,10 @@
         </div>
     </div>
 <<<<<<< ours
+<<<<<<< ours
 =======
+=======
+>>>>>>> theirs
 
     <div class="col-12">
         <div class="card">
