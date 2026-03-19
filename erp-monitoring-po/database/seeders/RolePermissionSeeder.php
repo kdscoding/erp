@@ -13,12 +13,9 @@ class RolePermissionSeeder extends Seeder
     public function run(): void
     {
         $roles = [
-            ['name' => 'Admin', 'slug' => 'admin'],
-            ['name' => 'Purchasing', 'slug' => 'purchasing'],
-            ['name' => 'Purchasing Manager', 'slug' => 'purchasing_manager'],
-            ['name' => 'Warehouse', 'slug' => 'warehouse'],
-            ['name' => 'BC Compliance', 'slug' => 'compliance'],
-            ['name' => 'Viewer', 'slug' => 'viewer'],
+            ['name' => 'Administrator', 'slug' => 'administrator'],
+            ['name' => 'Supervisor', 'slug' => 'supervisor'],
+            ['name' => 'Receiver', 'slug' => 'receiver'],
         ];
 
         foreach ($roles as $role) {
@@ -30,7 +27,7 @@ class RolePermissionSeeder extends Seeder
             'password' => Hash::make('password'),
         ]);
 
-        $adminRoleId = Role::where('slug', 'admin')->value('id');
+        $adminRoleId = Role::where('slug', 'administrator')->value('id');
         DB::table('user_roles')->updateOrInsert([
             'user_id' => $admin->id,
             'role_id' => $adminRoleId,

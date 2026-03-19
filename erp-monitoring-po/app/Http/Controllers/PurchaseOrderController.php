@@ -16,7 +16,17 @@ class PurchaseOrderController extends Controller
             'Draft' => ['Submitted', 'Cancelled'],
             'Submitted' => ['Approved', 'Cancelled', 'On Hold / Discrepancy'],
             'Approved' => ['Sent to Supplier', 'On Hold / Discrepancy', 'Cancelled'],
+<<<<<<< ours
+<<<<<<< ours
             'Sent to Supplier' => ['Supplier Confirmed', 'Shipped', 'On Hold / Discrepancy'],
+=======
+            'Sent to Supplier' => ['Partial Confirmed', 'Supplier Confirmed', 'Shipped', 'On Hold / Discrepancy'],
+            'Partial Confirmed' => ['Supplier Confirmed', 'Shipped', 'On Hold / Discrepancy'],
+>>>>>>> theirs
+=======
+            'Sent to Supplier' => ['Partial Confirmed', 'Supplier Confirmed', 'Shipped', 'On Hold / Discrepancy'],
+            'Partial Confirmed' => ['Supplier Confirmed', 'Shipped', 'On Hold / Discrepancy'],
+>>>>>>> theirs
             'Supplier Confirmed' => ['Shipped', 'On Hold / Discrepancy'],
             'Shipped' => ['Partial Received', 'Closed', 'On Hold / Discrepancy'],
             'Partial Received' => ['Closed', 'On Hold / Discrepancy'],
@@ -79,8 +89,22 @@ class PurchaseOrderController extends Controller
             ->get();
 
         $allowedTransitions = $this->transitionMap()[trim((string) $po->status)] ?? [];
+<<<<<<< ours
+<<<<<<< ours
 
         return view('po.show', compact('po', 'items', 'histories', 'allowedTransitions'));
+=======
+=======
+>>>>>>> theirs
+        $totalItems = $items->count();
+        $confirmedItems = $items->whereNotNull('etd_date')->count();
+        $splitShipment = $items->pluck('etd_date')->filter()->unique()->count() > 2;
+
+        return view('po.show', compact('po', 'items', 'histories', 'allowedTransitions', 'totalItems', 'confirmedItems', 'splitShipment'));
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
     }
 
     public function store(Request $request): RedirectResponse
@@ -124,6 +148,10 @@ class PurchaseOrderController extends Controller
                     'received_qty' => 0,
                     'outstanding_qty' => $row['ordered_qty'],
                     'item_status' => 'Waiting',
+<<<<<<< ours
+=======
+                    'status_item' => 'Waiting',
+>>>>>>> theirs
                     'unit_price' => $row['unit_price'] ?? null,
                     'remarks' => $row['remarks'] ?? null,
                     'created_at' => now(),
@@ -141,6 +169,7 @@ class PurchaseOrderController extends Controller
         }
 
         return redirect()->route('po.index')->with('success', 'PO berhasil dibuat.');
+<<<<<<< ours
     }
 
     public function transition(Request $request, int $id): RedirectResponse
@@ -194,6 +223,61 @@ class PurchaseOrderController extends Controller
         return back()->with('success', 'Status PO berhasil diperbarui ke '.$targetStatus.'.');
     }
 
+=======
+    }
+
+    public function transition(Request $request, int $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'to_status' => 'required|string|max:50',
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        $po = DB::table('purchase_orders')->where('id', $id)->firstOrFail();
+        $userId = optional($request->user())->id;
+        $currentStatus = trim((string) $po->status);
+        $targetStatus = trim((string) $validated['to_status']);
+        $allowedMap = $this->transitionMap();
+        $allowedTransitions = $allowedMap[$currentStatus] ?? [];
+
+        if ($currentStatus === $targetStatus) {
+            return back()->with('success', 'Status PO tidak berubah.');
+        }
+
+        if (! in_array($targetStatus, $allowedTransitions, true)) {
+            $allowedText = empty($allowedTransitions) ? 'tidak ada transisi tersedia' : implode(', ', $allowedTransitions);
+
+            return back()->with('error', "Transisi tidak valid dari {$currentStatus} ke {$targetStatus}. Opsi yang diizinkan: {$allowedText}.");
+        }
+
+        DB::table('purchase_orders')->where('id', $id)->update([
+            'status' => $targetStatus,
+            'approved_by' => $targetStatus === 'Approved' ? $userId : $po->approved_by,
+            'approved_at' => $targetStatus === 'Approved' ? now() : $po->approved_at,
+            'sent_to_supplier_at' => $targetStatus === 'Sent to Supplier' ? now() : $po->sent_to_supplier_at,
+            'updated_by' => $userId,
+            'updated_at' => now(),
+        ]);
+
+        ErpFlow::pushPoStatus($id, $currentStatus, $targetStatus, $userId, $validated['note'] ?? null);
+        ErpFlow::audit('purchase_orders', $id, 'status_change', ['status' => $currentStatus], ['status' => $targetStatus, 'note' => $validated['note'] ?? null], $userId, $request->ip());
+
+        if ($targetStatus === 'Approved') {
+            DB::table('po_approvals')->insert([
+                'purchase_order_id' => $id,
+                'approver_id' => $userId,
+                'status' => 'Approved',
+                'note' => $validated['note'] ?? null,
+                'approved_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        return back()->with('success', 'Status PO berhasil diperbarui ke '.$targetStatus.'.');
+    }
+
+>>>>>>> theirs
 
     public function updateItemSchedule(Request $request, int $itemId): RedirectResponse
     {
@@ -202,27 +286,76 @@ class PurchaseOrderController extends Controller
         $v = $request->validate([
             'etd_date' => 'nullable|date',
             'eta_date' => 'nullable|date|after_or_equal:etd_date',
+<<<<<<< ours
             'item_status' => 'required|string|in:Waiting,Confirmed,Shipped,Partial Received,Received,On Hold',
             'remarks' => 'nullable|string|max:500',
         ], [
             'item_status.required' => 'Status item wajib dipilih.',
+=======
+            'status_item' => 'required|string|in:Waiting,Confirmed,Shipped,Partial Received,Received,On Hold',
+            'remarks' => 'nullable|string|max:500',
+        ], [
+            'status_item.required' => 'Status item wajib dipilih.',
+>>>>>>> theirs
         ]);
 
         DB::table('purchase_order_items')->where('id', $itemId)->update([
             'etd_date' => $v['etd_date'] ?? null,
             'eta_date' => $v['eta_date'] ?? null,
+<<<<<<< ours
             'item_status' => $v['item_status'],
+=======
+            'item_status' => $v['status_item'],
+            'status_item' => $v['status_item'],
+>>>>>>> theirs
             'remarks' => $v['remarks'] ?? DB::table('purchase_order_items')->where('id', $itemId)->value('remarks'),
             'updated_at' => now(),
         ]);
 
         ErpFlow::audit('purchase_order_items', $itemId, 'item_schedule_update',
+<<<<<<< ours
             ['etd_date' => $item->etd_date, 'eta_date' => $item->eta_date, 'item_status' => $item->item_status],
             ['etd_date' => $v['etd_date'] ?? null, 'eta_date' => $v['eta_date'] ?? null, 'item_status' => $v['item_status']],
+=======
+            ['etd_date' => $item->etd_date, 'eta_date' => $item->eta_date, 'status_item' => $item->status_item ?? $item->item_status],
+            ['etd_date' => $v['etd_date'] ?? null, 'eta_date' => $v['eta_date'] ?? null, 'status_item' => $v['status_item']],
+>>>>>>> theirs
             optional($request->user())->id,
             $request->ip()
         );
 
+<<<<<<< ours
+<<<<<<< ours
+=======
+=======
+>>>>>>> theirs
+        $poId = (int) $item->purchase_order_id;
+        $totalItems = DB::table('purchase_order_items')->where('purchase_order_id', $poId)->count();
+        $confirmedItems = DB::table('purchase_order_items')->where('purchase_order_id', $poId)->whereNotNull('etd_date')->count();
+
+        $newPoStatus = null;
+        if ($confirmedItems > 0 && $confirmedItems < $totalItems) {
+            $newPoStatus = 'Partial Confirmed';
+        } elseif ($totalItems > 0 && $confirmedItems === $totalItems) {
+            $newPoStatus = 'Supplier Confirmed';
+        }
+
+        if ($newPoStatus) {
+            $oldPoStatus = DB::table('purchase_orders')->where('id', $poId)->value('status');
+            if ($oldPoStatus !== $newPoStatus) {
+                DB::table('purchase_orders')->where('id', $poId)->update([
+                    'status' => $newPoStatus,
+                    'updated_by' => optional($request->user())->id,
+                    'updated_at' => now(),
+                ]);
+                ErpFlow::pushPoStatus($poId, $oldPoStatus, $newPoStatus, optional($request->user())->id, 'Auto update dari konfirmasi ETD item.');
+            }
+        }
+
+<<<<<<< ours
+>>>>>>> theirs
+=======
+>>>>>>> theirs
         return back()->with('success', 'Jadwal item berhasil diperbarui.');
     }
 
