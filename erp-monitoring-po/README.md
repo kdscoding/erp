@@ -116,3 +116,23 @@ Solusi:
 
 ## Dokumen Konsep UI/UX Strategis
 Lihat dokumen konsep lengkap: `UI_UX_PRODUCT_STRATEGY.md`.
+
+
+## Cleanup Database (Tabel Tidak Dipakai)
+Berdasarkan pemakaian kode saat ini, tabel berikut tidak lagi dipakai oleh flow aktif:
+- `po_approvals`
+- `supplier_confirmations`
+- `shipment_items`
+
+Migrasi pembersihan sudah disediakan di:
+- `database/migrations/2026_03_19_130000_drop_unused_procurement_tables.php`
+
+Jalankan:
+```bash
+php artisan migrate
+```
+
+Jika ingin rollback:
+```bash
+php artisan migrate:rollback --step=1
+```

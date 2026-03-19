@@ -16,7 +16,7 @@ class DashboardController extends Controller
             'overdue_po' => DB::table('purchase_order_items')->whereNotNull('etd_date')->whereDate('etd_date', '<', $today)->where('outstanding_qty', '>', 0)->where('item_status', '!=', 'Cancelled')->count(),
             'shipped_today' => DB::table('shipments')->whereDate('shipment_date', $today)->count(),
             'received_today' => DB::table('goods_receipts')->whereDate('receipt_date', $today)->count(),
-            'partial_po' => DB::table('purchase_orders')->where('status', 'Partial Received')->count(),
+            'partial_po' => DB::table('purchase_orders')->where('status', 'Partial')->count(),
             'suppliers' => DB::table('suppliers')->where('status', true)->count(),
             'at_risk_items' => DB::table('purchase_order_items as poi')
                 ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
