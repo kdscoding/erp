@@ -55,7 +55,7 @@ class GoodsReceiptController extends Controller
             ->where('poi.outstanding_qty', '>', 0)
             ->where('poi.item_status', '!=', 'Cancelled')
             ->whereIn('po.status', ['PO Issued', 'Confirmed', 'Partial'])
-            ->when($request->filled('po_id'), fn ($q) => $q->where('po.id', $request->integer('po_id')))
+            ->when($request->filled('po_id'), fn($q) => $q->where('po.id', $request->integer('po_id')))
             ->groupBy('poi.id', 'poi.purchase_order_id', 'poi.ordered_qty', 'poi.received_qty', 'poi.outstanding_qty', 'poi.etd_date', 'po.po_number', 'po.status', 'i.item_code', 'i.item_name')
             ->orderBy('po.po_number')
             ->orderBy('i.item_code')

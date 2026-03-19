@@ -15,8 +15,8 @@ class PurchaseOrderController extends Controller
         $rows = DB::table('purchase_orders as po')
             ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->select('po.*', 's.supplier_name')
-            ->when($request->filled('status'), fn ($q) => $q->where('po.status', $request->string('status')))
-            ->when($request->filled('supplier_id'), fn ($q) => $q->where('po.supplier_id', $request->integer('supplier_id')))
+            ->when($request->filled('status'), fn($q) => $q->where('po.status', $request->string('status')))
+            ->when($request->filled('supplier_id'), fn($q) => $q->where('po.supplier_id', $request->integer('supplier_id')))
             ->orderByDesc('po.id')
             ->paginate(20)
             ->withQueryString();
