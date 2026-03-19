@@ -1,10 +1,12 @@
 <!doctype html>
 <html lang="id">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? 'Portal Dokumen BC 4.0 - Internal' }}</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
     <style>
@@ -64,6 +66,7 @@
                     <li class="nav-item"><a href="{{ route('shipments.index') }}" class="nav-link {{ request()->routeIs('shipments.*') ? 'active' : '' }}"><i class="nav-icon fas fa-ship"></i><p>Dokumen Shipment</p></a></li>
                     <li class="nav-item"><a href="{{ route('receiving.index') }}" class="nav-link {{ request()->routeIs('receiving.*') ? 'active' : '' }}"><i class="nav-icon fas fa-box-open"></i><p>Dokumen Receiving</p></a></li>
                     <li class="nav-header">Monitoring & Audit</li>
+                    <li class="nav-item"><a href="{{ route('monitoring') }}" class="nav-link {{ request()->routeIs('monitoring') ? 'active' : '' }}"><i class="nav-icon fas fa-eye"></i><p>Monitoring Item</p></a></li>
                     <li class="nav-item"><a href="{{ route('traceability.index') }}" class="nav-link {{ request()->routeIs('traceability.*') ? 'active' : '' }}"><i class="nav-icon fas fa-search"></i><p>Traceability</p></a></li>
                     <li class="nav-item"><a href="{{ route('reports.outstanding') }}" class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="nav-icon fas fa-chart-bar"></i><p>Laporan Outstanding</p></a></li>
                     <li class="nav-item"><a href="{{ route('settings.index') }}" class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}"><i class="nav-icon fas fa-cogs"></i><p>Parameter Sistem</p></a></li>
@@ -89,32 +92,38 @@
         </section>
         <section class="content">
             <div class="container-fluid">
-                @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
+                @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div> @endif
                 @yield('content')
             </div>
         </section>
     </div>
 
-    <footer class="main-footer" style="background:#2a2340;border-top:none;"><span class="footer-note"><strong>Portal BC 4.0 Internal</strong> - Tampilan terinspirasi CEISA untuk kebutuhan operasional internal</span></footer>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
-<script>
-$(function(){
-    $('table.data-table').each(function(){
-        if (!$.fn.DataTable.isDataTable(this)) {
-            $(this).DataTable({
-                paging: false,
-                info: false,
-                ordering: true,
-                language: { search: "Cari:", zeroRecords: "Data tidak ditemukan" }
+    <footer class="main-footer"
+        style="background:#2a2340;border-top:none;"><span class="footer-note"><strong>Portal BC 4.0 Internal</strong> -
+        Tampilan terinspirasi CEISA untuk kebutuhan operasional internal</span></footer>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        $(function() {
+            $('table.data-table').each(function() {
+                if (!$.fn.DataTable.isDataTable(this)) {
+                    $(this).DataTable({
+                        paging: false,
+                        info: false,
+                        ordering: true,
+                        language: {
+                            search: "Cari:",
+                            zeroRecords: "Data tidak ditemukan"
+                        }
+                    });
+                }
             });
-        }
-    });
-});
-</script>
-</body>
+        });
+    </script>
+    </body>
+
 </html>
