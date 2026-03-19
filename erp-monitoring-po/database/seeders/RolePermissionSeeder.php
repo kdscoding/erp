@@ -35,5 +35,10 @@ class RolePermissionSeeder extends Seeder
             'user_id' => $admin->id,
             'role_id' => $adminRoleId,
         ], []);
+
+        DB::table('settings')->updateOrInsert(
+            ['key' => 'allow_over_receipt'],
+            ['value' => '0', 'updated_at' => now(), 'created_at' => now()]
+        );
     }
 }

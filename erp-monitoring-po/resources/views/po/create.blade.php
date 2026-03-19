@@ -196,8 +196,8 @@
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-3">
-                        <label class="doc-label">Nomor PO</label>
-                        <input type="text" class="form-control" name="po_number" value="{{ old('po_number') }}" required>
+                        <label class="doc-label">Nomor PO (Opsional, auto jika kosong)</label>
+                        <input type="text" class="form-control" name="po_number" value="{{ old('po_number') }}">
                     </div>
 
                     <div class="col-md-3">
