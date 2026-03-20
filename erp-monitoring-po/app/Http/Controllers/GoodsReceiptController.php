@@ -14,8 +14,9 @@ class GoodsReceiptController extends Controller
     {
         $rows = DB::table('goods_receipts as gr')
             ->join('purchase_orders as po', 'po.id', '=', 'gr.purchase_order_id')
+            ->leftJoin('shipments as sh', 'sh.id', '=', 'gr.shipment_id')
             ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
-            ->select('gr.*', 'po.po_number', 's.supplier_name')
+            ->select('gr.*', 'po.po_number', 's.supplier_name', 'sh.shipment_number', 'sh.delivery_note_number')
             ->when($request->filled('document_number'), fn ($q) => $q->where('gr.document_number', 'like', '%'.$request->string('document_number').'%'))
             ->orderByDesc('gr.id')
             ->paginate(20);
@@ -23,17 +24,44 @@ class GoodsReceiptController extends Controller
         $openPoList = DB::table('purchase_orders as po')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->select('po.id', 'po.po_number', 'po.status', 's.supplier_name')
-            ->whereIn('po.status', ['PO Issued', 'Confirmed', 'Partial'])
+            ->whereIn('po.status', ['PO Issued', 'Confirmed', 'Shipped', 'Partial'])
             ->orderByDesc('po.id')
             ->limit(200)
             ->get();
+
+        $activeShipmentIdSubquery = DB::table('shipments as sh')
+            ->select('sh.id')
+            ->whereColumn('sh.purchase_order_id', 'po.id')
+            ->whereIn('sh.status', ['Shipped', 'Partial Received'])
+            ->orderByDesc('sh.id')
+            ->limit(1);
+
+        $activeShipmentNumberSubquery = DB::table('shipments as sh')
+            ->select('sh.shipment_number')
+            ->whereColumn('sh.purchase_order_id', 'po.id')
+            ->whereIn('sh.status', ['Shipped', 'Partial Received'])
+            ->orderByDesc('sh.id')
+            ->limit(1);
+
+        $activeShipmentStatusSubquery = DB::table('shipments as sh')
+            ->select('sh.status')
+            ->whereColumn('sh.purchase_order_id', 'po.id')
+            ->whereIn('sh.status', ['Shipped', 'Partial Received'])
+            ->orderByDesc('sh.id')
+            ->limit(1);
+
+        $activeDeliveryNoteSubquery = DB::table('shipments as sh')
+            ->select('sh.delivery_note_number')
+            ->whereColumn('sh.purchase_order_id', 'po.id')
+            ->whereIn('sh.status', ['Shipped', 'Partial Received'])
+            ->orderByDesc('sh.id')
+            ->limit(1);
 
         $poItems = DB::table('purchase_order_items as poi')
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->join('items as i', 'i.id', '=', 'poi.item_id')
             ->leftJoin('goods_receipt_items as gri', 'gri.purchase_order_item_id', '=', 'poi.id')
-            ->leftJoin('shipments as sh', 'sh.purchase_order_id', '=', 'po.id')
             ->select(
                 'poi.id',
                 'poi.purchase_order_id',
@@ -46,9 +74,12 @@ class GoodsReceiptController extends Controller
                 's.supplier_name',
                 'i.item_code',
                 'i.item_name',
-                DB::raw('COALESCE(MAX(gri.created_at), NULL) as last_receipt_at'),
-                DB::raw('COALESCE(MAX(sh.delivery_note_number), NULL) as latest_delivery_note_number')
+                DB::raw('COALESCE(MAX(gri.created_at), NULL) as last_receipt_at')
             )
+            ->selectSub($activeShipmentIdSubquery, 'active_shipment_id')
+            ->selectSub($activeShipmentNumberSubquery, 'active_shipment_number')
+            ->selectSub($activeShipmentStatusSubquery, 'active_shipment_status')
+            ->selectSub($activeDeliveryNoteSubquery, 'latest_delivery_note_number')
             ->selectRaw("CASE
                 WHEN poi.item_status = 'Cancelled' THEN 'Cancelled'
                 WHEN poi.outstanding_qty <= 0 THEN 'Closed'
@@ -59,7 +90,13 @@ class GoodsReceiptController extends Controller
             END as monitoring_status")
             ->where('poi.outstanding_qty', '>', 0)
             ->where('poi.item_status', '!=', 'Cancelled')
-            ->whereIn('po.status', ['PO Issued', 'Confirmed', 'Partial'])
+            ->whereIn('po.status', ['PO Issued', 'Confirmed', 'Shipped', 'Partial'])
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('shipments as sh')
+                    ->whereColumn('sh.purchase_order_id', 'po.id')
+                    ->whereIn('sh.status', ['Shipped', 'Partial Received']);
+            })
             ->when($request->filled('po_id'), fn($q) => $q->where('po.id', $request->integer('po_id')))
             ->when($request->filled('supplier_id'), fn($q) => $q->where('po.supplier_id', $request->integer('supplier_id')))
             ->when($request->filled('keyword'), function ($q) use ($request) {
@@ -71,7 +108,15 @@ class GoodsReceiptController extends Controller
                         ->orWhere('s.supplier_name', 'like', $keyword);
                 });
             })
-            ->when($request->filled('document_number'), fn($q) => $q->where('sh.delivery_note_number', 'like', '%'.$request->string('document_number').'%'))
+            ->when($request->filled('document_number'), function ($q) use ($request) {
+                $q->whereExists(function ($inner) use ($request) {
+                    $inner->select(DB::raw(1))
+                        ->from('shipments as sh')
+                        ->whereColumn('sh.purchase_order_id', 'po.id')
+                        ->whereIn('sh.status', ['Shipped', 'Partial Received'])
+                        ->where('sh.delivery_note_number', 'like', '%'.$request->string('document_number').'%');
+                });
+            })
             ->groupBy('poi.id', 'poi.purchase_order_id', 'poi.ordered_qty', 'poi.received_qty', 'poi.outstanding_qty', 'poi.etd_date', 'po.po_number', 'po.status', 's.supplier_name', 'i.item_code', 'i.item_name')
             ->orderBy('po.po_number')
             ->orderBy('i.item_code')
@@ -85,6 +130,7 @@ class GoodsReceiptController extends Controller
     public function store(Request $request)
     {
         $v = $request->validate([
+            'shipment_id' => 'required|integer|exists:shipments,id',
             'purchase_order_item_id' => 'required|integer|exists:purchase_order_items,id',
             'receipt_date' => 'required|date',
             'received_qty' => 'required|numeric|min:0.01',
@@ -106,6 +152,15 @@ class GoodsReceiptController extends Controller
         try {
             $poItem = DB::table('purchase_order_items')->where('id', $v['purchase_order_item_id'])->lockForUpdate()->firstOrFail();
             $po = DB::table('purchase_orders')->where('id', $poItem->purchase_order_id)->lockForUpdate()->firstOrFail();
+            $shipment = DB::table('shipments')->where('id', $v['shipment_id'])->lockForUpdate()->firstOrFail();
+
+            if ((int) $shipment->purchase_order_id !== (int) $poItem->purchase_order_id) {
+                throw new \RuntimeException('Shipment tidak sesuai dengan PO item yang dipilih.');
+            }
+
+            if (! in_array($shipment->status, ['Shipped', 'Partial Received'], true)) {
+                throw new \RuntimeException('Receiving hanya bisa diproses untuk shipment yang sudah berstatus Shipped atau Partial Received.');
+            }
 
             if (in_array($po->status, ['Cancelled', 'Closed'], true)) {
                 throw new \RuntimeException('PO dengan status ini tidak dapat diproses receiving.');
@@ -123,6 +178,7 @@ class GoodsReceiptController extends Controller
                 'gr_number' => ErpFlow::generateNumber('GR', 'goods_receipts', 'gr_number'),
                 'receipt_date' => $v['receipt_date'],
                 'purchase_order_id' => $poItem->purchase_order_id,
+                'shipment_id' => $shipment->id,
                 'warehouse_id' => $po->warehouse_id,
                 'received_by' => optional($request->user())->id,
                 'document_number' => $v['document_number'] ?? null,
@@ -173,7 +229,13 @@ class GoodsReceiptController extends Controller
                 'updated_at' => now(),
             ]);
 
-            ErpFlow::refreshPoStatusByOutstanding((int) $poItem->purchase_order_id, optional($request->user())->id);
+            $poStatus = ErpFlow::refreshPoStatusByOutstanding((int) $poItem->purchase_order_id, optional($request->user())->id);
+
+            $shipmentStatus = in_array($poStatus, ['Closed', 'Cancelled'], true) ? 'Received' : 'Partial Received';
+            DB::table('shipments')->where('id', $shipment->id)->update([
+                'status' => $shipmentStatus,
+                'updated_at' => now(),
+            ]);
             ErpFlow::audit('goods_receipts', $grId, 'create', null, $v, optional($request->user())->id, $request->ip());
 
             DB::commit();

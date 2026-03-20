@@ -107,9 +107,16 @@ class PoReceivingFlowTest extends TestCase
             'delivery_note_number' => 'SJ-0001',
         ])->assertSessionHas('success');
 
+        $shipmentId = DB::table('shipments')->value('id');
+        $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Draft']);
+
+        $this->actingAs($user)->patch("/shipments/{$shipmentId}/mark-shipped")->assertSessionHas('success');
+
         $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Shipped']);
+        $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Shipped']);
 
         $this->actingAs($user)->post('/receiving', [
+            'shipment_id' => $shipmentId,
             'purchase_order_item_id' => $poItemId,
             'receipt_date' => now()->toDateString(),
             'received_qty' => 40,
@@ -118,8 +125,10 @@ class PoReceivingFlowTest extends TestCase
 
         $this->assertDatabaseHas('purchase_order_items', ['id' => $poItemId, 'outstanding_qty' => 60]);
         $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Partial']);
+        $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Partial Received']);
 
         $this->actingAs($user)->post('/receiving', [
+            'shipment_id' => $shipmentId,
             'purchase_order_item_id' => $poItemId,
             'receipt_date' => now()->toDateString(),
             'received_qty' => 60,
@@ -128,6 +137,7 @@ class PoReceivingFlowTest extends TestCase
 
         $this->assertDatabaseHas('purchase_order_items', ['id' => $poItemId, 'outstanding_qty' => 0]);
         $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Closed']);
+        $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Received']);
     }
 
     public function test_over_receipt_is_blocked_by_default(): void
@@ -155,7 +165,18 @@ class PoReceivingFlowTest extends TestCase
             'updated_at' => now(),
         ]);
 
+        $shipmentId = DB::table('shipments')->insertGetId([
+            'purchase_order_id' => $poId,
+            'shipment_number' => 'SHP-TEST-0002',
+            'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'SJ-0002',
+            'status' => 'Shipped',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         $this->actingAs($user)->from('/receiving')->post('/receiving', [
+            'shipment_id' => $shipmentId,
             'purchase_order_item_id' => $poItemId,
             'receipt_date' => now()->toDateString(),
             'received_qty' => 11,

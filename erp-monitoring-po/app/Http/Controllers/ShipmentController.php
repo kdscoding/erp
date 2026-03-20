@@ -11,6 +11,7 @@ use Illuminate\View\View;
 class ShipmentController extends Controller
 {
     private const SHIPPABLE_PO_STATUSES = ['PO Issued', 'Confirmed', 'Shipped', 'Partial'];
+    private const RECEIVABLE_SHIPMENT_STATUSES = ['Shipped', 'Partial Received'];
 
     public function index(Request $request): View
     {
@@ -85,22 +86,45 @@ class ShipmentController extends Controller
             'eta_date' => $v['eta_date'] ?? null,
             'delivery_note_number' => $v['delivery_note_number'],
             'supplier_remark' => $remark,
-            'status' => 'Shipped',
+            'status' => 'Draft',
             'created_by' => $userId,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        DB::table('purchase_orders')->where('id', $v['purchase_order_id'])->update([
-            'status' => 'Shipped',
-            'eta_date' => $v['eta_date'] ?? $po->eta_date,
-            'updated_by' => $userId,
-            'updated_at' => now(),
-        ]);
-
-        ErpFlow::pushPoStatus((int) $po->id, $po->status, 'Shipped', $userId, 'Shipment '.$number.' dibuat.');
         ErpFlow::audit('shipments', (int) DB::getPdo()->lastInsertId(), 'create', null, $v, $userId, $request->ip());
 
-        return back()->with('success', 'Shipment tersimpan.');
+        return back()->with('success', 'Shipment tersimpan dengan status Draft.');
+    }
+
+    public function markShipped(string $id, Request $request)
+    {
+        $shipment = DB::table('shipments')->where('id', $id)->firstOrFail();
+        if ($shipment->status !== 'Draft') {
+            return back()->with('error', 'Hanya shipment Draft yang bisa dikonfirmasi menjadi Shipped.');
+        }
+
+        $po = DB::table('purchase_orders')->where('id', $shipment->purchase_order_id)->firstOrFail();
+        $userId = optional($request->user())->id;
+
+        DB::transaction(function () use ($shipment, $po, $userId) {
+            DB::table('shipments')->where('id', $shipment->id)->update([
+                'status' => 'Shipped',
+                'updated_at' => now(),
+            ]);
+
+            DB::table('purchase_orders')->where('id', $shipment->purchase_order_id)->update([
+                'status' => 'Shipped',
+                'eta_date' => $shipment->eta_date ?? $po->eta_date,
+                'updated_by' => $userId,
+                'updated_at' => now(),
+            ]);
+
+            if ($po->status !== 'Shipped') {
+                ErpFlow::pushPoStatus((int) $po->id, $po->status, 'Shipped', $userId, 'Shipment '.$shipment->shipment_number.' dikonfirmasi berangkat.');
+            }
+        });
+
+        return back()->with('success', 'Shipment berhasil dikonfirmasi menjadi Shipped.');
     }
 }

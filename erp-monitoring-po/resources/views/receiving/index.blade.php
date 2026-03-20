@@ -57,11 +57,12 @@
     <div class="card-header"><h3 class="card-title">Posting Receiving (Item per Item)</h3></div>
     <div class="card-body table-responsive p-0">
         <table class="table table-hover mb-0 data-table">
-            <thead><tr><th>PO</th><th>Supplier / Referensi</th><th>Item</th><th>Ordered</th><th>Received</th><th>Outstanding</th><th>Status</th><th>Input Kedatangan</th></tr></thead>
+            <thead><tr><th>PO</th><th>Shipment</th><th>Supplier / Referensi</th><th>Item</th><th>Ordered</th><th>Received</th><th>Outstanding</th><th>Status</th><th>Input Kedatangan</th></tr></thead>
             <tbody>
             @forelse($poItems as $item)
                 <tr>
                     <td>{{ $item->po_number }}<br><span class="badge bg-{{ $statusBadge($item->po_status) }}">{{ $item->po_status }}</span></td>
+                    <td>{{ $item->active_shipment_number }}<br><span class="badge bg-{{ $item->active_shipment_status === 'Shipped' ? 'primary' : 'warning text-dark' }}">{{ $item->active_shipment_status }}</span></td>
                     <td>{{ $item->supplier_name }}<br><small class="text-muted">Delivery Note: {{ $item->latest_delivery_note_number ?: '-' }}</small></td>
                     <td><strong>{{ $item->item_code }}</strong><br>{{ $item->item_name }}</td>
                     <td>{{ number_format($item->ordered_qty, 2, ',', '.') }}</td>
@@ -71,6 +72,7 @@
                     <td>
                         <form method="POST" action="{{ route('receiving.store') }}" class="row g-1 align-items-center receiving-form" enctype="multipart/form-data">
                             @csrf
+                            <input type="hidden" name="shipment_id" value="{{ $item->active_shipment_id }}">
                             <input type="hidden" name="purchase_order_item_id" value="{{ $item->id }}">
                             <input type="hidden" class="ordered-val" value="{{ $item->ordered_qty }}">
                             <input type="hidden" class="received-val" value="{{ $item->received_qty }}">
@@ -84,14 +86,14 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="8" class="text-center text-muted">Tidak ada item outstanding untuk diproses.</td></tr>
+                <tr><td colspan="9" class="text-center text-muted">Tidak ada item outstanding untuk diproses.</td></tr>
             @endforelse
             </tbody>
         </table>
     </div>
 </div>
 
-<div class="card"><div class="card-header"><h3 class="card-title">Riwayat Goods Receipt</h3></div><div class="card-body table-responsive p-0"><table class="table table-hover text-nowrap mb-0 data-table"><thead><tr><th>GR</th><th>PO</th><th>Supplier</th><th>Tgl</th></tr></thead><tbody>@foreach($rows as $r)<tr><td>{{ $r->gr_number }}</td><td>{{ $r->po_number }}</td><td>{{ $r->supplier_name }}</td><td>{{ \Carbon\Carbon::parse($r->receipt_date)->format('d-m-Y') }}</td></tr>@endforeach</tbody></table></div></div>
+<div class="card"><div class="card-header"><h3 class="card-title">Riwayat Goods Receipt</h3></div><div class="card-body table-responsive p-0"><table class="table table-hover text-nowrap mb-0 data-table"><thead><tr><th>GR</th><th>Shipment</th><th>PO</th><th>Supplier</th><th>No Dok</th><th>Tgl</th></tr></thead><tbody>@foreach($rows as $r)<tr><td>{{ $r->gr_number }}</td><td>{{ $r->shipment_number ?: '-' }}</td><td>{{ $r->po_number }}</td><td>{{ $r->supplier_name }}</td><td>{{ $r->document_number ?: $r->delivery_note_number ?: '-' }}</td><td>{{ \Carbon\Carbon::parse($r->receipt_date)->format('d-m-Y') }}</td></tr>@endforeach</tbody></table></div></div>
 <div class="mt-2">{{ $rows->links() }}</div>
 
 <script>
