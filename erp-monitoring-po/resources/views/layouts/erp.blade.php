@@ -8,7 +8,7 @@
     <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css">
     <style>
         :root{--bc-blue:#2c2a4a;--bc-blue-2:#5a3d7a;--bc-bg:#f4f2f8;--bc-line:#d9d2e6;}
         body{font-size:12.5px;background:var(--bc-bg)}
@@ -34,6 +34,8 @@
         .nav-header{font-size:10px;color:#f0e8ff!important;letter-spacing:.7px;text-transform:uppercase;font-weight:700}
         .footer-note{font-size:11px;color:#efe4ff}
         .bc-chip{background:#ffffff33;border:1px solid #ffffff77;padding:2px 9px;border-radius:99px;font-size:10.5px}
+        .form-select{display:block;width:100%;height:calc(2.25rem + 2px);padding:.375rem 1.75rem .375rem .75rem;font-size:1rem;line-height:1.5;color:#495057;vertical-align:middle;background:#fff url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3e%3cpath fill='%23343a40' d='M2 5L0 0h4z'/%3e%3c/svg%3e") no-repeat right .75rem center/8px 10px;border:1px solid #ced4da;border-radius:.25rem;appearance:none}
+        .form-select-sm{height:calc(1.8125rem + 2px);padding-top:.25rem;padding-bottom:.25rem;padding-left:.5rem;font-size:.875rem}
     </style>
 </head>
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed">
@@ -51,12 +53,12 @@
     @endphp
     <nav class="main-header navbar navbar-expand">
         <ul class="navbar-nav"><li class="nav-item"><a class="nav-link" data-widget="pushmenu" href="#"><i class="fas fa-bars"></i></a></li></ul>
-        <ul class="navbar-nav ms-auto align-items-center">
-            <li class="nav-item me-3"><span class="bc-chip">SIMULASI CEISA BEACUKAI - DARK THEME</span></li>
+        <ul class="navbar-nav ml-auto align-items-center">
+            <li class="nav-item mr-3"><span class="bc-chip">SIMULASI CEISA BEACUKAI - DARK THEME</span></li>
             @auth
-            <li class="nav-item me-3"><span class="bc-chip">{{ $roleLabel }}</span></li>
+            <li class="nav-item mr-3"><span class="bc-chip">{{ $roleLabel }}</span></li>
             @endauth
-            <li class="nav-item me-3 small">{{ auth()->user()->nik ?? '-' }} | {{ auth()->user()->email ?? 'Guest' }}</li>
+            <li class="nav-item mr-3 small">{{ auth()->user()->nik ?? '-' }} | {{ auth()->user()->email ?? 'Guest' }}</li>
             @auth
             <li class="nav-item"><form method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-sm btn-light">Logout</button></form></li>
             @endauth
@@ -110,7 +112,7 @@
                         <h1 class="m-0">{{ $header ?? 'Portal Dokumen BC 4.0 Internal' }}</h1>
                         <div class="bc-sub">Monitoring Purchase Order, Shipment, dan Receiving Material Label</div>
                     </div>
-                    <div class="col-md-5 text-md-end">
+                    <div class="col-md-5 text-md-right">
                         <span class="bc-ribbon">Tanggal Sistem: {{ now()->timezone('Asia/Jakarta')->format('d-m-Y H:i') }} WIB</span>
                     </div>
                 </div>
@@ -122,7 +124,7 @@
                 @if (session('error'))<div class="alert alert-danger">{{ session('error') }}</div> @endif
                 @if ($errors->any())
                     <div class="alert alert-danger">
-                        <ul class="mb-0 ps-3">
+                        <ul class="mb-0 pl-3">
                             @foreach ($errors->all() as $error)
                                 <li>{{ $error }}</li>
                             @endforeach
@@ -139,10 +141,10 @@
         Tampilan terinspirasi CEISA untuk kebutuhan operasional internal</span></footer>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap4.min.js"></script>
     <script>
         $(function() {
             $('table.data-table').each(function() {

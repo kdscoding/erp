@@ -1,45 +1,40 @@
 <x-guest-layout>
-    <div class="p-4 border rounded" style="border-color:#bcd0ec!important;background:#f3f8ff;">
-        <div class="text-center mb-4">
-            <div class="fw-bold" style="font-size:20px;color:#004b9b;">PORTAL BC 4.0 INTERNAL</div>
-            <div class="text-muted" style="font-size:12px;">Tampilan terinspirasi CEISA Beacukai untuk monitoring operasional perusahaan</div>
+    <p class="login-box-msg mb-4">Masuk menggunakan NIK untuk mengakses portal operasional internal.</p>
+
+    @if (session('status'))
+        <div class="alert alert-success">{{ session('status') }}</div>
+    @endif
+
+    <form method="POST" action="{{ route('login') }}">
+        @csrf
+        <div class="input-group mb-3">
+            <input id="nik" type="text" name="nik" value="{{ old('nik') }}" class="form-control @error('nik') is-invalid @enderror" placeholder="NIK" required autofocus autocomplete="username">
+            <div class="input-group-append"><div class="input-group-text"><span class="fas fa-id-card"></span></div></div>
+            @error('nik')<span class="invalid-feedback d-block">{{ $message }}</span>@enderror
         </div>
 
-        <x-auth-session-status class="mb-4" :status="session('status')" />
+        <div class="input-group mb-3">
+            <input id="password" type="password" name="password" class="form-control @error('password') is-invalid @enderror" placeholder="Password" required autocomplete="current-password">
+            <div class="input-group-append"><div class="input-group-text"><span class="fas fa-lock"></span></div></div>
+            @error('password')<span class="invalid-feedback d-block">{{ $message }}</span>@enderror
+        </div>
 
-        <form method="POST" action="{{ route('login') }}">
-            @csrf
-
-            <div>
-                <x-input-label for="nik" :value="__('NIK')" />
-                <x-text-input id="nik" class="block mt-1 w-full" type="text" name="nik" :value="old('nik')" required autofocus autocomplete="username" />
-                <x-input-error :messages="$errors->get('nik')" class="mt-2" />
+        <div class="row">
+            <div class="col-6">
+                <div class="icheck-primary">
+                    <input id="remember_me" type="checkbox" name="remember">
+                    <label for="remember_me">Ingat saya</label>
+                </div>
             </div>
-
-            <div class="mt-4">
-                <x-input-label for="password" :value="__('Password')" />
-                <x-text-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="current-password" />
-                <x-input-error :messages="$errors->get('password')" class="mt-2" />
+            <div class="col-6">
+                <button type="submit" class="btn btn-primary btn-block">Masuk</button>
             </div>
+        </div>
+    </form>
 
-            <div class="block mt-4">
-                <label for="remember_me" class="inline-flex items-center">
-                    <input id="remember_me" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                    <span class="ms-2 text-sm text-gray-600">Ingat saya</span>
-                </label>
-            </div>
-
-            <div class="flex items-center justify-end mt-4">
-                @if (Route::has('password.request'))
-                    <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
-                        Lupa password?
-                    </a>
-                @endif
-
-                <x-primary-button class="ms-3">
-                    Masuk
-                </x-primary-button>
-            </div>
-        </form>
-    </div>
+    @if (Route::has('password.request'))
+        <p class="mb-1 mt-3">
+            <a href="{{ route('password.request') }}">Lupa password?</a>
+        </p>
+    @endif
 </x-guest-layout>

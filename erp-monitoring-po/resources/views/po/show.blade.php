@@ -79,7 +79,7 @@
                     <h3 class="card-title">Cancel PO</h3>
                 </div>
                 <div class="card-body">
-                    <button class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#cancelPoModal">Batalkan
+                    <button class="btn btn-danger w-100" data-toggle="modal" data-target="#cancelPoModal">Batalkan
                         PO</button>
                     @if ($po->cancel_reason)
                         <div class="alert alert-danger mt-2 mb-0"><strong>Alasan:</strong> {{ $po->cancel_reason }}</div>
@@ -177,11 +177,11 @@
                                         </form>
 
                                         <div class="d-flex gap-1 flex-wrap">
-                                            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
-                                                data-bs-target="#cancelItemModal{{ $item->id }}"
+                                            <button class="btn btn-sm btn-outline-danger" data-toggle="modal"
+                                                data-target="#cancelItemModal{{ $item->id }}"
                                                 @disabled($item->monitoring_status === 'Cancelled')>Cancel</button>
-                                            <button class="btn btn-sm btn-danger" data-bs-toggle="modal"
-                                                data-bs-target="#forceCloseModal{{ $item->id }}"
+                                            <button class="btn btn-sm btn-danger" data-toggle="modal"
+                                                data-target="#forceCloseModal{{ $item->id }}"
                                                 @disabled(!in_array($item->monitoring_status, ['Confirmed', 'Partial']))>Force Close</button>
                                         </div>
                                     </td>
@@ -195,7 +195,7 @@
                                             @csrf
                                             <div class="modal-header">
                                                 <h5 class="modal-title">Cancel Item {{ $item->item_code }}</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                                             </div>
                                             <div class="modal-body">
                                                 <label class="form-label">Alasan Pembatalan *</label>
@@ -203,7 +203,7 @@
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-light"
-                                                    data-bs-dismiss="modal">Tutup</button>
+                                                    data-dismiss="modal">Tutup</button>
                                                 <button class="btn btn-danger">Konfirmasi Cancel</button>
                                             </div>
                                         </form>
@@ -218,7 +218,7 @@
                                             @csrf
                                             <div class="modal-header">
                                                 <h5 class="modal-title">Force Close Item {{ $item->item_code }}</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                                             </div>
                                             <div class="modal-body">
                                                 <div class="alert alert-warning">Status akan jadi <strong>Cancelled</strong></div>
@@ -227,7 +227,7 @@
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-light"
-                                                    data-bs-dismiss="modal">Tutup</button>
+                                                    data-dismiss="modal">Tutup</button>
                                                 <button class="btn btn-danger">Force Close</button>
                                             </div>
                                         </form>
@@ -248,14 +248,14 @@
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Batalkan PO {{ $po->po_number }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
                     <label class="form-label">Alasan Pembatalan *</label>
                     <textarea name="cancel_reason" class="form-control" required rows="3"></textarea>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Tutup</button>
                     <button class="btn btn-danger">Konfirmasi Cancel PO</button>
                 </div>
             </form>

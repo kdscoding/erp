@@ -10,10 +10,10 @@
 
 <ul class="nav nav-tabs mb-3" id="shipmentTabs" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link {{ request('view', 'draft') !== 'history' ? 'active' : '' }}" id="draft-tab" data-bs-toggle="tab" data-bs-target="#draft-pane" type="button" role="tab" aria-controls="draft-pane" aria-selected="{{ request('view', 'draft') !== 'history' ? 'true' : 'false' }}">Pembuatan Draft</button>
+        <a class="nav-link {{ request('view', 'draft') !== 'history' ? 'active' : '' }}" id="draft-tab" data-toggle="tab" href="#draft-pane" role="tab" aria-controls="draft-pane" aria-selected="{{ request('view', 'draft') !== 'history' ? 'true' : 'false' }}">Pembuatan Draft</a>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link {{ request('view') === 'history' ? 'active' : '' }}" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-pane" type="button" role="tab" aria-controls="history-pane" aria-selected="{{ request('view') === 'history' ? 'true' : 'false' }}">Riwayat Shipment</button>
+        <a class="nav-link {{ request('view') === 'history' ? 'active' : '' }}" id="history-tab" data-toggle="tab" href="#history-pane" role="tab" aria-controls="history-pane" aria-selected="{{ request('view') === 'history' ? 'true' : 'false' }}">Riwayat Shipment</a>
     </li>
 </ul>
 
@@ -31,12 +31,12 @@
 </div>
 @endif
 <form method="GET" class="row g-2 align-items-end shipment-selection-form">
-<div class="col-md-3"><label class="form-label">Supplier</label><select name="supplier_id" class="form-select" {{ $selectedItems->isNotEmpty() ? 'disabled' : '' }}><option value="">Semua Supplier</option>@foreach($suppliers as $supplier)<option value="{{ $supplier->id }}" @selected((int) request('supplier_id', $selectedSupplierId) == (int) $supplier->id)>{{ $supplier->supplier_name }}</option>@endforeach</select>@if($selectedItems->isNotEmpty())<input type="hidden" name="supplier_id" value="{{ $selectedSupplierId }}">@endif</div>
-<div class="col-md-8"><label class="form-label">Cari Item / PO / Supplier</label><input type="text" name="keyword" value="{{ request('keyword') }}" class="form-control" placeholder="Contoh: item code, nama item, PO, supplier"></div>
+<div class="col-md-3"><label class="form-label">Supplier</label><select name="supplier_id" class="form-select form-select-sm" {{ $selectedItems->isNotEmpty() ? 'disabled' : '' }}><option value="">Semua Supplier</option>@foreach($suppliers as $supplier)<option value="{{ $supplier->id }}" @selected((int) request('supplier_id', $selectedSupplierId) == (int) $supplier->id)>{{ $supplier->supplier_name }}</option>@endforeach</select>@if($selectedItems->isNotEmpty())<input type="hidden" name="supplier_id" value="{{ $selectedSupplierId }}">@endif</div>
+<div class="col-md-8"><label class="form-label">Cari Item / PO / Supplier</label><input type="text" name="keyword" value="{{ request('keyword') }}" class="form-control form-control-sm" placeholder="Contoh: item code, nama item, PO, supplier"></div>
 <input type="hidden" name="view" value="draft">
 @foreach($selectedItemIds as $selectedItemId)<input type="hidden" name="selected_items[]" value="{{ $selectedItemId }}">@endforeach
 @foreach($draftQuantities as $itemId => $qty)<input type="hidden" name="shipped_qty[{{ $itemId }}]" value="{{ $qty }}">@endforeach
-<div class="col-md-1"><button class="btn btn-outline-primary w-100">Cari</button></div>
+<div class="col-md-1"><button class="btn btn-outline-primary btn-sm w-100">Cari</button></div>
 </form></div></div>
 
 <div class="card mb-3">
@@ -47,11 +47,13 @@
     Kandidat item akan muncul setelah Anda mencari supplier atau keyword item/PO.
 </div>
 @else
-<div class="p-3 border-bottom bg-light d-flex justify-content-between align-items-center gap-2 flex-wrap">
-    <div class="text-muted small">Centang item yang ingin dimasukkan ke draft shipment.</div>
-    <div class="d-flex gap-2">
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleCandidateCheckboxes(false)">Kosongkan Centang</button>
-        <button type="button" class="btn btn-sm btn-primary" onclick="addCheckedCandidateItems()">Tambahkan ke Draft</button>
+<div class="p-3 border-bottom bg-light">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+            <div class="font-weight-bold">Kandidat Item</div>
+            <small class="text-muted">Centang item yang ingin dimasukkan ke draft shipment, lalu lanjutkan dengan aksi di kanan.</small>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" onclick="addCheckedCandidateItems()">Tambahkan ke Draft</button>
     </div>
 </div>
 <table class="table table-hover mb-0">
@@ -86,14 +88,14 @@
     {{ $selectedItems->count() }} item terpilih dari {{ $selectedItems->pluck('purchase_order_id')->unique()->count() }} PO.
     Supplier: <strong>{{ $selectedItems->first()->supplier_name }}</strong>
 </div>
-<div class="mb-3 d-flex gap-2 flex-wrap">
-    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleDraftCheckboxes(false)">Kosongkan Centang</button>
-    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCheckedDraftItems()">Batal Pilih yang Dicentang</button>
-    <form method="GET" action="{{ route('shipments.index') }}">
-        <input type="hidden" name="view" value="draft">
-        <input type="hidden" name="clear_selection" value="1">
-        <button class="btn btn-sm btn-outline-danger">Bersihkan Semua Item</button>
-    </form>
+<div class="mb-3 p-3 border rounded bg-light">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+            <div class="font-weight-bold">Item Dalam Draft</div>
+            <small class="text-muted">Tinjau kembali item yang sudah dipilih. Gunakan aksi berikut jika ada item yang perlu dikeluarkan dari draft.</small>
+        </div>
+        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeCheckedDraftItems()">Keluarkan Item Terpilih</button>
+    </div>
 </div>
 @else
 <div class="alert alert-warning">
@@ -103,17 +105,17 @@
 <form method="POST" action="{{ route('shipments.store') }}" class="row g-2">@csrf
 <div class="col-md-4">
     <label class="form-label">Supplier</label>
-    <input type="text" class="form-control" value="{{ optional($selectedItems->first())->supplier_name ?: '-' }}" disabled>
+    <input type="text" class="form-control form-control-sm" value="{{ optional($selectedItems->first())->supplier_name ?: '-' }}" disabled>
 </div>
-<div class="col-md-3"><label class="form-label">No Delivery Note</label><input type="text" name="delivery_note_number" value="{{ old('delivery_note_number') }}" class="form-control" placeholder="No surat jalan supplier" required></div>
-<div class="col-md-4"><label class="form-label">Tanggal Dokumen</label><input type="date" name="shipment_date" value="{{ old('shipment_date', now()->format('Y-m-d')) }}" class="form-control" required></div>
+<div class="col-md-3"><label class="form-label">No Delivery Note</label><input type="text" name="delivery_note_number" value="{{ old('delivery_note_number') }}" class="form-control form-control-sm" placeholder="No surat jalan supplier" required></div>
+<div class="col-md-4"><label class="form-label">Tanggal Dokumen</label><input type="date" name="shipment_date" value="{{ old('shipment_date', now()->format('Y-m-d')) }}" class="form-control form-control-sm" required></div>
 <div class="col-md-4">
     <div class="form-check mt-2">
         <input class="form-check-input" type="checkbox" value="1" name="po_reference_missing" id="po_reference_missing" @checked(old('po_reference_missing') === '1')>
         <label class="form-check-label" for="po_reference_missing">Nomor PO tidak ada di dokumen supplier</label>
     </div>
 </div>
-<div class="col-md-8"><input type="text" name="supplier_remark" value="{{ old('supplier_remark') }}" class="form-control" placeholder="Catatan internal, misalnya info supplier atau alasan pencocokan"></div>
+<div class="col-md-8"><input type="text" name="supplier_remark" value="{{ old('supplier_remark') }}" class="form-control form-control-sm" placeholder="Catatan internal, misalnya info supplier atau alasan pencocokan"></div>
 
 <div class="col-12">
     <div class="table-responsive">
@@ -130,7 +132,7 @@
                         <input type="hidden" name="selected_items[]" value="{{ $item->purchase_order_item_id }}">
                         <input type="number" step="0.01" min="0.01" max="{{ $item->available_to_ship_qty }}" name="shipped_qty[{{ $item->purchase_order_item_id }}]" value="{{ old('shipped_qty.'.$item->purchase_order_item_id, $draftQuantities[$item->purchase_order_item_id] ?? $item->available_to_ship_qty) }}" class="form-control" required>
                     </td>
-                    <td>
+                    <td class="text-nowrap">
                         <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeDraftItem('{{ $item->purchase_order_item_id }}')">Batal Pilih</button>
                     </td>
                 </tr>
@@ -142,7 +144,7 @@
     </div>
 </div>
 <div class="col-12 d-flex justify-content-end">
-    <button class="btn btn-primary" {{ $selectedItems->isEmpty() ? 'disabled' : '' }}>Simpan Draft Shipment</button>
+    <button class="btn btn-primary btn-sm" {{ $selectedItems->isEmpty() ? 'disabled' : '' }}>Simpan Draft Shipment</button>
 </div>
 </form></div></div>
 </div>
@@ -152,9 +154,9 @@
 <div class="card-header"><h3 class="card-title">Riwayat Shipment</h3></div>
 <div class="card-body">
 <form method="GET" class="row g-2 align-items-end">
-<div class="col-md-4"><label class="form-label">Cari Delivery Note</label><input type="text" name="delivery_note_number" value="{{ request('delivery_note_number') }}" class="form-control" placeholder="No surat jalan supplier"></div>
+<div class="col-md-4"><label class="form-label">Cari Delivery Note</label><input type="text" name="delivery_note_number" value="{{ request('delivery_note_number') }}" class="form-control form-control-sm" placeholder="No surat jalan supplier"></div>
 <input type="hidden" name="view" value="history">
-<div class="col-md-2"><button class="btn btn-outline-secondary w-100">Cari Riwayat</button></div>
+<div class="col-md-2"><button class="btn btn-outline-secondary btn-sm w-100">Cari Riwayat</button></div>
 </form>
 </div></div>
 
@@ -164,7 +166,6 @@
 <div class="mt-2">{{ $rows->links() }}</div>
 </div>
 </div>
-
 <script>
     const draftStorageKey = 'shipment-draft-state-{{ auth()->id() ?? "guest" }}';
 
