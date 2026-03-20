@@ -14,11 +14,33 @@ class ShipmentController extends Controller
 
     public function index(Request $request): View
     {
-        $selectedItemIds = collect($request->input('selected_items', []))
+        if ($request->boolean('clear_selection')) {
+            $request->session()->forget('shipment_selected_items');
+            $request->session()->forget('shipment_shipped_qty');
+        }
+
+        if ($request->has('shipped_qty')) {
+            $request->session()->put('shipment_shipped_qty', collect($request->input('shipped_qty', []))
+                ->mapWithKeys(fn ($qty, $itemId) => [(int) $itemId => (float) $qty])
+                ->all());
+        }
+
+        if ($request->has('selected_items')) {
+            $request->session()->put('shipment_selected_items', collect($request->input('selected_items', []))
+                ->map(fn ($id) => (int) $id)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all());
+        }
+
+        $selectedItemIds = collect($request->has('selected_items')
+            ? $request->input('selected_items', [])
+            : $request->session()->get('shipment_selected_items', []))
             ->map(fn ($id) => (int) $id)
             ->filter()
             ->values();
-        $hasSearch = $request->filled('supplier_id') || $request->filled('keyword');
+        $hasSearch = $request->filled('supplier_id') || $request->filled('keyword') || $selectedItemIds->isNotEmpty();
 
         $rows = DB::table('shipments as sh')
             ->leftJoin('suppliers as s', 's.id', '=', 'sh.supplier_id')
@@ -39,8 +61,16 @@ class ShipmentController extends Controller
             ->orderByDesc('sh.id')
             ->paginate(20);
 
+        $selectedItems = $selectedItemIds->isNotEmpty()
+            ? $this->candidateItemsBaseQuery()->whereIn('poi.id', $selectedItemIds)->get()
+            : collect();
+        $selectedSupplierId = $selectedItems->isNotEmpty() ? (int) $selectedItems->first()->supplier_id : null;
+        $draftQuantities = collect($request->session()->get('shipment_shipped_qty', []))
+            ->mapWithKeys(fn ($qty, $itemId) => [(int) $itemId => (float) $qty]);
+
         $candidateItems = $hasSearch
             ? $this->candidateItemsQuery($request)
+                ->when($selectedSupplierId, fn ($query) => $query->where('po.supplier_id', $selectedSupplierId))
                 ->orderBy('s.supplier_name')
                 ->orderBy('po.po_number')
                 ->orderBy('i.item_code')
@@ -48,19 +78,14 @@ class ShipmentController extends Controller
                 ->get()
             : collect();
 
-        $selectedItems = $selectedItemIds->isNotEmpty()
-            ? $this->candidateItemsBaseQuery()->whereIn('poi.id', $selectedItemIds)->get()
-            : collect();
-
         $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name']);
 
-        return view('shipments.index', compact('rows', 'suppliers', 'candidateItems', 'selectedItems', 'hasSearch'));
+        return view('shipments.index', compact('rows', 'suppliers', 'candidateItems', 'selectedItems', 'hasSearch', 'selectedSupplierId', 'draftQuantities'));
     }
 
     public function store(Request $request)
     {
         $v = $request->validate([
-            'supplier_id' => 'required|integer|exists:suppliers,id',
             'shipment_date' => 'required|date',
             'delivery_note_number' => 'required|string|max:100',
             'supplier_remark' => 'nullable|string|max:500',
@@ -81,9 +106,11 @@ class ShipmentController extends Controller
             return back()->withInput()->with('error', 'Sebagian item tidak lagi tersedia untuk dibuat shipment.');
         }
 
-        if ($items->pluck('supplier_id')->unique()->count() !== 1 || (int) $items->first()->supplier_id !== (int) $v['supplier_id']) {
+        if ($items->pluck('supplier_id')->unique()->count() !== 1) {
             return back()->withInput()->with('error', 'Semua item shipment harus berasal dari supplier yang sama.');
         }
+
+        $supplierId = (int) $items->first()->supplier_id;
 
         $linePayloads = [];
         foreach ($items as $item) {
@@ -110,10 +137,10 @@ class ShipmentController extends Controller
             $v['supplier_remark'] ?? null,
         ]))) ?: null;
 
-        DB::transaction(function () use ($linePayloads, $number, $remark, $userId, $v, $request) {
+        DB::transaction(function () use ($linePayloads, $number, $remark, $supplierId, $userId, $v, $request) {
             $shipmentId = DB::table('shipments')->insertGetId([
                 'purchase_order_id' => $linePayloads[0]['purchase_order_id'],
-                'supplier_id' => $v['supplier_id'],
+                'supplier_id' => $supplierId,
                 'shipment_number' => $number,
                 'shipment_date' => $v['shipment_date'],
                 'delivery_note_number' => $v['delivery_note_number'],
@@ -140,6 +167,9 @@ class ShipmentController extends Controller
                 'lines' => $linePayloads,
             ], $userId, $request->ip());
         });
+
+        $request->session()->forget('shipment_selected_items');
+        $request->session()->forget('shipment_shipped_qty');
 
         return back()->with('success', 'Shipment dokumen supplier tersimpan dengan status Draft.');
     }
