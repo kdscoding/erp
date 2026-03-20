@@ -34,8 +34,6 @@
         .nav-header{font-size:10px;color:#f0e8ff!important;letter-spacing:.7px;text-transform:uppercase;font-weight:700}
         .footer-note{font-size:11px;color:#efe4ff}
         .bc-chip{background:#ffffff33;border:1px solid #ffffff77;padding:2px 9px;border-radius:99px;font-size:10.5px}
-        .form-select{display:block;width:100%;height:calc(2.25rem + 2px);padding:.375rem 1.75rem .375rem .75rem;font-size:1rem;line-height:1.5;color:#495057;vertical-align:middle;background:#fff url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3e%3cpath fill='%23343a40' d='M2 5L0 0h4z'/%3e%3c/svg%3e") no-repeat right .75rem center/8px 10px;border:1px solid #ced4da;border-radius:.25rem;appearance:none}
-        .form-select-sm{height:calc(1.8125rem + 2px);padding-top:.25rem;padding-bottom:.25rem;padding-left:.5rem;font-size:.875rem}
     </style>
 </head>
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed">

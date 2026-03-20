@@ -24,7 +24,7 @@
         <form method="GET" class="row g-2 align-items-end">
             <div class="col-md-5">
                 <label class="form-label">Pilih PO</label>
-                <select name="po_id" class="form-select">
+                <select name="po_id" class="form-select form-select-sm">
                     <option value="">Semua PO Aktif</option>
                     @foreach($openPoList as $po)
                         <option value="{{ $po->id }}" @selected(request('po_id') == $po->id)>{{ $po->po_number }} - {{ $po->supplier_name }} ({{ $po->status }})</option>
@@ -33,7 +33,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label">Supplier</label>
-                <select name="supplier_id" class="form-select">
+                <select name="supplier_id" class="form-select form-select-sm">
                     <option value="">Semua Supplier</option>
                     @foreach($suppliers as $supplier)
                         <option value="{{ $supplier->id }}" @selected(request('supplier_id') == $supplier->id)>{{ $supplier->supplier_name }}</option>
@@ -42,13 +42,13 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">No Dok Supplier</label>
-                <input type="text" name="document_number" value="{{ request('document_number') }}" class="form-control" placeholder="Delivery note">
+                <input type="text" name="document_number" value="{{ request('document_number') }}" class="form-control form-control-sm" placeholder="Delivery note">
             </div>
             <div class="col-md-2">
                 <label class="form-label">Cari PO / Item</label>
-                <input type="text" name="keyword" value="{{ request('keyword') }}" class="form-control" placeholder="PO, item, supplier">
+                <input type="text" name="keyword" value="{{ request('keyword') }}" class="form-control form-control-sm" placeholder="PO, item, supplier">
             </div>
-            <div class="col-md-12"><button class="btn btn-primary">Tampilkan</button></div>
+            <div class="col-md-12"><button class="btn btn-primary btn-sm">Tampilkan</button></div>
         </form>
     </div>
 </div>

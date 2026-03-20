@@ -130,7 +130,7 @@
                     <td>{{ number_format($item->available_to_ship_qty, 2, ',', '.') }}</td>
                     <td>
                         <input type="hidden" name="selected_items[]" value="{{ $item->purchase_order_item_id }}">
-                        <input type="number" step="0.01" min="0.01" max="{{ $item->available_to_ship_qty }}" name="shipped_qty[{{ $item->purchase_order_item_id }}]" value="{{ old('shipped_qty.'.$item->purchase_order_item_id, $draftQuantities[$item->purchase_order_item_id] ?? $item->available_to_ship_qty) }}" class="form-control" required>
+                        <input type="number" step="0.01" min="0.01" max="{{ $item->available_to_ship_qty }}" name="shipped_qty[{{ $item->purchase_order_item_id }}]" value="{{ old('shipped_qty.'.$item->purchase_order_item_id, $draftQuantities[$item->purchase_order_item_id] ?? $item->available_to_ship_qty) }}" class="form-control form-control-sm" required>
                     </td>
                     <td class="text-nowrap">
                         <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeDraftItem('{{ $item->purchase_order_item_id }}')">Batal Pilih</button>

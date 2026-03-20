@@ -9,11 +9,11 @@
 
     <form method="POST" action="{{ route('verification.send') }}" class="mb-3">
         @csrf
-        <button type="submit" class="btn btn-primary btn-block">Kirim Ulang Verifikasi Email</button>
+        <button type="submit" class="btn btn-primary btn-sm btn-block">Kirim Ulang Verifikasi Email</button>
     </form>
 
     <form method="POST" action="{{ route('logout') }}">
         @csrf
-        <button type="submit" class="btn btn-outline-secondary btn-block">Keluar</button>
+        <button type="submit" class="btn btn-outline-secondary btn-sm btn-block">Keluar</button>
     </form>
 </x-guest-layout>

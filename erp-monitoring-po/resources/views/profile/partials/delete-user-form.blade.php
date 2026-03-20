@@ -8,11 +8,11 @@
 
     <div class="col-md-6">
         <label for="password" class="form-label">Konfirmasi Password</label>
-        <input id="password" name="password" type="password" class="form-control" placeholder="Masukkan password untuk konfirmasi">
+        <input id="password" name="password" type="password" class="form-control form-control-sm" placeholder="Masukkan password untuk konfirmasi">
         @if($errors->userDeletion->has('password'))<div class="text-danger small mt-1">{{ $errors->userDeletion->first('password') }}</div>@endif
     </div>
 
     <div class="col-12 d-flex justify-content-end">
-        <button class="btn btn-danger">Nonaktifkan Akun</button>
+        <button class="btn btn-danger btn-sm">Nonaktifkan Akun</button>
     </div>
 </form>

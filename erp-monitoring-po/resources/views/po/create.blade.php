@@ -197,28 +197,32 @@
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="doc-label">Nomor PO (Opsional, auto jika kosong)</label>
-                        <input type="text" class="form-control" name="po_number" value="{{ old('po_number') }}">
+                        <input type="text" class="form-control form-control-sm" name="po_number"
+                            value="{{ old('po_number') }}">
                     </div>
 
                     <div class="col-md-3">
                         <label class="doc-label">Tanggal PO</label>
-                        <input type="date" class="form-control" name="po_date" value="{{ old('po_date') }}" required>
+                        <input type="date" class="form-control form-control-sm" name="po_date"
+                            value="{{ old('po_date') }}" required>
                     </div>
 
                     <div class="col-md-3">
                         <label class="doc-label">Nomor Referensi</label>
-                        <input type="text" class="form-control" name="reference_number"
+                        <input type="text" class="form-control form-control-sm" name="reference_number"
                             value="{{ old('reference_number') }}">
                     </div>
 
                     <div class="col-md-3">
                         <label class="doc-label">Jenis Dokumen</label>
-                        <input type="text" class="form-control field-readonly" value="Purchase Order Manual" readonly>
+                        <input type="text" class="form-control form-control-sm field-readonly"
+                            value="Purchase Order Manual" readonly>
                     </div>
 
                     <div class="col-md-12">
                         <label class="doc-label">Catatan</label>
-                        <input type="text" class="form-control" name="notes" value="{{ old('notes') }}">
+                        <input type="text" class="form-control form-control-sm" name="notes"
+                            value="{{ old('notes') }}">
                     </div>
                 </div>
             </div>
@@ -232,7 +236,7 @@
                 <div class="row g-3">
                     <div class="col-md-8">
                         <label class="doc-label">Supplier</label>
-                        <select name="supplier_id" class="form-select supplier-select" required>
+                        <select name="supplier_id" class="form-control form-control-sm supplier-select" required>
                             <option value="">-- Pilih Supplier --</option>
                             @foreach ($suppliers as $s)
                                 <option value="{{ $s->id }}" {{ old('supplier_id') == $s->id ? 'selected' : '' }}>
@@ -245,7 +249,8 @@
 
                     <div class="col-md-4">
                         <label class="doc-label">Status</label>
-                        <input type="text" class="form-control field-readonly" value="PO Issued (Direct Entry)" readonly>
+                        <input type="text" class="form-control form-control-sm field-readonly"
+                            value="PO Issued (Direct Entry)" readonly>
                     </div>
                 </div>
             </div>
@@ -291,7 +296,7 @@
                 </div>
 
                 <div class="sticky-action-bar d-flex justify-content-end gap-2">
-                    <button type="submit" class="btn btn-success">Simpan PO</button>
+                    <button type="submit" class="btn btn-success btn-sm">Simpan PO</button>
                 </div>
             </div>
         </div>
@@ -358,24 +363,24 @@
                         <td class="row-no row-number">${idx + 1}</td>
                         <td>
                             <input type="hidden" class="item-id-input" name="items[${idx}][item_id]" value="${escapeHtml(itemId)}">
-                            <input type="text" class="form-control item-code-input" name="items[${idx}][item_code]" value="${escapeHtml(code)}" autocomplete="off" required>
+                            <input type="text" class="form-control form-control-sm item-code-input" name="items[${idx}][item_code]" value="${escapeHtml(code)}" autocomplete="off" required>
                         </td>
                         <td>
-                            <input type="text" class="form-control item-name-display field-readonly" value="${escapeHtml(itemName)}" readonly>
+                            <input type="text" class="form-control form-control-sm item-name-display field-readonly" value="${escapeHtml(itemName)}" readonly>
                         </td>
                         <td>
-                            <input type="text" class="form-control item-unit field-readonly" value="${escapeHtml(unitName)}" readonly>
+                            <input type="text" class="form-control form-control-sm item-unit field-readonly" value="${escapeHtml(unitName)}" readonly>
                         </td>
                         <td>
-                            <input type="number" step="0.01" min="0.01" class="form-control qty-input"
+                            <input type="number" step="0.01" min="0.01" class="form-control form-control-sm qty-input"
                                 name="items[${idx}][ordered_qty]" value="${escapeHtml(qty)}" required>
                         </td>
                         <td>
-                            <input type="number" step="0.01" min="0" class="form-control price-input"
+                            <input type="number" step="0.01" min="0" class="form-control form-control-sm price-input"
                                 name="items[${idx}][price]" value="${escapeHtml(price)}">
                         </td>
                         <td>
-                            <input type="text" class="form-control subtotal-display field-readonly"
+                            <input type="text" class="form-control form-control-sm subtotal-display field-readonly"
                                 value="${formatNumber(subtotal)}" readonly>
                         </td>
                         <td>

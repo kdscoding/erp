@@ -15,25 +15,25 @@
           @method('PUT')
           <div class="mb-3">
             <label class="form-label">Nama</label>
-            <input type="text" name="name" value="{{ old('name', $user->name) }}" class="form-control" required>
+            <input type="text" name="name" value="{{ old('name', $user->name) }}" class="form-control form-control-sm" required>
           </div>
           <div class="mb-3">
             <label class="form-label">NIK</label>
-            <input type="text" name="nik" value="{{ old('nik', $user->nik) }}" class="form-control" required>
+            <input type="text" name="nik" value="{{ old('nik', $user->nik) }}" class="form-control form-control-sm" required>
           </div>
           <div class="mb-3">
             <label class="form-label">Email</label>
-            <input type="email" name="email" value="{{ old('email', $user->email) }}" class="form-control" required>
+            <input type="email" name="email" value="{{ old('email', $user->email) }}" class="form-control form-control-sm" required>
           </div>
           <div class="mb-3">
             <label class="form-label">Role</label>
-            <select name="role_slug" class="form-select" required>
+            <select name="role_slug" class="form-select form-select-sm" required>
               @foreach($roles as $role)
                 <option value="{{ $role->slug }}" @selected(old('role_slug', $user->primaryRoleSlug()) === $role->slug)>{{ $role->name }}</option>
               @endforeach
             </select>
           </div>
-          <button class="btn btn-primary">Update Data User</button>
+          <button class="btn btn-primary btn-sm">Update Data User</button>
         </form>
       </div>
     </div>
@@ -55,17 +55,17 @@
             @method('PUT')
             <div class="mb-3">
               <label class="form-label">Password Baru</label>
-              <input type="password" name="password" class="form-control" required>
+              <input type="password" name="password" class="form-control form-control-sm" required>
             </div>
             <div class="mb-3">
               <label class="form-label">Konfirmasi Password Baru</label>
-              <input type="password" name="password_confirmation" class="form-control" required>
+              <input type="password" name="password_confirmation" class="form-control form-control-sm" required>
             </div>
             <div class="mb-3">
               <label class="form-label">Catatan Tindak Lanjut Admin</label>
-              <textarea name="admin_note" class="form-control" rows="3" placeholder="Contoh: reset diproses setelah verifikasi identitas user." required>{{ old('admin_note') }}</textarea>
+              <textarea name="admin_note" class="form-control form-control-sm" rows="3" placeholder="Contoh: reset diproses setelah verifikasi identitas user." required>{{ old('admin_note') }}</textarea>
             </div>
-            <button class="btn btn-warning">Proses Reset Password</button>
+            <button class="btn btn-warning btn-sm">Proses Reset Password</button>
           </form>
         @else
           <div class="alert alert-secondary mb-0">

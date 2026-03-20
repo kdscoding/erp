@@ -13,19 +13,19 @@
       <div class="row">
         <div class="col-md-6 mb-3">
           <label class="form-label">Nama</label>
-          <input type="text" name="name" value="{{ old('name') }}" class="form-control" required>
+          <input type="text" name="name" value="{{ old('name') }}" class="form-control form-control-sm" required>
         </div>
         <div class="col-md-6 mb-3">
           <label class="form-label">NIK</label>
-          <input type="text" name="nik" value="{{ old('nik') }}" class="form-control" required>
+          <input type="text" name="nik" value="{{ old('nik') }}" class="form-control form-control-sm" required>
         </div>
         <div class="col-md-6 mb-3">
           <label class="form-label">Email</label>
-          <input type="email" name="email" value="{{ old('email') }}" class="form-control" required>
+          <input type="email" name="email" value="{{ old('email') }}" class="form-control form-control-sm" required>
         </div>
         <div class="col-md-6 mb-3">
           <label class="form-label">Role</label>
-          <select name="role_slug" class="form-select" required>
+          <select name="role_slug" class="form-select form-select-sm" required>
             <option value="">Pilih role</option>
             @foreach($roles as $role)
               <option value="{{ $role->slug }}" @selected(old('role_slug') === $role->slug)>{{ $role->name }}</option>
@@ -34,14 +34,14 @@
         </div>
         <div class="col-md-6 mb-3">
           <label class="form-label">Password Awal</label>
-          <input type="password" name="password" class="form-control" required>
+          <input type="password" name="password" class="form-control form-control-sm" required>
         </div>
         <div class="col-md-6 mb-3">
           <label class="form-label">Konfirmasi Password Awal</label>
-          <input type="password" name="password_confirmation" class="form-control" required>
+          <input type="password" name="password_confirmation" class="form-control form-control-sm" required>
         </div>
       </div>
-      <button class="btn btn-primary">Simpan User</button>
+      <button class="btn btn-primary btn-sm">Simpan User</button>
     </form>
   </div>
 </div>

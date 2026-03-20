@@ -10,17 +10,17 @@
 
         <div class="form-group mb-3">
             <label for="nik">NIK</label>
-            <input id="nik" type="text" name="nik" value="{{ old('nik') }}" class="form-control @error('nik') is-invalid @enderror" required autofocus>
+            <input id="nik" type="text" name="nik" value="{{ old('nik') }}" class="form-control form-control-sm @error('nik') is-invalid @enderror" required autofocus>
             @error('nik')<span class="invalid-feedback d-block">{{ $message }}</span>@enderror
         </div>
 
         <div class="form-group mb-3">
             <label for="request_note">Keterangan Permintaan</label>
-            <textarea id="request_note" name="request_note" rows="4" class="form-control @error('request_note') is-invalid @enderror" required>{{ old('request_note') }}</textarea>
+            <textarea id="request_note" name="request_note" rows="4" class="form-control form-control-sm @error('request_note') is-invalid @enderror" required>{{ old('request_note') }}</textarea>
             @error('request_note')<span class="invalid-feedback d-block">{{ $message }}</span>@enderror
         </div>
 
-        <button type="submit" class="btn btn-primary btn-block">Ajukan Reset Password</button>
+        <button type="submit" class="btn btn-primary btn-sm btn-block">Ajukan Reset Password</button>
     </form>
 
     <p class="mb-0 mt-3">

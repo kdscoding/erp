@@ -8,9 +8,9 @@
     <div class="card-body">
         <form method="POST" action="{{ route('plants.update', $plant->id) }}" class="row g-3">
             @csrf @method('PUT')
-            <div class="col-md-4"><label class="form-label">Kode Plant</label><input class="form-control" name="plant_code" value="{{ old('plant_code', $plant->plant_code) }}" required></div>
-            <div class="col-md-6"><label class="form-label">Nama Plant</label><input class="form-control" name="plant_name" value="{{ old('plant_name', $plant->plant_name) }}" required></div>
-            <div class="col-12 d-flex justify-content-end gap-2"><a href="{{ route('plants.index') }}" class="btn btn-secondary">Kembali</a><button class="btn btn-primary">Simpan Perubahan</button></div>
+            <div class="col-md-4"><label class="form-label">Kode Plant</label><input class="form-control form-control-sm" name="plant_code" value="{{ old('plant_code', $plant->plant_code) }}" required></div>
+            <div class="col-md-6"><label class="form-label">Nama Plant</label><input class="form-control form-control-sm" name="plant_name" value="{{ old('plant_name', $plant->plant_name) }}" required></div>
+            <div class="col-12 d-flex justify-content-end gap-2"><a href="{{ route('plants.index') }}" class="btn btn-secondary btn-sm">Kembali</a><button class="btn btn-primary btn-sm">Simpan Perubahan</button></div>
         </form>
     </div>
 </div>

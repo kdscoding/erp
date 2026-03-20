@@ -79,7 +79,7 @@
                     <h3 class="card-title">Cancel PO</h3>
                 </div>
                 <div class="card-body">
-                    <button class="btn btn-danger w-100" data-toggle="modal" data-target="#cancelPoModal">Batalkan
+                    <button class="btn btn-danger btn-sm w-100" data-toggle="modal" data-target="#cancelPoModal">Batalkan
                         PO</button>
                     @if ($po->cancel_reason)
                         <div class="alert alert-danger mt-2 mb-0"><strong>Alasan:</strong> {{ $po->cancel_reason }}</div>
@@ -199,12 +199,12 @@
                                             </div>
                                             <div class="modal-body">
                                                 <label class="form-label">Alasan Pembatalan *</label>
-                                                <textarea name="cancel_reason" class="form-control" required rows="3"></textarea>
+                                                <textarea name="cancel_reason" class="form-control form-control-sm" required rows="3"></textarea>
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-light"
                                                     data-dismiss="modal">Tutup</button>
-                                                <button class="btn btn-danger">Konfirmasi Cancel</button>
+                                                <button class="btn btn-danger btn-sm">Konfirmasi Cancel</button>
                                             </div>
                                         </form>
                                     </div>
@@ -223,12 +223,12 @@
                                             <div class="modal-body">
                                                 <div class="alert alert-warning">Status akan jadi <strong>Cancelled</strong></div>
                                                 <label class="form-label">Cancel Reason *</label>
-                                                <textarea name="cancel_reason" class="form-control" required rows="3"></textarea>
+                                                <textarea name="cancel_reason" class="form-control form-control-sm" required rows="3"></textarea>
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-light"
                                                     data-dismiss="modal">Tutup</button>
-                                                <button class="btn btn-danger">Force Close</button>
+                                                <button class="btn btn-danger btn-sm">Force Close</button>
                                             </div>
                                         </form>
                                     </div>
@@ -252,11 +252,11 @@
                 </div>
                 <div class="modal-body">
                     <label class="form-label">Alasan Pembatalan *</label>
-                    <textarea name="cancel_reason" class="form-control" required rows="3"></textarea>
+                    <textarea name="cancel_reason" class="form-control form-control-sm" required rows="3"></textarea>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-dismiss="modal">Tutup</button>
-                    <button class="btn btn-danger">Konfirmasi Cancel PO</button>
+                    <button class="btn btn-danger btn-sm">Konfirmasi Cancel PO</button>
                 </div>
             </form>
         </div>

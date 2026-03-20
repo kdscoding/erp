@@ -17,8 +17,8 @@
 <div class="card card-outline card-primary mb-3">
     <div class="card-body">
         <form method="GET" class="row g-2">
-            <div class="col-md-4"><input name="po_number" class="form-control" placeholder="Cari Nomor PO" value="{{ request('po_number') }}"></div>
-            <div class="col-md-2"><button class="btn btn-primary w-100">Cari</button></div>
+            <div class="col-md-4"><input name="po_number" class="form-control form-control-sm" placeholder="Cari Nomor PO" value="{{ request('po_number') }}"></div>
+            <div class="col-md-2"><button class="btn btn-primary btn-sm w-100">Cari</button></div>
         </form>
     </div>
 </div>

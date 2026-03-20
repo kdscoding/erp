@@ -8,13 +8,13 @@
 
     <div class="col-12">
         <label for="name" class="form-label">Nama</label>
-        <input id="name" name="name" type="text" class="form-control" value="{{ old('name', $user->name) }}" required autofocus autocomplete="name">
+        <input id="name" name="name" type="text" class="form-control form-control-sm" value="{{ old('name', $user->name) }}" required autofocus autocomplete="name">
         @error('name')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
     </div>
 
     <div class="col-12">
         <label for="email" class="form-label">Email</label>
-        <input id="email" name="email" type="email" class="form-control" value="{{ old('email', $user->email) }}" required autocomplete="username">
+        <input id="email" name="email" type="email" class="form-control form-control-sm" value="{{ old('email', $user->email) }}" required autocomplete="username">
         @error('email')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
 
         @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
@@ -30,6 +30,6 @@
     </div>
 
     <div class="col-12 d-flex justify-content-end">
-        <button class="btn btn-primary">Simpan Profil</button>
+        <button class="btn btn-primary btn-sm">Simpan Profil</button>
     </div>
 </form>

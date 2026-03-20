@@ -8,13 +8,13 @@
     <form method="POST" action="{{ route('login') }}">
         @csrf
         <div class="input-group mb-3">
-            <input id="nik" type="text" name="nik" value="{{ old('nik') }}" class="form-control @error('nik') is-invalid @enderror" placeholder="NIK" required autofocus autocomplete="username">
+            <input id="nik" type="text" name="nik" value="{{ old('nik') }}" class="form-control form-control-sm @error('nik') is-invalid @enderror" placeholder="NIK" required autofocus autocomplete="username">
             <div class="input-group-append"><div class="input-group-text"><span class="fas fa-id-card"></span></div></div>
             @error('nik')<span class="invalid-feedback d-block">{{ $message }}</span>@enderror
         </div>
 
         <div class="input-group mb-3">
-            <input id="password" type="password" name="password" class="form-control @error('password') is-invalid @enderror" placeholder="Password" required autocomplete="current-password">
+            <input id="password" type="password" name="password" class="form-control form-control-sm @error('password') is-invalid @enderror" placeholder="Password" required autocomplete="current-password">
             <div class="input-group-append"><div class="input-group-text"><span class="fas fa-lock"></span></div></div>
             @error('password')<span class="invalid-feedback d-block">{{ $message }}</span>@enderror
         </div>
@@ -27,7 +27,7 @@
                 </div>
             </div>
             <div class="col-6">
-                <button type="submit" class="btn btn-primary btn-block">Masuk</button>
+                <button type="submit" class="btn btn-primary btn-sm btn-block">Masuk</button>
             </div>
         </div>
     </form>
