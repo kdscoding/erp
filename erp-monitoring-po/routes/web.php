@@ -56,6 +56,7 @@ Route::get('/', fn() => redirect()->route('dashboard'));
         Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
         Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
         Route::patch('/shipments/{id}/mark-shipped', [ShipmentController::class, 'markShipped'])->name('shipments.mark-shipped');
+        Route::patch('/shipments/{id}/cancel-draft', [ShipmentController::class, 'cancelDraft'])->name('shipments.cancel-draft');
     });
 
     Route::get('/po/{id}', [PurchaseOrderController::class, 'show'])->middleware('role:administrator|staff|supervisor')->name('po.show');

@@ -224,6 +224,48 @@ class PoReceivingFlowTest extends TestCase
         $this->assertDatabaseHas('purchase_orders', ['id' => $poTwoId, 'status' => 'Shipped']);
     }
 
+    public function test_draft_shipment_can_be_cancelled_without_being_deleted(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-CANCEL',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Confirmed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemId,
+            'ordered_qty' => 15,
+            'received_qty' => 0,
+            'outstanding_qty' => 15,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)->post('/shipments', [
+            'supplier_id' => $supplierId,
+            'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'SJ-CANCEL-01',
+            'selected_items' => [$poItemId],
+            'shipped_qty' => [
+                $poItemId => 15,
+            ],
+        ])->assertSessionHas('success');
+
+        $shipmentId = DB::table('shipments')->value('id');
+
+        $this->actingAs($user)->patch("/shipments/{$shipmentId}/cancel-draft")->assertSessionHas('success');
+
+        $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Cancelled']);
+    }
+
     public function test_over_receipt_is_blocked_by_default(): void
     {
         $user = $this->makeUserWithRole('administrator');

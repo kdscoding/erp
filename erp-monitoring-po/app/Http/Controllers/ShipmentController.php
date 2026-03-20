@@ -35,7 +35,7 @@ class ShipmentController extends Controller
                 DB::raw("GROUP_CONCAT(DISTINCT po.po_number ORDER BY po.po_number SEPARATOR ', ') as po_numbers")
             )
             ->when($request->filled('delivery_note_number'), fn ($q) => $q->where('sh.delivery_note_number', 'like', '%'.$request->string('delivery_note_number').'%'))
-            ->groupBy('sh.id', 'sh.purchase_order_id', 'sh.supplier_id', 'sh.shipment_number', 'sh.shipment_date', 'sh.eta_date', 'sh.delivery_note_number', 'sh.supplier_remark', 'sh.status', 'sh.created_by', 'sh.created_at', 'sh.updated_at', 's.supplier_name', 'anchor_s.supplier_name')
+            ->groupBy('sh.id', 'sh.purchase_order_id', 'sh.supplier_id', 'sh.shipment_number', 'sh.shipment_date', 'sh.delivery_note_number', 'sh.supplier_remark', 'sh.status', 'sh.created_by', 'sh.created_at', 'sh.updated_at', 's.supplier_name', 'anchor_s.supplier_name')
             ->orderByDesc('sh.id')
             ->paginate(20);
 
@@ -62,7 +62,6 @@ class ShipmentController extends Controller
         $v = $request->validate([
             'supplier_id' => 'required|integer|exists:suppliers,id',
             'shipment_date' => 'required|date',
-            'eta_date' => 'nullable|date|after_or_equal:shipment_date',
             'delivery_note_number' => 'required|string|max:100',
             'supplier_remark' => 'nullable|string|max:500',
             'po_reference_missing' => ['nullable', Rule::in(['1'])],
@@ -117,7 +116,6 @@ class ShipmentController extends Controller
                 'supplier_id' => $v['supplier_id'],
                 'shipment_number' => $number,
                 'shipment_date' => $v['shipment_date'],
-                'eta_date' => $v['eta_date'] ?? null,
                 'delivery_note_number' => $v['delivery_note_number'],
                 'supplier_remark' => $remark,
                 'status' => 'Draft',
@@ -181,7 +179,6 @@ class ShipmentController extends Controller
             foreach ($purchaseOrders as $po) {
                 DB::table('purchase_orders')->where('id', $po->id)->update([
                     'status' => 'Shipped',
-                    'eta_date' => $shipment->eta_date ?? $po->eta_date,
                     'updated_by' => $userId,
                     'updated_at' => now(),
                 ]);
@@ -193,6 +190,23 @@ class ShipmentController extends Controller
         });
 
         return back()->with('success', 'Shipment berhasil dikonfirmasi menjadi Shipped.');
+    }
+
+    public function cancelDraft(string $id, Request $request)
+    {
+        $shipment = DB::table('shipments')->where('id', $id)->firstOrFail();
+        if ($shipment->status !== 'Draft') {
+            return back()->with('error', 'Hanya shipment Draft yang bisa dibatalkan.');
+        }
+
+        DB::table('shipments')->where('id', $shipment->id)->update([
+            'status' => 'Cancelled',
+            'updated_at' => now(),
+        ]);
+
+        ErpFlow::audit('shipments', (int) $shipment->id, 'cancel', $shipment, ['status' => 'Cancelled'], optional($request->user())->id, $request->ip());
+
+        return back()->with('success', 'Draft shipment berhasil dibatalkan.');
     }
 
     private function candidateItemsQuery(Request $request)
