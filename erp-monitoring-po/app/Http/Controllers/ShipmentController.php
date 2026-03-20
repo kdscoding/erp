@@ -71,6 +71,7 @@ class ShipmentController extends Controller
         $candidateItems = $hasSearch
             ? $this->candidateItemsQuery($request)
                 ->when($selectedSupplierId, fn ($query) => $query->where('po.supplier_id', $selectedSupplierId))
+                ->when($selectedItemIds->isNotEmpty(), fn ($query) => $query->whereNotIn('poi.id', $selectedItemIds))
                 ->orderBy('s.supplier_name')
                 ->orderBy('po.po_number')
                 ->orderBy('i.item_code')
@@ -119,8 +120,8 @@ class ShipmentController extends Controller
                 return back()->withInput()->with('error', 'Qty kirim harus diisi untuk setiap item yang dipilih.');
             }
 
-            if ($qty > (float) $item->outstanding_qty) {
-                return back()->withInput()->with('error', "Qty kirim untuk {$item->item_code} melebihi outstanding PO.");
+            if ($qty > (float) $item->available_to_ship_qty) {
+                return back()->withInput()->with('error', "Qty kirim untuk {$item->item_code} melebihi sisa qty yang masih bisa dialokasikan.");
             }
 
             $linePayloads[] = [
@@ -261,6 +262,10 @@ class ShipmentController extends Controller
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->join('items as i', 'i.id', '=', 'poi.item_id')
             ->leftJoin('shipment_items as si', 'si.purchase_order_item_id', '=', 'poi.id')
+            ->leftJoin('shipments as sh_alloc', function ($join) {
+                $join->on('sh_alloc.id', '=', 'si.shipment_id')
+                    ->where('sh_alloc.status', '!=', 'Cancelled');
+            })
             ->select(
                 'poi.id as purchase_order_item_id',
                 'poi.purchase_order_id',
@@ -272,7 +277,7 @@ class ShipmentController extends Controller
                 'i.item_name',
                 'poi.outstanding_qty',
                 'poi.etd_date',
-                DB::raw('COALESCE(SUM(CASE WHEN si.id IS NOT NULL THEN si.shipped_qty - si.received_qty ELSE 0 END), 0) as open_shipment_qty')
+                DB::raw('COALESCE(SUM(CASE WHEN sh_alloc.id IS NOT NULL THEN si.shipped_qty - si.received_qty ELSE 0 END), 0) as open_shipment_qty')
             )
             ->whereIn('po.status', self::SHIPPABLE_PO_STATUSES)
             ->where('poi.outstanding_qty', '>', 0)
@@ -289,7 +294,7 @@ class ShipmentController extends Controller
                 'poi.outstanding_qty',
                 'poi.etd_date'
             )
-            ->havingRaw('(poi.outstanding_qty - COALESCE(SUM(CASE WHEN si.id IS NOT NULL THEN si.shipped_qty - si.received_qty ELSE 0 END), 0)) > 0')
-            ->selectRaw('(poi.outstanding_qty - COALESCE(SUM(CASE WHEN si.id IS NOT NULL THEN si.shipped_qty - si.received_qty ELSE 0 END), 0)) as available_to_ship_qty');
+            ->havingRaw('(poi.outstanding_qty - COALESCE(SUM(CASE WHEN sh_alloc.id IS NOT NULL THEN si.shipped_qty - si.received_qty ELSE 0 END), 0)) > 0')
+            ->selectRaw('(poi.outstanding_qty - COALESCE(SUM(CASE WHEN sh_alloc.id IS NOT NULL THEN si.shipped_qty - si.received_qty ELSE 0 END), 0)) as available_to_ship_qty');
     }
 }

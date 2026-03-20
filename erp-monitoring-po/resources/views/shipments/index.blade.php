@@ -30,7 +30,7 @@
     Supplier sudah terkunci ke <strong>{{ $selectedItems->first()->supplier_name }}</strong>. Item dari supplier lain tidak akan ditampilkan sampai pilihan item ini dibersihkan.
 </div>
 @endif
-<form method="GET" class="row g-2 align-items-end">
+<form method="GET" class="row g-2 align-items-end shipment-selection-form">
 <div class="col-md-3"><label class="form-label">Supplier</label><select name="supplier_id" class="form-select" {{ $selectedItems->isNotEmpty() ? 'disabled' : '' }}><option value="">Semua Supplier</option>@foreach($suppliers as $supplier)<option value="{{ $supplier->id }}" @selected((int) request('supplier_id', $selectedSupplierId) == (int) $supplier->id)>{{ $supplier->supplier_name }}</option>@endforeach</select>@if($selectedItems->isNotEmpty())<input type="hidden" name="supplier_id" value="{{ $selectedSupplierId }}">@endif</div>
 <div class="col-md-8"><label class="form-label">Cari Item / PO / Supplier</label><input type="text" name="keyword" value="{{ request('keyword') }}" class="form-control" placeholder="Contoh: item code, nama item, PO, supplier"></div>
 <input type="hidden" name="view" value="draft">
@@ -47,13 +47,22 @@
     Kandidat item akan muncul setelah Anda mencari supplier atau keyword item/PO.
 </div>
 @else
+<div class="p-3 border-bottom bg-light">
+    <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+        <div class="text-muted small">Pilih beberapa item sekaligus lalu tambahkan ke draft.</div>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addCheckedCandidateItems()">Pilih Beberapa Item</button>
+    </div>
+</div>
 <table class="table table-hover mb-0">
-<thead><tr><th>Pilih</th><th>Supplier</th><th>PO</th><th>Item</th><th>Outstanding PO</th><th>Sudah Dialokasikan</th><th>Sisa Bisa Dikirim</th><th>ETD</th></tr></thead>
+<thead><tr><th><input type="checkbox" onchange="toggleCandidateCheckboxes(this.checked)"></th><th>Pilih</th><th>Supplier</th><th>PO</th><th>Item</th><th>Outstanding PO</th><th>Sudah Dialokasikan</th><th>Sisa Bisa Dikirim</th><th>ETD</th></tr></thead>
 <tbody>
 @forelse($candidateItems as $candidate)
 <tr class="{{ in_array((int) $candidate->purchase_order_item_id, $selectedItemIds, true) ? 'table-primary' : '' }}">
     <td>
-        <form method="GET">
+        <input type="checkbox" class="candidate-item-checkbox" value="{{ $candidate->purchase_order_item_id }}">
+    </td>
+    <td>
+        <form method="GET" class="shipment-selection-form">
             @foreach(request()->except('selected_items') as $key => $value)
                 @if(is_array($value))
                     @foreach($value as $nestedValue)
@@ -75,9 +84,7 @@
             @foreach($draftQuantities as $itemId => $qty)
                 <input type="hidden" name="shipped_qty[{{ $itemId }}]" value="{{ $qty }}">
             @endforeach
-            <button class="btn btn-sm {{ in_array((int) $candidate->purchase_order_item_id, $selectedItemIds, true) ? 'btn-outline-danger' : 'btn-outline-primary' }}">
-                {{ in_array((int) $candidate->purchase_order_item_id, $selectedItemIds, true) ? 'Batalkan' : 'Pilih' }}
-            </button>
+            <button class="btn btn-sm btn-outline-primary">Pilih</button>
         </form>
     </td>
     <td>{{ $candidate->supplier_name }}</td>
@@ -89,7 +96,7 @@
     <td>{{ $candidate->etd_date ? \Carbon\Carbon::parse($candidate->etd_date)->format('d-m-Y') : '-' }}</td>
 </tr>
 @empty
-<tr><td colspan="8" class="text-center text-muted">Belum ada kandidat. Coba filter supplier atau cari berdasarkan item yang akan datang.</td></tr>
+<tr><td colspan="9" class="text-center text-muted">Belum ada kandidat. Coba filter supplier atau cari berdasarkan item yang akan datang.</td></tr>
 @endforelse
 </tbody>
 </table>
@@ -104,7 +111,8 @@
     {{ $selectedItems->count() }} item terpilih dari {{ $selectedItems->pluck('purchase_order_id')->unique()->count() }} PO.
     Supplier: <strong>{{ $selectedItems->first()->supplier_name }}</strong>
 </div>
-<div class="mb-3">
+<div class="mb-3 d-flex gap-2 flex-wrap">
+    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCheckedDraftItems()">Batal Pilih Beberapa Item</button>
     <form method="GET" action="{{ route('shipments.index') }}">
         <input type="hidden" name="view" value="draft">
         <input type="hidden" name="clear_selection" value="1">
@@ -135,10 +143,11 @@
 <div class="col-12">
     <div class="table-responsive">
         <table class="table table-sm table-bordered align-middle mb-0">
-            <thead><tr><th>PO</th><th>Item</th><th>Sisa Bisa Dikirim</th><th>Qty di Draft Ini</th><th>Aksi</th></tr></thead>
+            <thead><tr><th><input type="checkbox" onchange="toggleDraftCheckboxes(this.checked)"></th><th>PO</th><th>Item</th><th>Sisa Bisa Dikirim</th><th>Qty di Draft Ini</th><th>Aksi</th></tr></thead>
             <tbody>
             @forelse($selectedItems as $item)
                 <tr>
+                    <td><input type="checkbox" class="draft-item-checkbox" value="{{ $item->purchase_order_item_id }}"></td>
                     <td>{{ $item->po_number }}</td>
                     <td><strong>{{ $item->item_code }}</strong><br>{{ $item->item_name }}</td>
                     <td>{{ number_format($item->available_to_ship_qty, 2, ',', '.') }}</td>
@@ -147,30 +156,11 @@
                         <input type="number" step="0.01" min="0.01" max="{{ $item->available_to_ship_qty }}" name="shipped_qty[{{ $item->purchase_order_item_id }}]" value="{{ old('shipped_qty.'.$item->purchase_order_item_id, $draftQuantities[$item->purchase_order_item_id] ?? $item->available_to_ship_qty) }}" class="form-control" required>
                     </td>
                     <td>
-                        <form method="GET">
-                            @foreach(request()->except('selected_items', 'shipped_qty') as $key => $value)
-                                @if(is_array($value))
-                                    @foreach($value as $nestedValue)
-                                        <input type="hidden" name="{{ $key }}[]" value="{{ $nestedValue }}">
-                                    @endforeach
-                                @else
-                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
-                                @endif
-                            @endforeach
-                            @foreach(collect($selectedItemIds)->reject(fn($id) => (int) $id === (int) $item->purchase_order_item_id) as $remainingId)
-                                <input type="hidden" name="selected_items[]" value="{{ $remainingId }}">
-                            @endforeach
-                            @foreach($draftQuantities as $qtyItemId => $qty)
-                                @if((int) $qtyItemId !== (int) $item->purchase_order_item_id)
-                                    <input type="hidden" name="shipped_qty[{{ $qtyItemId }}]" value="{{ $qty }}">
-                                @endif
-                            @endforeach
-                            <button class="btn btn-sm btn-outline-danger">Batal Pilih</button>
-                        </form>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeDraftItem('{{ $item->purchase_order_item_id }}')">Batal Pilih</button>
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="5" class="text-center text-muted">Belum ada item terpilih.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted">Belum ada item terpilih.</td></tr>
             @endforelse
             </tbody>
         </table>
@@ -196,4 +186,263 @@
 <div class="mt-2">{{ $rows->links() }}</div>
 </div>
 </div>
+
+<script>
+    const draftStorageKey = 'shipment-draft-state-{{ auth()->id() ?? "guest" }}';
+
+    const getDraftQuantities = () => {
+        const quantities = {};
+        document.querySelectorAll('form[method="POST"] input[name^="shipped_qty["]').forEach((input) => {
+            quantities[input.name] = input.value;
+        });
+
+        return quantities;
+    };
+
+    const getSelectedItems = () => {
+        const selectedItems = [];
+        document.querySelectorAll('form[method="POST"] input[name="selected_items[]"]').forEach((input) => {
+            selectedItems.push(input.value);
+        });
+
+        return selectedItems;
+    };
+
+    const persistDraftState = () => {
+        const draftState = {
+            supplier_id: document.querySelector('input[name="supplier_id"][type="hidden"]')?.value
+                || document.querySelector('select[name="supplier_id"]')?.value
+                || '',
+            keyword: document.querySelector('input[name="keyword"]')?.value || '',
+            selected_items: getSelectedItems(),
+            quantities: getDraftQuantities(),
+        };
+
+        localStorage.setItem(draftStorageKey, JSON.stringify(draftState));
+    };
+
+    const restoreDraftState = () => {
+        const rawState = localStorage.getItem(draftStorageKey);
+        if (!rawState) {
+            return;
+        }
+
+        try {
+            const state = JSON.parse(rawState);
+
+            Object.entries(state.quantities || {}).forEach(([name, value]) => {
+                document.querySelectorAll(`input[name="${name.replace(/"/g, '\\"')}"]`).forEach((input) => {
+                    input.value = value;
+                });
+            });
+
+            const keywordInput = document.querySelector('input[name="keyword"]');
+            if (keywordInput && !keywordInput.value && state.keyword) {
+                keywordInput.value = state.keyword;
+            }
+        } catch (error) {
+            localStorage.removeItem(draftStorageKey);
+        }
+    };
+
+    const submitDraftSelectionState = (selectedItemsOverride = null, quantitiesOverride = null) => {
+        let savedState = {};
+        try {
+            const rawState = localStorage.getItem(draftStorageKey);
+            savedState = rawState ? JSON.parse(rawState) : {};
+        } catch (error) {
+            localStorage.removeItem(draftStorageKey);
+        }
+        const selectedItems = selectedItemsOverride ?? getSelectedItems();
+        const quantities = quantitiesOverride ?? getDraftQuantities();
+
+        const form = document.createElement('form');
+        form.method = 'GET';
+        form.action = '{{ route('shipments.index') }}';
+
+        const appendHidden = (name, value) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+        };
+
+        appendHidden('view', 'draft');
+
+        const supplierId = document.querySelector('input[name="supplier_id"][type="hidden"]')?.value
+            || document.querySelector('select[name="supplier_id"]')?.value
+            || savedState.supplier_id
+            || '';
+        const keyword = document.querySelector('input[name="keyword"]')?.value || savedState.keyword || '';
+
+        if (supplierId) {
+            appendHidden('supplier_id', supplierId);
+        }
+
+        if (keyword) {
+            appendHidden('keyword', keyword);
+        }
+
+        if (selectedItems.length === 0) {
+            appendHidden('clear_selection', '1');
+        }
+
+        selectedItems.forEach((itemId) => appendHidden('selected_items[]', itemId));
+        Object.entries(quantities).forEach(([name, value]) => appendHidden(name, value));
+
+        document.body.appendChild(form);
+        form.submit();
+    };
+
+    const rehydrateDraftSelection = () => {
+        const rawState = localStorage.getItem(draftStorageKey);
+        if (!rawState) {
+            return;
+        }
+
+        const hasSelectedDraftRows = getSelectedItems().length > 0;
+        if (hasSelectedDraftRows) {
+            sessionStorage.removeItem('shipment-draft-rehydrated');
+            return;
+        }
+
+        if (sessionStorage.getItem('shipment-draft-rehydrated') === '1') {
+            sessionStorage.removeItem('shipment-draft-rehydrated');
+            return;
+        }
+
+        try {
+            const state = JSON.parse(rawState);
+            if (!Array.isArray(state.selected_items) || state.selected_items.length === 0) {
+                return;
+            }
+
+            sessionStorage.setItem('shipment-draft-rehydrated', '1');
+            submitDraftSelectionState(state.selected_items, state.quantities || {});
+        } catch (error) {
+            sessionStorage.removeItem('shipment-draft-rehydrated');
+            localStorage.removeItem(draftStorageKey);
+        }
+    };
+
+    const syncDraftQuantities = (form) => {
+        form.querySelectorAll('input[name^="shipped_qty["]').forEach((input) => input.remove());
+
+        Object.entries(getDraftQuantities()).forEach(([name, value]) => {
+            const hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = name;
+            hidden.value = value;
+            form.appendChild(hidden);
+        });
+
+        persistDraftState();
+    };
+
+    restoreDraftState();
+    rehydrateDraftSelection();
+
+    document.querySelectorAll('form[method="POST"] input[name^="shipped_qty["], input[name="keyword"]').forEach((input) => {
+        input.addEventListener('input', persistDraftState);
+        input.addEventListener('change', persistDraftState);
+    });
+
+    document.querySelectorAll('.shipment-selection-form').forEach((form) => {
+        form.addEventListener('submit', () => syncDraftQuantities(form));
+    });
+
+    window.removeDraftItem = (itemId) => {
+        persistDraftState();
+
+        const normalizedItemId = String(itemId);
+        const nextSelectedItems = getSelectedItems().filter((selectedItemId) => String(selectedItemId) !== normalizedItemId);
+        const nextQuantities = {...getDraftQuantities()};
+        delete nextQuantities[`shipped_qty[${normalizedItemId}]`];
+
+        let draftState = {};
+        try {
+            draftState = JSON.parse(localStorage.getItem(draftStorageKey) || '{}');
+        } catch (error) {
+            draftState = {};
+        }
+
+        draftState.selected_items = nextSelectedItems;
+        draftState.quantities = nextQuantities;
+        localStorage.setItem(draftStorageKey, JSON.stringify(draftState));
+
+        submitDraftSelectionState(nextSelectedItems, nextQuantities);
+    };
+
+    window.toggleCandidateCheckboxes = (checked) => {
+        document.querySelectorAll('.candidate-item-checkbox').forEach((checkbox) => {
+            checkbox.checked = checked;
+        });
+    };
+
+    window.toggleDraftCheckboxes = (checked) => {
+        document.querySelectorAll('.draft-item-checkbox').forEach((checkbox) => {
+            checkbox.checked = checked;
+        });
+    };
+
+    window.addCheckedCandidateItems = () => {
+        persistDraftState();
+
+        const checkedItems = Array.from(document.querySelectorAll('.candidate-item-checkbox:checked')).map((checkbox) => checkbox.value);
+        if (checkedItems.length === 0) {
+            return;
+        }
+
+        const nextSelectedItems = Array.from(new Set([...getSelectedItems(), ...checkedItems]));
+        const nextQuantities = {...getDraftQuantities()};
+
+        let draftState = {};
+        try {
+            draftState = JSON.parse(localStorage.getItem(draftStorageKey) || '{}');
+        } catch (error) {
+            draftState = {};
+        }
+
+        draftState.selected_items = nextSelectedItems;
+        draftState.quantities = nextQuantities;
+        localStorage.setItem(draftStorageKey, JSON.stringify(draftState));
+
+        submitDraftSelectionState(nextSelectedItems, nextQuantities);
+    };
+
+    window.removeCheckedDraftItems = () => {
+        persistDraftState();
+
+        const checkedItems = Array.from(document.querySelectorAll('.draft-item-checkbox:checked')).map((checkbox) => checkbox.value);
+        if (checkedItems.length === 0) {
+            return;
+        }
+
+        const checkedSet = new Set(checkedItems.map(String));
+        const nextSelectedItems = getSelectedItems().filter((selectedItemId) => !checkedSet.has(String(selectedItemId)));
+        const nextQuantities = {...getDraftQuantities()};
+
+        checkedItems.forEach((itemId) => {
+            delete nextQuantities[`shipped_qty[${itemId}]`];
+        });
+
+        let draftState = {};
+        try {
+            draftState = JSON.parse(localStorage.getItem(draftStorageKey) || '{}');
+        } catch (error) {
+            draftState = {};
+        }
+
+        draftState.selected_items = nextSelectedItems;
+        draftState.quantities = nextQuantities;
+        localStorage.setItem(draftStorageKey, JSON.stringify(draftState));
+
+        submitDraftSelectionState(nextSelectedItems, nextQuantities);
+    };
+
+    document.querySelectorAll('form[action="{{ route('shipments.store') }}"], form[action="{{ route('shipments.index') }}"]').forEach((form) => {
+        form.addEventListener('submit', persistDraftState);
+    });
+</script>
 @endsection
