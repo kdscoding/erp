@@ -2,6 +2,7 @@
 @php($title = 'Shipment Tracking')
 @php($header = 'Shipment Tracking')
 @section('content')
+    @php($focusedShipmentId = (int) request('focus'))
     @if (session('success'))
         <div class="alert alert-success">
             {{ session('success') }}</div>
@@ -49,7 +50,7 @@
                     @if ($selectedItems->isNotEmpty())
                         <div class="alert alert-warning mb-3">
                             Supplier sudah terkunci ke <strong>{{ $selectedItems->first()->supplier_name }}</strong>. Item
-                            dari supplier lain tidak akan ditampilkan sampai pilihan item ini dibersihkan.
+                            dari supplier lain tidak akan ditampilkan selama builder draft ini masih aktif.
                         </div>
                     @endif
                     <form method="GET" class="row g-2 align-items-end shipment-selection-form">
@@ -295,8 +296,13 @@
                         </thead>
                         <tbody>
                             @foreach ($rows as $r)
-                                <tr>
-                                    <td>{{ $r->shipment_number }}</td>
+                                <tr class="{{ $focusedShipmentId === (int) $r->id ? 'table-success' : '' }}">
+                                    <td>
+                                        {{ $r->shipment_number }}
+                                        @if ($focusedShipmentId === (int) $r->id)
+                                            <br><small class="text-success font-weight-bold">Draft terbaru</small>
+                                        @endif
+                                    </td>
                                     <td>{{ $r->supplier_name }}</td>
                                     <td>{{ $r->po_numbers ?: '-' }}<br><small class="text-muted">{{ $r->po_count }}
                                             PO</small></td>
@@ -310,6 +316,8 @@
                                     <td>
                                         @if ($r->status === 'Draft')
                                             <div class="d-flex gap-1">
+                                                <a href="{{ route('shipments.show', $r->id) }}" class="btn btn-sm btn-light">Lihat</a>
+                                                <a href="{{ route('shipments.edit', $r->id) }}" class="btn btn-sm btn-outline-secondary">Edit Draft</a>
                                                 <form method="POST"
                                                     action="{{ route('shipments.mark-shipped', $r->id) }}">@csrf
                                                     @method('PATCH')<button class="btn btn-sm btn-outline-primary">Tandai
@@ -320,8 +328,14 @@
                                                         onclick="return confirm('Batalkan draft shipment ini?')">Batalkan
                                                         Draft</button></form>
                                             </div>
+                                        @elseif (in_array($r->status, ['Shipped', 'Partial Received'], true))
+                                            <div class="d-flex gap-1">
+                                                <a href="{{ route('shipments.show', $r->id) }}" class="btn btn-sm btn-light">Lihat</a>
+                                                <a href="{{ route('receiving.index', ['supplier_id' => $r->supplier_id, 'shipment_id' => $r->id, 'document_number' => $r->delivery_note_number]) }}"
+                                                    class="btn btn-sm btn-outline-primary">Lanjut ke Receiving</a>
+                                            </div>
                                         @else
-                                            -
+                                            <a href="{{ route('shipments.show', $r->id) }}" class="btn btn-sm btn-light">Lihat</a>
                                         @endif
                                     </td>
                                 </tr>
@@ -335,6 +349,11 @@
     </div>
     <script>
         const draftStorageKey = 'shipment-draft-state-{{ auth()->id() ?? 'guest' }}';
+
+        @if (session('shipment_builder_reset'))
+            localStorage.removeItem(draftStorageKey);
+            sessionStorage.removeItem('shipment-draft-rehydrated');
+        @endif
 
         const getDraftQuantities = () => {
             const quantities = {};

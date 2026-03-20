@@ -54,7 +54,10 @@ Route::get('/', fn() => redirect()->route('dashboard'));
         Route::post('/po/{id}/cancel', [PurchaseOrderController::class, 'cancelPo'])->name('po.cancel');
 
         Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
+        Route::get('/shipments/{id}', [ShipmentController::class, 'show'])->name('shipments.show');
+        Route::get('/shipments/{id}/edit', [ShipmentController::class, 'edit'])->name('shipments.edit');
         Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
+        Route::put('/shipments/{id}', [ShipmentController::class, 'update'])->name('shipments.update');
         Route::patch('/shipments/{id}/mark-shipped', [ShipmentController::class, 'markShipped'])->name('shipments.mark-shipped');
         Route::patch('/shipments/{id}/cancel-draft', [ShipmentController::class, 'cancelDraft'])->name('shipments.cancel-draft');
     });

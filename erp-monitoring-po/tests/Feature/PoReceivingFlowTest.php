@@ -118,7 +118,9 @@ class PoReceivingFlowTest extends TestCase
         $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Draft']);
         $this->assertDatabaseHas('shipment_items', ['id' => $shipmentItemId, 'shipment_id' => $shipmentId, 'purchase_order_item_id' => $poItemId, 'shipped_qty' => 100]);
 
-        $this->actingAs($user)->patch("/shipments/{$shipmentId}/mark-shipped")->assertSessionHas('success');
+        $this->actingAs($user)->patch("/shipments/{$shipmentId}/mark-shipped")
+            ->assertRedirect('/receiving?supplier_id='.$supplierId.'&shipment_id='.$shipmentId.'&document_number=SJ-0001')
+            ->assertSessionHas('success');
 
         $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Shipped']);
         $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Shipped']);
@@ -218,7 +220,9 @@ class PoReceivingFlowTest extends TestCase
             'shipped_qty' => 20,
         ]);
 
-        $this->actingAs($user)->patch("/shipments/{$shipmentId}/mark-shipped")->assertSessionHas('success');
+        $this->actingAs($user)->patch("/shipments/{$shipmentId}/mark-shipped")
+            ->assertRedirect('/receiving?supplier_id='.$supplierId.'&shipment_id='.$shipmentId.'&document_number=SJ-MULTI-01')
+            ->assertSessionHas('success');
 
         $this->assertDatabaseHas('purchase_orders', ['id' => $poOneId, 'status' => 'Shipped']);
         $this->assertDatabaseHas('purchase_orders', ['id' => $poTwoId, 'status' => 'Shipped']);
@@ -264,6 +268,72 @@ class PoReceivingFlowTest extends TestCase
         $this->actingAs($user)->patch("/shipments/{$shipmentId}/cancel-draft")->assertSessionHas('success');
 
         $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Cancelled']);
+    }
+
+    public function test_same_delivery_note_for_same_supplier_cannot_be_processed_twice(): void
+    {
+        $firstUser = $this->makeUserWithRole('administrator');
+        $secondUser = $this->makeUserWithRole('staff');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+
+        $poOneId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-DN-01',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Confirmed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poTwoId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-DN-02',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Confirmed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poOneItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poOneId,
+            'item_id' => $itemId,
+            'ordered_qty' => 25,
+            'received_qty' => 0,
+            'outstanding_qty' => 25,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poTwoItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poTwoId,
+            'item_id' => $itemId,
+            'ordered_qty' => 10,
+            'received_qty' => 0,
+            'outstanding_qty' => 10,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($firstUser)->post('/shipments', [
+            'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'SJ-DUP-01',
+            'selected_items' => [$poOneItemId],
+            'shipped_qty' => [
+                $poOneItemId => 25,
+            ],
+        ])->assertSessionHas('success');
+
+        $this->actingAs($secondUser)->post('/shipments', [
+            'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'SJ-DUP-01',
+            'selected_items' => [$poTwoItemId],
+            'shipped_qty' => [
+                $poTwoItemId => 10,
+            ],
+        ])->assertSessionHasErrors('delivery_note_number');
+
+        $this->assertDatabaseCount('shipments', 1);
     }
 
     public function test_over_receipt_is_blocked_by_default(): void

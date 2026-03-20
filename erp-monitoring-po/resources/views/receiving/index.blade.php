@@ -1,17 +1,6 @@
 @extends('layouts.erp')
 @php($title='Goods Receiving')
-@php($header='Goods Receiving Per Shipment Item')
-
-@php
-    $statusBadge = static function ($status) {
-        return match ($status) {
-            'Received', 'Closed' => 'success',
-            'Partial Received', 'Partial', 'Confirmed', 'Waiting', 'PO Issued', 'Shipped' => 'warning text-dark',
-            'Late', 'Cancelled' => 'danger',
-            default => 'secondary',
-        };
-    };
-@endphp
+@php($header='Goods Receiving')
 
 @section('content')
 @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
@@ -19,18 +8,9 @@
 @if ($errors->any())<div class="alert alert-danger"><ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
 
 <div class="card card-outline card-primary mb-3">
-    <div class="card-header"><h3 class="card-title">Filter Item Kiriman yang Belum Selesai Diterima</h3></div>
+    <div class="card-header"><h3 class="card-title">1. Cari Dokumen Shipment</h3></div>
     <div class="card-body">
         <form method="GET" class="row g-2 align-items-end">
-            <div class="col-md-5">
-                <label class="form-label">Pilih PO</label>
-                <select name="po_id" class="form-select form-select-sm">
-                    <option value="">Semua PO Aktif</option>
-                    @foreach($openPoList as $po)
-                        <option value="{{ $po->id }}" @selected(request('po_id') == $po->id)>{{ $po->po_number }} - {{ $po->supplier_name }} ({{ $po->status }})</option>
-                    @endforeach
-                </select>
-            </div>
             <div class="col-md-3">
                 <label class="form-label">Supplier</label>
                 <select name="supplier_id" class="form-select form-select-sm">
@@ -40,75 +20,144 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label">No Dok Supplier</label>
-                <input type="text" name="document_number" value="{{ request('document_number') }}" class="form-control form-control-sm" placeholder="Delivery note">
+            <div class="col-md-3">
+                <label class="form-label">Delivery Note</label>
+                <input type="text" name="document_number" value="{{ request('document_number') }}" class="form-control form-control-sm" placeholder="No surat jalan supplier">
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Cari PO / Item</label>
-                <input type="text" name="keyword" value="{{ request('keyword') }}" class="form-control form-control-sm" placeholder="PO, item, supplier">
+            <div class="col-md-4">
+                <label class="form-label">Cari Shipment / PO / Supplier</label>
+                <input type="text" name="keyword" value="{{ request('keyword') }}" class="form-control form-control-sm" placeholder="Shipment number, PO, supplier">
             </div>
-            <div class="col-md-12"><button class="btn btn-primary btn-sm">Tampilkan</button></div>
+            <div class="col-md-2"><button class="btn btn-primary btn-sm w-100">Tampilkan Dokumen</button></div>
         </form>
     </div>
 </div>
 
 <div class="card mb-3">
-    <div class="card-header"><h3 class="card-title">Posting Receiving Per Line Shipment</h3></div>
+    <div class="card-header"><h3 class="card-title">2. Pilih Dokumen Yang Akan Diterima</h3></div>
     <div class="card-body table-responsive p-0">
-        <table class="table table-hover mb-0 data-table">
-            <thead><tr><th>Shipment</th><th>Supplier / Dokumen</th><th>PO</th><th>Item</th><th>Qty Dikirim</th><th>Sudah Diterima</th><th>Sisa Kiriman</th><th>Status</th><th>Input Kedatangan</th></tr></thead>
-            <tbody>
-            @forelse($shipmentItems as $item)
+        <table class="table table-hover mb-0">
+            <thead>
                 <tr>
-                    <td>{{ $item->shipment_number }}<br><span class="badge bg-{{ $statusBadge($item->shipment_status) }}">{{ $item->shipment_status }}</span></td>
-                    <td>{{ $item->supplier_name }}<br><small class="text-muted">Delivery Note: {{ $item->delivery_note_number ?: '-' }}</small></td>
-                    <td>{{ $item->po_number }}<br><span class="badge bg-{{ $statusBadge($item->po_status) }}">{{ $item->po_status }}</span></td>
-                    <td><strong>{{ $item->item_code }}</strong><br>{{ $item->item_name }}</td>
-                    <td>{{ number_format($item->shipped_qty, 2, ',', '.') }}</td>
-                    <td>{{ number_format($item->shipment_received_qty, 2, ',', '.') }}</td>
-                    <td><span class="badge bg-warning text-dark">{{ number_format($item->shipment_outstanding_qty, 2, ',', '.') }}</span></td>
-                    <td><span class="badge bg-{{ $statusBadge($item->monitoring_status) }}">{{ $item->monitoring_status }}</span></td>
-                    <td>
-                        <form method="POST" action="{{ route('receiving.store') }}" class="row g-1 align-items-center receiving-form" enctype="multipart/form-data">
-                            @csrf
-                            <input type="hidden" name="shipment_item_id" value="{{ $item->shipment_item_id }}">
-                            <input type="hidden" class="shipped-val" value="{{ $item->shipped_qty }}">
-                            <input type="hidden" class="received-val" value="{{ $item->shipment_received_qty }}">
-                            <div class="col-md-3"><input type="date" name="receipt_date" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required></div>
-                            <div class="col-md-2"><input type="number" step="0.01" name="received_qty" class="form-control form-control-sm input-qty" placeholder="Qty" max="{{ $item->shipment_outstanding_qty }}" required></div>
-                            <div class="col-md-3"><input type="file" name="attachment" class="form-control form-control-sm" accept=".jpg,.jpeg,.png,.pdf"></div>
-                            <div class="col-md-2"><input type="text" name="document_number" class="form-control form-control-sm" value="{{ $item->delivery_note_number }}" placeholder="No surat jalan" required></div>
-                            <div class="col-md-2"><button class="btn btn-success btn-sm w-100">Post</button></div>
-                            <div class="col-12"><small class="text-muted">Sisa kiriman realtime: <span class="fw-bold outstanding-preview">{{ number_format($item->shipment_outstanding_qty, 2, ',', '.') }}</span></small></div>
-                        </form>
-                    </td>
+                    <th>Shipment</th>
+                    <th>Supplier</th>
+                    <th>Delivery Note</th>
+                    <th>Tanggal Dokumen</th>
+                    <th>PO</th>
+                    <th>Line Item</th>
+                    <th>Sisa Kiriman</th>
+                    <th>Aksi</th>
                 </tr>
-            @empty
-                <tr><td colspan="9" class="text-center text-muted">Tidak ada shipment item yang siap diproses.</td></tr>
-            @endforelse
+            </thead>
+            <tbody>
+                @forelse($shipmentDocuments as $document)
+                    <tr class="{{ $selectedShipment && (int) $selectedShipment->id === (int) $document->id ? 'table-success' : '' }}">
+                        <td>{{ $document->shipment_number }}<br><span class="badge {{ $document->status === 'Shipped' ? 'bg-primary' : 'bg-warning text-dark' }}">{{ $document->status }}</span></td>
+                        <td>{{ $document->supplier_name }}</td>
+                        <td>{{ $document->delivery_note_number }}</td>
+                        <td>{{ \Carbon\Carbon::parse($document->shipment_date)->format('d-m-Y') }}</td>
+                        <td>{{ $document->po_count }}</td>
+                        <td>{{ $document->line_count }}</td>
+                        <td>{{ number_format($document->outstanding_qty, 2, ',', '.') }}</td>
+                        <td><a href="{{ route('receiving.index', ['shipment_id' => $document->id, 'supplier_id' => request('supplier_id'), 'document_number' => request('document_number'), 'keyword' => request('keyword')]) }}" class="btn btn-sm btn-outline-primary">Pilih Dokumen</a></td>
+                    </tr>
+                @empty
+                    <tr><td colspan="8" class="text-center text-muted">Belum ada dokumen shipment yang siap diterima.</td></tr>
+                @endforelse
             </tbody>
         </table>
     </div>
 </div>
 
-<div class="card"><div class="card-header"><h3 class="card-title">Riwayat Goods Receipt</h3></div><div class="card-body table-responsive p-0"><table class="table table-hover text-nowrap mb-0 data-table"><thead><tr><th>GR</th><th>Shipment</th><th>PO</th><th>Supplier</th><th>No Dok</th><th>Tgl</th></tr></thead><tbody>@foreach($rows as $r)<tr><td>{{ $r->gr_number }}</td><td>{{ $r->shipment_number ?: '-' }}</td><td>{{ $r->po_number }}</td><td>{{ $r->supplier_name }}</td><td>{{ $r->document_number ?: $r->delivery_note_number ?: '-' }}</td><td>{{ \Carbon\Carbon::parse($r->receipt_date)->format('d-m-Y') }}</td></tr>@endforeach</tbody></table></div></div>
+<div class="card card-outline card-primary mb-3">
+    <div class="card-header"><h3 class="card-title">3. Konfirmasi Receiving</h3></div>
+    <div class="card-body">
+        @if ($selectedShipment)
+            <div class="alert alert-info">
+                Warehouse akan memproses dokumen <strong>{{ $selectedShipment->shipment_number }}</strong> dari supplier <strong>{{ $selectedShipment->supplier_name }}</strong> dengan delivery note <strong>{{ $selectedShipment->delivery_note_number }}</strong>.
+            </div>
+
+            <form method="POST" action="{{ route('receiving.store') }}" enctype="multipart/form-data">
+                @csrf
+                <input type="hidden" name="shipment_id" value="{{ $selectedShipment->id }}">
+                <input type="hidden" name="supplier_id" value="{{ request('supplier_id') }}">
+                <input type="hidden" name="search_document_number" value="{{ request('document_number') }}">
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Tanggal Terima</label>
+                        <input type="date" name="receipt_date" class="form-control form-control-sm" value="{{ old('receipt_date', now()->format('Y-m-d')) }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">No Dokumen Receiving</label>
+                        <input type="text" name="document_number" class="form-control form-control-sm" value="{{ old('document_number', $selectedShipment->delivery_note_number) }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Lampiran</label>
+                        <input type="file" name="attachment" class="form-control form-control-sm" accept=".jpg,.jpeg,.png,.pdf">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Catatan</label>
+                        <input type="text" name="note" class="form-control form-control-sm" value="{{ old('note') }}" placeholder="Opsional">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered mb-3">
+                        <thead>
+                            <tr>
+                                <th>PO</th>
+                                <th>Item</th>
+                                <th>Qty Dikirim</th>
+                                <th>Sudah Diterima</th>
+                                <th>Sisa Bisa Diterima</th>
+                                <th>Qty Diterima Sekarang</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($shipmentItems as $item)
+                                <tr>
+                                    <td>{{ $item->po_number }}</td>
+                                    <td><strong>{{ $item->item_code }}</strong><br>{{ $item->item_name }}</td>
+                                    <td>{{ number_format($item->shipped_qty, 2, ',', '.') }}</td>
+                                    <td>{{ number_format($item->shipment_received_qty, 2, ',', '.') }}</td>
+                                    <td><span class="badge bg-warning text-dark">{{ number_format($item->shipment_outstanding_qty, 2, ',', '.') }}</span></td>
+                                    <td><input type="number" step="0.01" min="0" max="{{ $item->shipment_outstanding_qty }}" name="received_qty[{{ $item->shipment_item_id }}]" value="{{ old('received_qty.'.$item->shipment_item_id) }}" class="form-control form-control-sm" placeholder="Isi jika datang"></td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-end">
+                    <button class="btn btn-success btn-sm">Posting Receiving Dokumen Ini</button>
+                </div>
+            </form>
+        @else
+            <div class="text-muted">Pilih dulu satu dokumen shipment di tabel atas. Setelah itu item akan muncul otomatis dan warehouse tinggal mengisi qty yang benar-benar diterima.</div>
+        @endif
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3 class="card-title">Riwayat Goods Receipt</h3></div>
+    <div class="card-body table-responsive p-0">
+        <table class="table table-hover text-nowrap mb-0 data-table">
+            <thead><tr><th>GR</th><th>Shipment</th><th>PO</th><th>Supplier</th><th>No Dok</th><th>Tgl</th></tr></thead>
+            <tbody>
+                @foreach($rows as $r)
+                    <tr>
+                        <td>{{ $r->gr_number }}</td>
+                        <td>{{ $r->shipment_number ?: '-' }}</td>
+                        <td>{{ $r->po_number }}</td>
+                        <td>{{ $r->supplier_name }}</td>
+                        <td>{{ $r->document_number ?: $r->delivery_note_number ?: '-' }}</td>
+                        <td>{{ \Carbon\Carbon::parse($r->receipt_date)->format('d-m-Y') }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+</div>
 <div class="mt-2">{{ $rows->links() }}</div>
-
-<script>
-    document.querySelectorAll('.receiving-form').forEach((form) => {
-        const qtyInput = form.querySelector('.input-qty');
-        const shipped = parseFloat(form.querySelector('.shipped-val').value || '0');
-        const received = parseFloat(form.querySelector('.received-val').value || '0');
-        const preview = form.querySelector('.outstanding-preview');
-
-        const refreshPreview = () => {
-            const incoming = parseFloat(qtyInput.value || '0');
-            const nextOutstanding = Math.max(0, shipped - (received + incoming));
-            preview.textContent = new Intl.NumberFormat('id-ID', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(nextOutstanding);
-        };
-
-        qtyInput.addEventListener('input', refreshPreview);
-    });
-</script>
 @endsection
