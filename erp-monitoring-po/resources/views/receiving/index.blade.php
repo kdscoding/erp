@@ -31,7 +31,24 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-2"><button class="btn btn-primary w-100">Tampilkan</button></div>
+            <div class="col-md-3">
+                <label class="form-label">Supplier</label>
+                <select name="supplier_id" class="form-select">
+                    <option value="">Semua Supplier</option>
+                    @foreach($suppliers as $supplier)
+                        <option value="{{ $supplier->id }}" @selected(request('supplier_id') == $supplier->id)>{{ $supplier->supplier_name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">No Dok Supplier</label>
+                <input type="text" name="document_number" value="{{ request('document_number') }}" class="form-control" placeholder="Delivery note">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Cari PO / Item</label>
+                <input type="text" name="keyword" value="{{ request('keyword') }}" class="form-control" placeholder="PO, item, supplier">
+            </div>
+            <div class="col-md-12"><button class="btn btn-primary">Tampilkan</button></div>
         </form>
     </div>
 </div>
@@ -40,11 +57,12 @@
     <div class="card-header"><h3 class="card-title">Posting Receiving (Item per Item)</h3></div>
     <div class="card-body table-responsive p-0">
         <table class="table table-hover mb-0 data-table">
-            <thead><tr><th>PO</th><th>Item</th><th>Ordered</th><th>Received</th><th>Outstanding</th><th>Status</th><th>Input Kedatangan</th></tr></thead>
+            <thead><tr><th>PO</th><th>Supplier / Referensi</th><th>Item</th><th>Ordered</th><th>Received</th><th>Outstanding</th><th>Status</th><th>Input Kedatangan</th></tr></thead>
             <tbody>
             @forelse($poItems as $item)
                 <tr>
                     <td>{{ $item->po_number }}<br><span class="badge bg-{{ $statusBadge($item->po_status) }}">{{ $item->po_status }}</span></td>
+                    <td>{{ $item->supplier_name }}<br><small class="text-muted">Delivery Note: {{ $item->latest_delivery_note_number ?: '-' }}</small></td>
                     <td><strong>{{ $item->item_code }}</strong><br>{{ $item->item_name }}</td>
                     <td>{{ number_format($item->ordered_qty, 2, ',', '.') }}</td>
                     <td>{{ number_format($item->received_qty, 2, ',', '.') }}</td>
@@ -59,14 +77,14 @@
                             <div class="col-md-3"><input type="date" name="receipt_date" class="form-control form-control-sm" value="{{ now()->format('Y-m-d') }}" required></div>
                             <div class="col-md-2"><input type="number" step="0.01" name="received_qty" class="form-control form-control-sm input-qty" placeholder="Qty" required></div>
                             <div class="col-md-3"><input type="file" name="attachment" class="form-control form-control-sm" accept=".jpg,.jpeg,.png,.pdf"></div>
-                            <div class="col-md-2"><input type="text" name="document_number" class="form-control form-control-sm" placeholder="No Dok"></div>
+                            <div class="col-md-2"><input type="text" name="document_number" class="form-control form-control-sm" placeholder="No surat jalan" required></div>
                             <div class="col-md-2"><button class="btn btn-success btn-sm w-100">Post</button></div>
                             <div class="col-12"><small class="text-muted">Outstanding realtime: <span class="fw-bold outstanding-preview">{{ number_format($item->outstanding_qty, 2, ',', '.') }}</span></small></div>
                         </form>
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="7" class="text-center text-muted">Tidak ada item outstanding untuk diproses.</td></tr>
+                <tr><td colspan="8" class="text-center text-muted">Tidak ada item outstanding untuk diproses.</td></tr>
             @endforelse
             </tbody>
         </table>

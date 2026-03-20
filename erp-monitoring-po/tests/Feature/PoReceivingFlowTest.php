@@ -104,6 +104,7 @@ class PoReceivingFlowTest extends TestCase
         $this->actingAs($user)->post('/shipments', [
             'purchase_order_id' => $poId,
             'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'SJ-0001',
         ])->assertSessionHas('success');
 
         $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Shipped']);
@@ -112,6 +113,7 @@ class PoReceivingFlowTest extends TestCase
             'purchase_order_item_id' => $poItemId,
             'receipt_date' => now()->toDateString(),
             'received_qty' => 40,
+            'document_number' => 'SJ-0001',
         ])->assertSessionHas('success');
 
         $this->assertDatabaseHas('purchase_order_items', ['id' => $poItemId, 'outstanding_qty' => 60]);
@@ -121,6 +123,7 @@ class PoReceivingFlowTest extends TestCase
             'purchase_order_item_id' => $poItemId,
             'receipt_date' => now()->toDateString(),
             'received_qty' => 60,
+            'document_number' => 'SJ-0001',
         ])->assertSessionHas('success');
 
         $this->assertDatabaseHas('purchase_order_items', ['id' => $poItemId, 'outstanding_qty' => 0]);
@@ -156,6 +159,7 @@ class PoReceivingFlowTest extends TestCase
             'purchase_order_item_id' => $poItemId,
             'receipt_date' => now()->toDateString(),
             'received_qty' => 11,
+            'document_number' => 'SJ-0002',
         ])->assertRedirect('/receiving')->assertSessionHas('error');
     }
 

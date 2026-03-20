@@ -16,6 +16,7 @@ class GoodsReceiptController extends Controller
             ->join('purchase_orders as po', 'po.id', '=', 'gr.purchase_order_id')
             ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->select('gr.*', 'po.po_number', 's.supplier_name')
+            ->when($request->filled('document_number'), fn ($q) => $q->where('gr.document_number', 'like', '%'.$request->string('document_number').'%'))
             ->orderByDesc('gr.id')
             ->paginate(20);
 
@@ -29,8 +30,10 @@ class GoodsReceiptController extends Controller
 
         $poItems = DB::table('purchase_order_items as poi')
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->join('items as i', 'i.id', '=', 'poi.item_id')
             ->leftJoin('goods_receipt_items as gri', 'gri.purchase_order_item_id', '=', 'poi.id')
+            ->leftJoin('shipments as sh', 'sh.purchase_order_id', '=', 'po.id')
             ->select(
                 'poi.id',
                 'poi.purchase_order_id',
@@ -40,9 +43,11 @@ class GoodsReceiptController extends Controller
                 'poi.etd_date',
                 'po.po_number',
                 'po.status as po_status',
+                's.supplier_name',
                 'i.item_code',
                 'i.item_name',
-                DB::raw('COALESCE(MAX(gri.created_at), NULL) as last_receipt_at')
+                DB::raw('COALESCE(MAX(gri.created_at), NULL) as last_receipt_at'),
+                DB::raw('COALESCE(MAX(sh.delivery_note_number), NULL) as latest_delivery_note_number')
             )
             ->selectRaw("CASE
                 WHEN poi.item_status = 'Cancelled' THEN 'Cancelled'
@@ -56,12 +61,25 @@ class GoodsReceiptController extends Controller
             ->where('poi.item_status', '!=', 'Cancelled')
             ->whereIn('po.status', ['PO Issued', 'Confirmed', 'Partial'])
             ->when($request->filled('po_id'), fn($q) => $q->where('po.id', $request->integer('po_id')))
-            ->groupBy('poi.id', 'poi.purchase_order_id', 'poi.ordered_qty', 'poi.received_qty', 'poi.outstanding_qty', 'poi.etd_date', 'po.po_number', 'po.status', 'i.item_code', 'i.item_name')
+            ->when($request->filled('supplier_id'), fn($q) => $q->where('po.supplier_id', $request->integer('supplier_id')))
+            ->when($request->filled('keyword'), function ($q) use ($request) {
+                $keyword = '%'.$request->string('keyword').'%';
+                $q->where(function ($inner) use ($keyword) {
+                    $inner->where('po.po_number', 'like', $keyword)
+                        ->orWhere('i.item_code', 'like', $keyword)
+                        ->orWhere('i.item_name', 'like', $keyword)
+                        ->orWhere('s.supplier_name', 'like', $keyword);
+                });
+            })
+            ->when($request->filled('document_number'), fn($q) => $q->where('sh.delivery_note_number', 'like', '%'.$request->string('document_number').'%'))
+            ->groupBy('poi.id', 'poi.purchase_order_id', 'poi.ordered_qty', 'poi.received_qty', 'poi.outstanding_qty', 'poi.etd_date', 'po.po_number', 'po.status', 's.supplier_name', 'i.item_code', 'i.item_name')
             ->orderBy('po.po_number')
             ->orderBy('i.item_code')
             ->get();
 
-        return view('receiving.index', compact('rows', 'poItems', 'openPoList'));
+        $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name']);
+
+        return view('receiving.index', compact('rows', 'poItems', 'openPoList', 'suppliers'));
     }
 
     public function store(Request $request)
@@ -73,7 +91,7 @@ class GoodsReceiptController extends Controller
             'accepted_qty' => 'nullable|numeric|min:0',
             'rejected_qty' => 'nullable|numeric|min:0',
             'note' => 'nullable|string|max:500',
-            'document_number' => 'nullable|string|max:100',
+            'document_number' => 'required|string|max:100',
             'attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:4096',
         ], [
             'required' => ':attribute wajib diisi.',
