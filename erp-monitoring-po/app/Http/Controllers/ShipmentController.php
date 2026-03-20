@@ -11,90 +11,139 @@ use Illuminate\View\View;
 class ShipmentController extends Controller
 {
     private const SHIPPABLE_PO_STATUSES = ['PO Issued', 'Confirmed', 'Shipped', 'Partial'];
-    private const RECEIVABLE_SHIPMENT_STATUSES = ['Shipped', 'Partial Received'];
 
     public function index(Request $request): View
     {
+        $selectedItemIds = collect($request->input('selected_items', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->values();
+        $hasSearch = $request->filled('supplier_id') || $request->filled('keyword');
+
         $rows = DB::table('shipments as sh')
-            ->join('purchase_orders as po', 'po.id', '=', 'sh.purchase_order_id')
-            ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
-            ->select('sh.*', 'po.po_number', 's.supplier_name')
+            ->leftJoin('suppliers as s', 's.id', '=', 'sh.supplier_id')
+            ->leftJoin('purchase_orders as anchor_po', 'anchor_po.id', '=', 'sh.purchase_order_id')
+            ->leftJoin('suppliers as anchor_s', 'anchor_s.id', '=', 'anchor_po.supplier_id')
+            ->leftJoin('shipment_items as si', 'si.shipment_id', '=', 'sh.id')
+            ->leftJoin('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
+            ->leftJoin('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->select(
+                'sh.*',
+                DB::raw('COALESCE(s.supplier_name, anchor_s.supplier_name) as supplier_name'),
+                DB::raw('COUNT(DISTINCT si.id) as line_count'),
+                DB::raw('COUNT(DISTINCT po.id) as po_count'),
+                DB::raw("GROUP_CONCAT(DISTINCT po.po_number ORDER BY po.po_number SEPARATOR ', ') as po_numbers")
+            )
             ->when($request->filled('delivery_note_number'), fn ($q) => $q->where('sh.delivery_note_number', 'like', '%'.$request->string('delivery_note_number').'%'))
+            ->groupBy('sh.id', 'sh.purchase_order_id', 'sh.supplier_id', 'sh.shipment_number', 'sh.shipment_date', 'sh.eta_date', 'sh.delivery_note_number', 'sh.supplier_remark', 'sh.status', 'sh.created_by', 'sh.created_at', 'sh.updated_at', 's.supplier_name', 'anchor_s.supplier_name')
             ->orderByDesc('sh.id')
             ->paginate(20);
 
-        $pos = DB::table('purchase_orders as po')
-            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
-            ->leftJoin('purchase_order_items as poi', 'poi.purchase_order_id', '=', 'po.id')
-            ->leftJoin('items as i', 'i.id', '=', 'poi.item_id')
-            ->whereIn('po.status', self::SHIPPABLE_PO_STATUSES)
-            ->when($request->filled('supplier_id'), fn ($q) => $q->where('po.supplier_id', $request->integer('supplier_id')))
-            ->when($request->filled('keyword'), function ($q) use ($request) {
-                $keyword = '%'.$request->string('keyword').'%';
-                $q->where(function ($inner) use ($keyword) {
-                    $inner->where('po.po_number', 'like', $keyword)
-                        ->orWhere('s.supplier_name', 'like', $keyword)
-                        ->orWhere('i.item_code', 'like', $keyword)
-                        ->orWhere('i.item_name', 'like', $keyword);
-                });
-            })
-            ->groupBy('po.id', 'po.po_number', 'po.status', 's.supplier_name')
-            ->select(
-                'po.id',
-                'po.po_number',
-                'po.status',
-                's.supplier_name',
-                DB::raw('COUNT(DISTINCT poi.id) as item_count')
-            )
-            ->orderByDesc('po.id')
-            ->limit(200)
-            ->get();
+        $candidateItems = $hasSearch
+            ? $this->candidateItemsQuery($request)
+                ->orderBy('s.supplier_name')
+                ->orderBy('po.po_number')
+                ->orderBy('i.item_code')
+                ->limit(100)
+                ->get()
+            : collect();
+
+        $selectedItems = $selectedItemIds->isNotEmpty()
+            ? $this->candidateItemsBaseQuery()->whereIn('poi.id', $selectedItemIds)->get()
+            : collect();
 
         $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name']);
 
-        return view('shipments.index', compact('rows', 'pos', 'suppliers'));
+        return view('shipments.index', compact('rows', 'suppliers', 'candidateItems', 'selectedItems', 'hasSearch'));
     }
 
     public function store(Request $request)
     {
         $v = $request->validate([
-            'purchase_order_id' => 'required|integer|exists:purchase_orders,id',
+            'supplier_id' => 'required|integer|exists:suppliers,id',
             'shipment_date' => 'required|date',
             'eta_date' => 'nullable|date|after_or_equal:shipment_date',
             'delivery_note_number' => 'required|string|max:100',
             'supplier_remark' => 'nullable|string|max:500',
             'po_reference_missing' => ['nullable', Rule::in(['1'])],
+            'selected_items' => 'required|array|min:1',
+            'selected_items.*' => 'integer|exists:purchase_order_items,id',
+            'shipped_qty' => 'required|array',
         ], ['required' => ':attribute wajib diisi.']);
 
-        $po = DB::table('purchase_orders')->where('id', $v['purchase_order_id'])->firstOrFail();
-        if (! in_array($po->status, self::SHIPPABLE_PO_STATUSES, true)) {
-            return back()->with('error', 'Status PO tidak valid untuk shipment.');
+        $selectedIds = collect($v['selected_items'])->map(fn ($id) => (int) $id)->unique()->values();
+
+        $items = $this->candidateItemsBaseQuery()
+            ->whereIn('poi.id', $selectedIds)
+            ->lockForUpdate()
+            ->get();
+
+        if ($items->count() !== $selectedIds->count()) {
+            return back()->withInput()->with('error', 'Sebagian item tidak lagi tersedia untuk dibuat shipment.');
+        }
+
+        if ($items->pluck('supplier_id')->unique()->count() !== 1 || (int) $items->first()->supplier_id !== (int) $v['supplier_id']) {
+            return back()->withInput()->with('error', 'Semua item shipment harus berasal dari supplier yang sama.');
+        }
+
+        $linePayloads = [];
+        foreach ($items as $item) {
+            $qty = (float) ($request->input("shipped_qty.{$item->purchase_order_item_id}") ?? 0);
+            if ($qty <= 0) {
+                return back()->withInput()->with('error', 'Qty kirim harus diisi untuk setiap item yang dipilih.');
+            }
+
+            if ($qty > (float) $item->outstanding_qty) {
+                return back()->withInput()->with('error', "Qty kirim untuk {$item->item_code} melebihi outstanding PO.");
+            }
+
+            $linePayloads[] = [
+                'purchase_order_item_id' => $item->purchase_order_item_id,
+                'purchase_order_id' => $item->purchase_order_id,
+                'shipped_qty' => $qty,
+            ];
         }
 
         $userId = optional($request->user())->id;
         $number = ErpFlow::generateNumber('SHP', 'shipments', 'shipment_number');
-
         $remark = trim(implode(' | ', array_filter([
             ! empty($v['po_reference_missing']) ? 'Dokumen supplier tidak mencantumkan nomor PO.' : null,
             $v['supplier_remark'] ?? null,
         ]))) ?: null;
 
-        DB::table('shipments')->insert([
-            'purchase_order_id' => $v['purchase_order_id'],
-            'shipment_number' => $number,
-            'shipment_date' => $v['shipment_date'],
-            'eta_date' => $v['eta_date'] ?? null,
-            'delivery_note_number' => $v['delivery_note_number'],
-            'supplier_remark' => $remark,
-            'status' => 'Draft',
-            'created_by' => $userId,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        DB::transaction(function () use ($linePayloads, $number, $remark, $userId, $v, $request) {
+            $shipmentId = DB::table('shipments')->insertGetId([
+                'purchase_order_id' => $linePayloads[0]['purchase_order_id'],
+                'supplier_id' => $v['supplier_id'],
+                'shipment_number' => $number,
+                'shipment_date' => $v['shipment_date'],
+                'eta_date' => $v['eta_date'] ?? null,
+                'delivery_note_number' => $v['delivery_note_number'],
+                'supplier_remark' => $remark,
+                'status' => 'Draft',
+                'created_by' => $userId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        ErpFlow::audit('shipments', (int) DB::getPdo()->lastInsertId(), 'create', null, $v, $userId, $request->ip());
+            $lineRows = collect($linePayloads)->map(fn ($line) => [
+                'shipment_id' => $shipmentId,
+                'purchase_order_item_id' => $line['purchase_order_item_id'],
+                'shipped_qty' => $line['shipped_qty'],
+                'received_qty' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ])->all();
 
-        return back()->with('success', 'Shipment tersimpan dengan status Draft.');
+            DB::table('shipment_items')->insert($lineRows);
+
+            ErpFlow::audit('shipments', $shipmentId, 'create', null, [
+                'shipment' => $v,
+                'lines' => $linePayloads,
+            ], $userId, $request->ip());
+        });
+
+        return back()->with('success', 'Shipment dokumen supplier tersimpan dengan status Draft.');
     }
 
     public function markShipped(string $id, Request $request)
@@ -104,27 +153,99 @@ class ShipmentController extends Controller
             return back()->with('error', 'Hanya shipment Draft yang bisa dikonfirmasi menjadi Shipped.');
         }
 
-        $po = DB::table('purchase_orders')->where('id', $shipment->purchase_order_id)->firstOrFail();
+        $linePoIds = DB::table('shipment_items as si')
+            ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
+            ->where('si.shipment_id', $shipment->id)
+            ->pluck('poi.purchase_order_id')
+            ->map(fn ($poId) => (int) $poId)
+            ->unique()
+            ->values();
+
+        if ($linePoIds->isEmpty()) {
+            return back()->with('error', 'Shipment belum memiliki item yang bisa dikirim.');
+        }
+
         $userId = optional($request->user())->id;
 
-        DB::transaction(function () use ($shipment, $po, $userId) {
+        DB::transaction(function () use ($shipment, $linePoIds, $userId) {
             DB::table('shipments')->where('id', $shipment->id)->update([
                 'status' => 'Shipped',
                 'updated_at' => now(),
             ]);
 
-            DB::table('purchase_orders')->where('id', $shipment->purchase_order_id)->update([
-                'status' => 'Shipped',
-                'eta_date' => $shipment->eta_date ?? $po->eta_date,
-                'updated_by' => $userId,
-                'updated_at' => now(),
-            ]);
+            $purchaseOrders = DB::table('purchase_orders')
+                ->whereIn('id', $linePoIds)
+                ->lockForUpdate()
+                ->get();
 
-            if ($po->status !== 'Shipped') {
-                ErpFlow::pushPoStatus((int) $po->id, $po->status, 'Shipped', $userId, 'Shipment '.$shipment->shipment_number.' dikonfirmasi berangkat.');
+            foreach ($purchaseOrders as $po) {
+                DB::table('purchase_orders')->where('id', $po->id)->update([
+                    'status' => 'Shipped',
+                    'eta_date' => $shipment->eta_date ?? $po->eta_date,
+                    'updated_by' => $userId,
+                    'updated_at' => now(),
+                ]);
+
+                if ($po->status !== 'Shipped') {
+                    ErpFlow::pushPoStatus((int) $po->id, $po->status, 'Shipped', $userId, 'Shipment '.$shipment->shipment_number.' dikonfirmasi berangkat.');
+                }
             }
         });
 
         return back()->with('success', 'Shipment berhasil dikonfirmasi menjadi Shipped.');
+    }
+
+    private function candidateItemsQuery(Request $request)
+    {
+        return $this->candidateItemsBaseQuery()
+            ->when($request->filled('supplier_id'), fn ($q) => $q->where('po.supplier_id', $request->integer('supplier_id')))
+            ->when($request->filled('keyword'), function ($q) use ($request) {
+                $keyword = '%'.$request->string('keyword').'%';
+                $q->where(function ($inner) use ($keyword) {
+                    $inner->where('po.po_number', 'like', $keyword)
+                        ->orWhere('i.item_code', 'like', $keyword)
+                        ->orWhere('i.item_name', 'like', $keyword)
+                        ->orWhere('s.supplier_name', 'like', $keyword);
+                });
+            });
+    }
+
+    private function candidateItemsBaseQuery()
+    {
+        return DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->join('items as i', 'i.id', '=', 'poi.item_id')
+            ->leftJoin('shipment_items as si', 'si.purchase_order_item_id', '=', 'poi.id')
+            ->select(
+                'poi.id as purchase_order_item_id',
+                'poi.purchase_order_id',
+                'po.supplier_id',
+                'po.po_number',
+                'po.status as po_status',
+                's.supplier_name',
+                'i.item_code',
+                'i.item_name',
+                'poi.outstanding_qty',
+                'poi.etd_date',
+                DB::raw('COALESCE(SUM(CASE WHEN si.id IS NOT NULL THEN si.shipped_qty - si.received_qty ELSE 0 END), 0) as open_shipment_qty')
+            )
+            ->whereIn('po.status', self::SHIPPABLE_PO_STATUSES)
+            ->where('poi.outstanding_qty', '>', 0)
+            ->where('poi.item_status', '!=', 'Cancelled')
+            ->groupBy(
+                'poi.id',
+                'poi.purchase_order_id',
+                'po.supplier_id',
+                'po.po_number',
+                'po.status',
+                's.supplier_name',
+                'i.item_code',
+                'i.item_name',
+                'poi.outstanding_qty',
+                'poi.etd_date'
+            )
+            ->havingRaw('(poi.outstanding_qty - COALESCE(SUM(CASE WHEN si.id IS NOT NULL THEN si.shipped_qty - si.received_qty ELSE 0 END), 0)) > 0')
+            ->selectRaw('(poi.outstanding_qty - COALESCE(SUM(CASE WHEN si.id IS NOT NULL THEN si.shipped_qty - si.received_qty ELSE 0 END), 0)) as available_to_ship_qty');
     }
 }

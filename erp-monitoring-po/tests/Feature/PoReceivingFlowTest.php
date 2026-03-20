@@ -40,6 +40,7 @@ class PoReceivingFlowTest extends TestCase
         DB::table('units')->insert(['unit_code' => 'PCS', 'unit_name' => 'Pieces', 'created_at' => now(), 'updated_at' => now()]);
         $unitId = DB::table('units')->value('id');
         DB::table('items')->insert(['item_code' => 'ITM001', 'item_name' => 'Label A', 'unit_id' => $unitId, 'active' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('items')->insert(['item_code' => 'ITM002', 'item_name' => 'Label B', 'unit_id' => $unitId, 'active' => 1, 'created_at' => now(), 'updated_at' => now()]);
     }
 
     private function makeUserWithRole(string $roleSlug): User
@@ -55,7 +56,7 @@ class PoReceivingFlowTest extends TestCase
     {
         $user = $this->makeUserWithRole('staff');
         $supplierId = DB::table('suppliers')->value('id');
-        $itemId = DB::table('items')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
 
         $resp = $this->actingAs($user)->post('/po', [
             'po_date' => now()->toDateString(),
@@ -80,7 +81,7 @@ class PoReceivingFlowTest extends TestCase
     {
         $user = $this->makeUserWithRole('administrator');
         $supplierId = DB::table('suppliers')->value('id');
-        $itemId = DB::table('items')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
 
         $poId = DB::table('purchase_orders')->insertGetId([
             'po_number' => 'PO-TEST-0001',
@@ -102,13 +103,20 @@ class PoReceivingFlowTest extends TestCase
         ]);
 
         $this->actingAs($user)->post('/shipments', [
-            'purchase_order_id' => $poId,
+            'supplier_id' => $supplierId,
             'shipment_date' => now()->toDateString(),
             'delivery_note_number' => 'SJ-0001',
+            'selected_items' => [$poItemId],
+            'shipped_qty' => [
+                $poItemId => 100,
+            ],
         ])->assertSessionHas('success');
 
         $shipmentId = DB::table('shipments')->value('id');
+        $shipmentItemId = DB::table('shipment_items')->value('id');
+
         $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Draft']);
+        $this->assertDatabaseHas('shipment_items', ['id' => $shipmentItemId, 'shipment_id' => $shipmentId, 'purchase_order_item_id' => $poItemId, 'shipped_qty' => 100]);
 
         $this->actingAs($user)->patch("/shipments/{$shipmentId}/mark-shipped")->assertSessionHas('success');
 
@@ -116,8 +124,7 @@ class PoReceivingFlowTest extends TestCase
         $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Shipped']);
 
         $this->actingAs($user)->post('/receiving', [
-            'shipment_id' => $shipmentId,
-            'purchase_order_item_id' => $poItemId,
+            'shipment_item_id' => $shipmentItemId,
             'receipt_date' => now()->toDateString(),
             'received_qty' => 40,
             'document_number' => 'SJ-0001',
@@ -125,11 +132,11 @@ class PoReceivingFlowTest extends TestCase
 
         $this->assertDatabaseHas('purchase_order_items', ['id' => $poItemId, 'outstanding_qty' => 60]);
         $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Partial']);
+        $this->assertDatabaseHas('shipment_items', ['id' => $shipmentItemId, 'received_qty' => 40]);
         $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Partial Received']);
 
         $this->actingAs($user)->post('/receiving', [
-            'shipment_id' => $shipmentId,
-            'purchase_order_item_id' => $poItemId,
+            'shipment_item_id' => $shipmentItemId,
             'receipt_date' => now()->toDateString(),
             'received_qty' => 60,
             'document_number' => 'SJ-0001',
@@ -137,14 +144,91 @@ class PoReceivingFlowTest extends TestCase
 
         $this->assertDatabaseHas('purchase_order_items', ['id' => $poItemId, 'outstanding_qty' => 0]);
         $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Closed']);
+        $this->assertDatabaseHas('shipment_items', ['id' => $shipmentItemId, 'received_qty' => 100]);
         $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Received']);
+    }
+
+    public function test_one_supplier_document_can_cover_multiple_purchase_orders(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemAId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+        $itemBId = DB::table('items')->where('item_code', 'ITM002')->value('id');
+
+        $poOneId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-1001',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Confirmed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poTwoId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-1002',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Confirmed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poOneItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poOneId,
+            'item_id' => $itemAId,
+            'ordered_qty' => 30,
+            'received_qty' => 0,
+            'outstanding_qty' => 30,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poTwoItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poTwoId,
+            'item_id' => $itemBId,
+            'ordered_qty' => 20,
+            'received_qty' => 0,
+            'outstanding_qty' => 20,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)->post('/shipments', [
+            'supplier_id' => $supplierId,
+            'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'SJ-MULTI-01',
+            'selected_items' => [$poOneItemId, $poTwoItemId],
+            'shipped_qty' => [
+                $poOneItemId => 10,
+                $poTwoItemId => 20,
+            ],
+        ])->assertSessionHas('success');
+
+        $shipmentId = DB::table('shipments')->value('id');
+
+        $this->assertDatabaseHas('shipment_items', [
+            'shipment_id' => $shipmentId,
+            'purchase_order_item_id' => $poOneItemId,
+            'shipped_qty' => 10,
+        ]);
+
+        $this->assertDatabaseHas('shipment_items', [
+            'shipment_id' => $shipmentId,
+            'purchase_order_item_id' => $poTwoItemId,
+            'shipped_qty' => 20,
+        ]);
+
+        $this->actingAs($user)->patch("/shipments/{$shipmentId}/mark-shipped")->assertSessionHas('success');
+
+        $this->assertDatabaseHas('purchase_orders', ['id' => $poOneId, 'status' => 'Shipped']);
+        $this->assertDatabaseHas('purchase_orders', ['id' => $poTwoId, 'status' => 'Shipped']);
     }
 
     public function test_over_receipt_is_blocked_by_default(): void
     {
         $user = $this->makeUserWithRole('administrator');
         $supplierId = DB::table('suppliers')->value('id');
-        $itemId = DB::table('items')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
 
         $poId = DB::table('purchase_orders')->insertGetId([
             'po_number' => 'PO-TEST-0002',
@@ -167,6 +251,7 @@ class PoReceivingFlowTest extends TestCase
 
         $shipmentId = DB::table('shipments')->insertGetId([
             'purchase_order_id' => $poId,
+            'supplier_id' => $supplierId,
             'shipment_number' => 'SHP-TEST-0002',
             'shipment_date' => now()->toDateString(),
             'delivery_note_number' => 'SJ-0002',
@@ -175,9 +260,17 @@ class PoReceivingFlowTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $this->actingAs($user)->from('/receiving')->post('/receiving', [
+        $shipmentItemId = DB::table('shipment_items')->insertGetId([
             'shipment_id' => $shipmentId,
             'purchase_order_item_id' => $poItemId,
+            'shipped_qty' => 10,
+            'received_qty' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)->from('/receiving')->post('/receiving', [
+            'shipment_item_id' => $shipmentItemId,
             'receipt_date' => now()->toDateString(),
             'received_qty' => 11,
             'document_number' => 'SJ-0002',
