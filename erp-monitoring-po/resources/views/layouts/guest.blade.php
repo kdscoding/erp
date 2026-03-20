@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'Portal BC 4.0 Internal' }}</title>
+    <title>{{ $title ?? 'LEMON | Login' }}</title>
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('lemon/apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('lemon/favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('lemon/favicon-16x16.png') }}">
@@ -14,15 +14,16 @@
     <style>
         body.login-page {
             background:
-                radial-gradient(circle at top left, rgba(255, 214, 90, 0.18), transparent 32%),
-                radial-gradient(circle at top right, rgba(119, 221, 119, 0.16), transparent 28%),
-                linear-gradient(135deg, #f5f2f8 0%, #ece5f4 100%);
+                radial-gradient(circle at 15% 20%, rgba(255, 223, 72, 0.32), transparent 20%),
+                radial-gradient(circle at 82% 16%, rgba(142, 214, 70, 0.22), transparent 18%),
+                radial-gradient(circle at 70% 78%, rgba(255, 241, 176, 0.26), transparent 22%),
+                linear-gradient(135deg, #fffbea 0%, #f6f7df 38%, #eef4df 100%);
         }
         .login-box {
             width: 440px;
         }
         .login-logo a {
-            color: #3a2e58;
+            color: #304218;
             font-weight: 700;
         }
         .login-logo .login-main-mark {
@@ -30,12 +31,6 @@
             height: 76px;
             object-fit: contain;
             filter: drop-shadow(0 0.35rem 1rem rgba(58, 46, 88, 0.18));
-        }
-        .login-logo .login-brand-mark {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            box-shadow: 0 0.125rem 0.5rem rgba(58, 46, 88, 0.16);
         }
         .login-logo .login-title {
             font-size: 1.75rem;
@@ -46,32 +41,68 @@
         .login-logo .login-subtitle {
             font-size: .88rem;
             letter-spacing: .05rem;
-            color: #6c757d;
-        }
-        .login-logo .login-context {
-            color: #4c3d68;
-            font-size: .95rem;
+            color: #6a7a42;
         }
         .login-card {
             border: 0;
-            box-shadow: 0 0.9rem 2rem rgba(55, 41, 90, 0.12);
+            box-shadow: 0 1rem 2.4rem rgba(106, 122, 66, 0.14);
             border-radius: .9rem;
             overflow: hidden;
+            background: rgba(255, 255, 255, 0.95);
         }
         .login-card-body {
             border-radius: .9rem;
             padding: 1.75rem;
+            border-top: 4px solid #d8e84f;
         }
         .login-box-msg {
-            color: #5d5472;
+            color: #61713e;
             font-size: .93rem;
             margin-bottom: 1.25rem;
         }
         .login-helper {
-            color: #7a708f;
+            color: #7f8b55;
             font-size: .8rem;
             text-align: center;
             margin-top: 1rem;
+        }
+        .login-card .form-control {
+            border-color: #dfe8b3;
+            background: #fffef7;
+        }
+        .login-card .form-control:focus {
+            border-color: #b6cf45;
+            box-shadow: 0 0 0 0.12rem rgba(182, 207, 69, 0.2);
+            background: #fff;
+        }
+        .login-card .input-group-text {
+            background: #f7f8dd;
+            border-color: #dfe8b3;
+            color: #73822b;
+        }
+        .login-card .btn-primary {
+            background: linear-gradient(135deg, #bfd730 0%, #8fc63f 100%);
+            border-color: #8eb93a;
+            color: #24310f;
+            font-weight: 700;
+        }
+        .login-card .btn-primary:hover,
+        .login-card .btn-primary:focus {
+            background: linear-gradient(135deg, #b0ca22 0%, #82ba34 100%);
+            border-color: #7aa52f;
+            color: #1f290d;
+        }
+        .login-card a {
+            color: #6d8d1f;
+            font-weight: 600;
+        }
+        .login-card a:hover {
+            color: #587312;
+        }
+        .login-card .icheck-primary>input:first-child:checked+label::before,
+        .login-card .icheck-primary>input:first-child:not(:checked):not(:disabled):hover+label::before {
+            background-color: #9cc43b;
+            border-color: #88ab2f;
         }
     </style>
 </head>
@@ -80,13 +111,9 @@
         <div class="login-logo">
             <a href="{{ url('/') }}" class="d-flex flex-column align-items-center">
                 <img src="{{ asset('lemon/android-chrome-512x512.png') }}" alt="LEMON" class="login-main-mark mb-3">
-                <div class="text-center mb-2">
+                <div class="text-center mb-3">
                     <div class="login-title">LEMON</div>
                     <div class="login-subtitle">Labeling Internal Monitoring</div>
-                </div>
-                <div class="d-flex align-items-center">
-                    <img src="{{ asset('lemon/apple-touch-icon.png') }}" alt="LEMON icon" class="login-brand-mark mr-2">
-                    <span class="login-context">Portal <b>Operasional Internal</b></span>
                 </div>
             </a>
         </div>
