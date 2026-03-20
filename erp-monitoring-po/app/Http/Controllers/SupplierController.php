@@ -66,14 +66,14 @@ class SupplierController extends Controller
         return redirect()->route('suppliers.index')->with('success', 'Supplier berhasil ditambahkan.');
     }
 
-    public function edit(int $id): View
+    public function edit(string $id): View
     {
         $supplier = DB::table('suppliers')->where('id', $id)->firstOrFail();
 
         return view('suppliers.edit', compact('supplier'));
     }
 
-    public function update(Request $request, int $id): RedirectResponse
+    public function update(Request $request, string $id): RedirectResponse
     {
         $supplier = DB::table('suppliers')->where('id', $id)->firstOrFail();
 
@@ -111,7 +111,7 @@ class SupplierController extends Controller
         return redirect()->route('suppliers.index')->with('success', 'Supplier berhasil diperbarui.');
     }
 
-    public function toggleStatus(int $id): RedirectResponse
+    public function toggleStatus(string $id): RedirectResponse
     {
         $supplier = DB::table('suppliers')->where('id', $id)->firstOrFail();
 

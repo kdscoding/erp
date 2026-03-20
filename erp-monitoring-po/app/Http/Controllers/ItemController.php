@@ -63,7 +63,7 @@ class ItemController extends Controller
         return back()->with('success', 'Item berhasil ditambahkan.');
     }
 
-    public function edit(int $id): View
+    public function edit(string $id): View
     {
         $item = DB::table('items')->where('id', $id)->firstOrFail();
         $units = DB::table('units')->orderBy('unit_name')->get();
@@ -71,7 +71,7 @@ class ItemController extends Controller
         return view('masters.items.edit', compact('item', 'units'));
     }
 
-    public function update(Request $request, int $id): RedirectResponse
+    public function update(Request $request, string $id): RedirectResponse
     {
         $item = DB::table('items')->where('id', $id)->firstOrFail();
 
@@ -102,7 +102,7 @@ class ItemController extends Controller
         return redirect()->route('items.index')->with('success', 'Item berhasil diperbarui.');
     }
 
-    public function toggleStatus(int $id): RedirectResponse
+    public function toggleStatus(string $id): RedirectResponse
     {
         $item = DB::table('items')->where('id', $id)->firstOrFail();
 

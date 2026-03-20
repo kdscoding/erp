@@ -19,14 +19,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn() => redirect()->route('dashboard'));
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', DashboardController::class)->name('dashboard');
-    Route::get('/monitoring', [DashboardController::class, 'monitoring'])->name('monitoring');
-    Route::get('/po', [PurchaseOrderController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('po.index');
-    Route::get('/po/{id}', [PurchaseOrderController::class, 'show'])->middleware('role:administrator|staff|supervisor')->name('po.show');
-    Route::get('/reports/outstanding', [ReportController::class, 'outstanding'])->middleware('role:administrator|staff|supervisor')->name('reports.outstanding');
-    Route::get('/traceability', [TraceabilityController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('traceability.index');
-    Route::get('/audit-trail', [AuditTrailController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('audit.index');
+    Route::middleware(['auth', 'verified'])->group(function () {
+        Route::get('/dashboard', DashboardController::class)->name('dashboard');
+        Route::get('/monitoring', [DashboardController::class, 'monitoring'])->name('monitoring');
+        Route::get('/po', [PurchaseOrderController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('po.index');
+        Route::get('/reports/outstanding', [ReportController::class, 'outstanding'])->middleware('role:administrator|staff|supervisor')->name('reports.outstanding');
+        Route::get('/traceability', [TraceabilityController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('traceability.index');
+        Route::get('/audit-trail', [AuditTrailController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('audit.index');
 
     Route::middleware('role:administrator|staff')->group(function () {
         Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
@@ -57,6 +56,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
         Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
     });
+
+    Route::get('/po/{id}', [PurchaseOrderController::class, 'show'])->middleware('role:administrator|staff|supervisor')->name('po.show');
 
     Route::middleware('role:administrator|staff')->group(function () {
         Route::get('/receiving', [GoodsReceiptController::class, 'index'])->name('receiving.index');

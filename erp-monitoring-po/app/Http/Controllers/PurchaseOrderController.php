@@ -39,7 +39,7 @@ class PurchaseOrderController extends Controller
         return view('po.create', compact('suppliers', 'items'));
     }
 
-    public function show(int $id): View
+    public function show(string $id): View
     {
         $po = DB::table('purchase_orders as po')
             ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
@@ -158,7 +158,7 @@ class PurchaseOrderController extends Controller
         return redirect()->route('po.index')->with('success', 'PO berhasil dibuat dengan status PO Issued.');
     }
 
-    public function updateItemSchedule(Request $request, int $itemId): RedirectResponse
+    public function updateItemSchedule(Request $request, string $itemId): RedirectResponse
     {
         $item = DB::table('purchase_order_items')->where('id', $itemId)->firstOrFail();
 
@@ -197,7 +197,7 @@ class PurchaseOrderController extends Controller
         return back()->with('success', 'ETD item berhasil diperbarui.');
     }
 
-    public function cancelItem(Request $request, int $itemId): RedirectResponse
+    public function cancelItem(Request $request, string $itemId): RedirectResponse
     {
         $validated = $request->validate([
             'cancel_reason' => 'required|string|max:1000',
@@ -237,7 +237,7 @@ class PurchaseOrderController extends Controller
         return back()->with('success', 'Item berhasil dibatalkan.');
     }
 
-    public function forceCloseItem(Request $request, int $itemId): RedirectResponse
+    public function forceCloseItem(Request $request, string $itemId): RedirectResponse
     {
         $validated = $request->validate([
             'cancel_reason' => 'required|string|max:1000',
@@ -281,7 +281,7 @@ class PurchaseOrderController extends Controller
         return back()->with('success', 'Force close item berhasil. Status item menjadi Cancelled.');
     }
 
-    public function cancelPo(Request $request, int $id): RedirectResponse
+    public function cancelPo(Request $request, string $id): RedirectResponse
     {
         $validated = $request->validate([
             'cancel_reason' => 'required|string|max:1000',
