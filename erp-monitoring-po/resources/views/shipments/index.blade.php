@@ -47,45 +47,20 @@
     Kandidat item akan muncul setelah Anda mencari supplier atau keyword item/PO.
 </div>
 @else
-<div class="p-3 border-bottom bg-light">
-    <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
-        <div class="text-muted small">Pilih beberapa item sekaligus lalu tambahkan ke draft.</div>
-        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addCheckedCandidateItems()">Pilih Beberapa Item</button>
+<div class="p-3 border-bottom bg-light d-flex justify-content-between align-items-center gap-2 flex-wrap">
+    <div class="text-muted small">Centang item yang ingin dimasukkan ke draft shipment.</div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleCandidateCheckboxes(false)">Kosongkan Centang</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="addCheckedCandidateItems()">Tambahkan ke Draft</button>
     </div>
 </div>
 <table class="table table-hover mb-0">
-<thead><tr><th><input type="checkbox" onchange="toggleCandidateCheckboxes(this.checked)"></th><th>Pilih</th><th>Supplier</th><th>PO</th><th>Item</th><th>Outstanding PO</th><th>Sudah Dialokasikan</th><th>Sisa Bisa Dikirim</th><th>ETD</th></tr></thead>
+<thead><tr><th><input type="checkbox" onchange="toggleCandidateCheckboxes(this.checked)"></th><th>Supplier</th><th>PO</th><th>Item</th><th>Outstanding PO</th><th>Sudah Dialokasikan</th><th>Sisa Bisa Dikirim</th><th>ETD</th></tr></thead>
 <tbody>
 @forelse($candidateItems as $candidate)
 <tr class="{{ in_array((int) $candidate->purchase_order_item_id, $selectedItemIds, true) ? 'table-primary' : '' }}">
     <td>
         <input type="checkbox" class="candidate-item-checkbox" value="{{ $candidate->purchase_order_item_id }}">
-    </td>
-    <td>
-        <form method="GET" class="shipment-selection-form">
-            @foreach(request()->except('selected_items') as $key => $value)
-                @if(is_array($value))
-                    @foreach($value as $nestedValue)
-                        <input type="hidden" name="{{ $key }}[]" value="{{ $nestedValue }}">
-                    @endforeach
-                @else
-                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
-                @endif
-            @endforeach
-            @php($updatedSelections = collect($selectedItemIds))
-            @if(in_array((int) $candidate->purchase_order_item_id, $selectedItemIds, true))
-                @php($updatedSelections = $updatedSelections->reject(fn($id) => (int) $id === (int) $candidate->purchase_order_item_id)->values())
-            @else
-                @php($updatedSelections = $updatedSelections->push((int) $candidate->purchase_order_item_id)->unique()->values())
-            @endif
-            @foreach($updatedSelections as $selectedItemId)
-                <input type="hidden" name="selected_items[]" value="{{ $selectedItemId }}">
-            @endforeach
-            @foreach($draftQuantities as $itemId => $qty)
-                <input type="hidden" name="shipped_qty[{{ $itemId }}]" value="{{ $qty }}">
-            @endforeach
-            <button class="btn btn-sm btn-outline-primary">Pilih</button>
-        </form>
     </td>
     <td>{{ $candidate->supplier_name }}</td>
     <td>{{ $candidate->po_number }}<br><span class="badge bg-light text-dark">{{ $candidate->po_status }}</span></td>
@@ -96,7 +71,7 @@
     <td>{{ $candidate->etd_date ? \Carbon\Carbon::parse($candidate->etd_date)->format('d-m-Y') : '-' }}</td>
 </tr>
 @empty
-<tr><td colspan="9" class="text-center text-muted">Belum ada kandidat. Coba filter supplier atau cari berdasarkan item yang akan datang.</td></tr>
+<tr><td colspan="8" class="text-center text-muted">Belum ada kandidat. Coba filter supplier atau cari berdasarkan item yang akan datang.</td></tr>
 @endforelse
 </tbody>
 </table>
@@ -112,11 +87,12 @@
     Supplier: <strong>{{ $selectedItems->first()->supplier_name }}</strong>
 </div>
 <div class="mb-3 d-flex gap-2 flex-wrap">
-    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCheckedDraftItems()">Batal Pilih Beberapa Item</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleDraftCheckboxes(false)">Kosongkan Centang</button>
+    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCheckedDraftItems()">Batal Pilih yang Dicentang</button>
     <form method="GET" action="{{ route('shipments.index') }}">
         <input type="hidden" name="view" value="draft">
         <input type="hidden" name="clear_selection" value="1">
-        <button class="btn btn-sm btn-outline-danger">Bersihkan Pilihan Item</button>
+        <button class="btn btn-sm btn-outline-danger">Bersihkan Semua Item</button>
     </form>
 </div>
 @else
@@ -131,7 +107,6 @@
 </div>
 <div class="col-md-3"><label class="form-label">No Delivery Note</label><input type="text" name="delivery_note_number" value="{{ old('delivery_note_number') }}" class="form-control" placeholder="No surat jalan supplier" required></div>
 <div class="col-md-4"><label class="form-label">Tanggal Dokumen</label><input type="date" name="shipment_date" value="{{ old('shipment_date', now()->format('Y-m-d')) }}" class="form-control" required></div>
-<div class="col-md-1 d-flex align-items-end"><button class="btn btn-primary w-100" {{ $selectedItems->isEmpty() ? 'disabled' : '' }}>Simpan</button></div>
 <div class="col-md-4">
     <div class="form-check mt-2">
         <input class="form-check-input" type="checkbox" value="1" name="po_reference_missing" id="po_reference_missing" @checked(old('po_reference_missing') === '1')>
@@ -165,6 +140,9 @@
             </tbody>
         </table>
     </div>
+</div>
+<div class="col-12 d-flex justify-content-end">
+    <button class="btn btn-primary" {{ $selectedItems->isEmpty() ? 'disabled' : '' }}>Simpan Draft Shipment</button>
 </div>
 </form></div></div>
 </div>
