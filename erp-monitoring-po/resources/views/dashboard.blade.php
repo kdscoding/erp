@@ -33,27 +33,27 @@
         }
 
         .bg-kpi-1 {
-            background: linear-gradient(135deg, #00a6c0, #0072a5)
+            background: linear-gradient(135deg, #bfd730, #8fc63f)
         }
 
         .bg-kpi-2 {
-            background: linear-gradient(135deg, #ea5455, #b51d2f)
+            background: linear-gradient(135deg, #f1d93b, #d8b529)
         }
 
         .bg-kpi-3 {
-            background: linear-gradient(135deg, #2d9cdb, #1565d8)
+            background: linear-gradient(135deg, #9ecb3c, #6f9628)
         }
 
         .bg-kpi-4 {
-            background: linear-gradient(135deg, #2ecc71, #1f9c53)
+            background: linear-gradient(135deg, #cfe56a, #94bf36)
         }
 
         .bg-kpi-5 {
-            background: linear-gradient(135deg, #f9ca24, #e39d12)
+            background: linear-gradient(135deg, #f6e97e, #e2c93e)
         }
 
         .bg-kpi-6 {
-            background: linear-gradient(135deg, #7b8794, #4b5563)
+            background: linear-gradient(135deg, #7b8f35, #556c22)
         }
 
         .mini-chip {

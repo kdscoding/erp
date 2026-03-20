@@ -14,32 +14,92 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css">
     <style>
-        :root{--bc-blue:#2c2a4a;--bc-blue-2:#5a3d7a;--bc-bg:#f4f2f8;--bc-line:#d9d2e6;}
-        body{font-size:12.5px;background:var(--bc-bg)}
-        .main-header.navbar{background:linear-gradient(90deg,var(--bc-blue),var(--bc-blue-2));color:#fff;border-bottom:0}
-        .main-header .nav-link,.main-header .small{color:#fff!important;text-shadow:0 1px 0 rgba(0,0,0,.15)}
-        .main-sidebar{background:#2a2340!important}
-        .brand-link{background:#211a35!important;border-bottom:1px solid rgba(255,255,255,.12)!important;padding:.7rem .9rem}
+        :root{
+            --lemon-yellow:#f1d93b;
+            --lemon-yellow-soft:#fff4a8;
+            --lemon-green:#9ecb3c;
+            --lemon-green-deep:#6f9628;
+            --lemon-ink:#304218;
+            --lemon-olive:#566d2a;
+            --lemon-bg:#f7f8ea;
+            --lemon-bg-soft:#fcfced;
+            --lemon-line:#dfe6b8;
+            --lemon-line-strong:#ccd88a;
+            --lemon-accent:#e8f18a;
+        }
+        body{
+            font-size:12.5px;
+            background:
+                radial-gradient(circle at top left, rgba(255, 225, 85, 0.14), transparent 22%),
+                radial-gradient(circle at top right, rgba(158, 203, 60, 0.12), transparent 20%),
+                var(--lemon-bg);
+            color:var(--lemon-ink)
+        }
+        a{color:var(--lemon-green-deep)}
+        a:hover{color:#59781e}
+        .main-header.navbar{
+            background:linear-gradient(90deg,#738f27,#9ecb3c 55%,#d8e85b);
+            color:#21300b;
+            border-bottom:1px solid rgba(86,109,42,.12)
+        }
+        .main-header .nav-link,.main-header .small{color:#21300b!important;text-shadow:none}
+        .main-sidebar{background:linear-gradient(180deg,#354a18 0%,#2a3a13 100%)!important}
+        .brand-link{background:linear-gradient(90deg,#2d4111,#425d18)!important;border-bottom:1px solid rgba(255,255,255,.12)!important;padding:.7rem .9rem}
         .brand-link .brand-image{float:none;max-height:34px;margin-left:0;margin-right:.55rem;margin-top:0;opacity:.95}
         .brand-text{color:#fff!important;font-weight:700!important;font-size:13px;letter-spacing:.3px;display:inline-flex;flex-direction:column;line-height:1.1;text-align:left}
-        .brand-text small{font-size:10px;font-weight:500;letter-spacing:.6px;color:#e7dcff}
-        .content-wrapper{background:var(--bc-bg)}
+        .brand-text small{font-size:10px;font-weight:500;letter-spacing:.6px;color:#dceca7}
+        .content-wrapper{background:transparent}
         .content-header{padding:.6rem .5rem .2rem}
-        .content-header h1{font-size:17px;font-weight:700;color:#3a2e58}
-        .bc-sub{font-size:11px;color:#6a5d87}
-        .bc-ribbon{background:#efe9f7;border:1px solid #d6c8e8;border-radius:4px;padding:4px 10px;font-size:11px;color:#5c467f}
-        .card{border:1px solid var(--bc-line);box-shadow:none;border-radius:4px}
-        .card-header{background:#f8f5fc;border-bottom:1px solid var(--bc-line);padding:.5rem .75rem}
-        .card-title{font-size:12px;font-weight:700;color:#4d3b6d;text-transform:uppercase;letter-spacing:.2px}
-        .table thead th{background:#ece5f6;border-bottom:1px solid var(--bc-line);font-size:10.8px;text-transform:uppercase;letter-spacing:.4px}
+        .content-header h1{font-size:17px;font-weight:700;color:var(--lemon-ink)}
+        .bc-sub{font-size:11px;color:#6f7e48}
+        .bc-ribbon{background:#f9fbcf;border:1px solid var(--lemon-line-strong);border-radius:999px;padding:4px 10px;font-size:11px;color:var(--lemon-olive)}
+        .card{border:1px solid var(--lemon-line);box-shadow:0 .4rem 1rem rgba(119,136,60,.06);border-radius:10px;background:rgba(255,255,255,.92)}
+        .card-header{background:linear-gradient(180deg,var(--lemon-bg-soft),#f4f7d8);border-bottom:1px solid var(--lemon-line);padding:.6rem .85rem}
+        .card-title{font-size:12px;font-weight:700;color:var(--lemon-olive);text-transform:uppercase;letter-spacing:.2px}
+        .table thead th{background:#f2f6cf;border-bottom:1px solid var(--lemon-line);font-size:10.8px;text-transform:uppercase;letter-spacing:.4px;color:#5f7331}
         .table td,.table th{padding:.42rem .55rem;vertical-align:middle}
+        .table-hover tbody tr:hover{background:rgba(241,217,59,.08)}
         .btn{font-size:12px;padding:.32rem .58rem}
         .badge{font-size:10.5px}
+        .btn-primary{background:linear-gradient(135deg,#bfd730 0%,#8fc63f 100%);border-color:#8eb93a;color:#23300d;font-weight:700}
+        .btn-primary:hover,.btn-primary:focus{background:linear-gradient(135deg,#b1cc22 0%,#82ba34 100%);border-color:#799d2d;color:#1f290d}
+        .btn-outline-primary{border-color:#9ecb3c;color:#6d8d1f}
+        .btn-outline-primary:hover,.btn-outline-primary:focus{background:#9ecb3c;border-color:#8fb832;color:#22300c}
+        .btn-success{background:linear-gradient(135deg,#9ecb3c 0%,#7ead31 100%);border-color:#70992b;color:#22300c}
+        .btn-success:hover,.btn-success:focus{background:linear-gradient(135deg,#93c035 0%,#729f2c 100%);border-color:#658c24;color:#1e290b}
+        .btn-warning{background:linear-gradient(135deg,#f3de59 0%,#e9c73d 100%);border-color:#d6b330;color:#4a3908}
+        .btn-warning:hover,.btn-warning:focus{background:linear-gradient(135deg,#ecd548 0%,#ddb72e 100%);border-color:#c39f22;color:#412f05}
+        .btn-light{background:#fffef1;border-color:#dce6b2;color:#5b6e27}
+        .btn-light:hover,.btn-light:focus{background:#f8f7df;border-color:#cfdc9b;color:#4d5e1f}
+        .form-control,.form-select,.custom-select{
+            border-color:#dfe6b8;
+            background:#fffef8;
+            color:var(--lemon-ink)
+        }
+        .form-control:focus,.form-select:focus,.custom-select:focus{
+            border-color:#b6cf45;
+            box-shadow:0 0 0 .12rem rgba(182,207,69,.18);
+            background:#fff
+        }
+        .input-group-text{background:#f7f8dd;border-color:#dfe6b8;color:#73822b}
+        .page-link{color:#6d8d1f;border-color:#dfe6b8;background:#fffef5}
+        .page-item.active .page-link{background:#9ecb3c;border-color:#8eb93a;color:#21300b}
+        .page-link:hover{color:#59781e;background:#f6f8dc;border-color:#d2dd9e}
+        .alert-success{background:#eef8d9;border-color:#d5e8a5;color:#48611a}
+        .alert-danger{background:#fff2ee;border-color:#efc8bd;color:#8f3f2b}
+        .alert-warning{background:#fff8d8;border-color:#ead78f;color:#7e6618}
+        .alert-info{background:#f4fbdf;border-color:#dce8a7;color:#5c7130}
         .nav-sidebar .nav-link{font-size:12.5px;padding:.42rem .65rem;color:#e9f1ff!important}
-        .nav-sidebar .nav-link.active{background:#ef8f2f!important;color:#1f1a2e!important;font-weight:700}
-        .nav-header{font-size:10px;color:#f0e8ff!important;letter-spacing:.7px;text-transform:uppercase;font-weight:700}
-        .footer-note{font-size:11px;color:#efe4ff}
-        .bc-chip{background:#ffffff33;border:1px solid #ffffff77;padding:2px 9px;border-radius:99px;font-size:10.5px}
+        .nav-sidebar .nav-link.active{background:linear-gradient(90deg,#e4ef7b,#bfd730)!important;color:#21300b!important;font-weight:700}
+        .nav-sidebar .nav-link:hover{background:rgba(232,241,138,.15)!important}
+        .nav-header{font-size:10px;color:#dceca7!important;letter-spacing:.7px;text-transform:uppercase;font-weight:700}
+        .footer-note{font-size:11px;color:#dceca7}
+        .bc-chip{background:rgba(255,255,255,.45);border:1px solid rgba(72,97,22,.18);padding:2px 9px;border-radius:99px;font-size:10.5px;color:#354817;font-weight:700}
+        .bg-primary{background-color:#9ecb3c!important;color:#21300b!important}
+        .bg-success{background-color:#88b93b!important}
+        .bg-warning{background-color:#f1d93b!important;color:#4b3b07!important}
+        .bg-secondary{background-color:#9aa57a!important}
+        .text-muted{color:#7a8660!important}
     </style>
 </head>
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed">
@@ -118,7 +178,7 @@
             <div class="container-fluid">
                 <div class="row g-2 align-items-center mb-1">
                     <div class="col-md-7">
-                        <h1 class="m-0">{{ $header ?? 'Portal Dokumen BC 4.0 Internal' }}</h1>
+                        <h1 class="m-0">{{ $header ?? 'LEMON Internal Monitoring' }}</h1>
                         <div class="bc-sub">Monitoring Purchase Order, Shipment, dan Receiving Material Label</div>
                     </div>
                     <div class="col-md-5 text-md-right">
@@ -145,8 +205,8 @@
     </div>
 
     <footer class="main-footer"
-        style="background:#2a2340;border-top:none;"><span class="footer-note"><strong>Portal BC 4.0 Internal</strong> -
-        Tampilan terinspirasi CEISA untuk kebutuhan operasional internal</span></footer>
+        style="background:#314216;border-top:none;"><span class="footer-note"><strong>LEMON Internal Monitoring</strong> -
+        Tema lemon untuk kebutuhan operasional internal</span></footer>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
