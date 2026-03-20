@@ -38,11 +38,25 @@
 </head>
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed">
 <div class="wrapper">
+    @php
+        $currentUser = auth()->user();
+        $currentUser?->loadMissing('roles');
+        $roleSlug = $currentUser?->primaryRoleSlug();
+        $roleLabel = match ($roleSlug) {
+            'administrator' => 'Administrator',
+            'staff' => 'Staff',
+            'supervisor' => 'Supervisor',
+            default => 'Tanpa Role',
+        };
+    @endphp
     <nav class="main-header navbar navbar-expand">
         <ul class="navbar-nav"><li class="nav-item"><a class="nav-link" data-widget="pushmenu" href="#"><i class="fas fa-bars"></i></a></li></ul>
         <ul class="navbar-nav ms-auto align-items-center">
             <li class="nav-item me-3"><span class="bc-chip">SIMULASI CEISA BEACUKAI - DARK THEME</span></li>
-            <li class="nav-item me-3 small">{{ auth()->user()->email ?? 'Guest' }}</li>
+            @auth
+            <li class="nav-item me-3"><span class="bc-chip">{{ $roleLabel }}</span></li>
+            @endauth
+            <li class="nav-item me-3 small">{{ auth()->user()->nik ?? '-' }} | {{ auth()->user()->email ?? 'Guest' }}</li>
             @auth
             <li class="nav-item"><form method="POST" action="{{ route('logout') }}">@csrf<button class="btn btn-sm btn-light">Logout</button></form></li>
             @endauth
@@ -55,22 +69,34 @@
             <nav class="mt-2">
                 <ul class="nav nav-pills nav-sidebar flex-column" role="menu">
                     <li class="nav-item"><a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"><i class="nav-icon fas fa-gauge"></i><p>Dashboard</p></a></li>
+                    @if($currentUser?->hasAnyRole(['administrator', 'staff']))
                     <li class="nav-header">Referensi Master</li>
                     <li class="nav-item"><a href="{{ route('suppliers.index') }}" class="nav-link {{ request()->routeIs('suppliers.*') ? 'active' : '' }}"><i class="nav-icon fas fa-truck"></i><p>Data Supplier</p></a></li>
                     <li class="nav-item"><a href="{{ route('items.index') }}" class="nav-link {{ request()->routeIs('items.*') ? 'active' : '' }}"><i class="nav-icon fas fa-tags"></i><p>Data Barang</p></a></li>
                     <li class="nav-item"><a href="{{ route('units.index') }}" class="nav-link {{ request()->routeIs('units.*') ? 'active' : '' }}"><i class="nav-icon fas fa-ruler"></i><p>Data Satuan</p></a></li>
                     <li class="nav-item"><a href="{{ route('warehouses.index') }}" class="nav-link {{ request()->routeIs('warehouses.*') ? 'active' : '' }}"><i class="nav-icon fas fa-warehouse"></i><p>Data Gudang</p></a></li>
                     <li class="nav-item"><a href="{{ route('plants.index') }}" class="nav-link {{ request()->routeIs('plants.*') ? 'active' : '' }}"><i class="nav-icon fas fa-industry"></i><p>Data Plant</p></a></li>
+                    @endif
+                    @if($currentUser?->hasAnyRole(['administrator', 'staff', 'supervisor']))
                     <li class="nav-header">Dokumen</li>
                     <li class="nav-item"><a href="{{ route('po.index') }}" class="nav-link {{ request()->routeIs('po.*') ? 'active' : '' }}"><i class="nav-icon fas fa-file-alt"></i><p>Dokumen PO</p></a></li>
+                    @endif
+                    @if($currentUser?->hasAnyRole(['administrator', 'staff']))
                     <li class="nav-item"><a href="{{ route('shipments.index') }}" class="nav-link {{ request()->routeIs('shipments.*') ? 'active' : '' }}"><i class="nav-icon fas fa-ship"></i><p>Dokumen Shipment</p></a></li>
                     <li class="nav-item"><a href="{{ route('receiving.index') }}" class="nav-link {{ request()->routeIs('receiving.*') ? 'active' : '' }}"><i class="nav-icon fas fa-box-open"></i><p>Dokumen Receiving</p></a></li>
+                    @endif
+                    @if($currentUser?->hasAnyRole(['administrator', 'staff', 'supervisor']))
                     <li class="nav-header">Monitoring & Audit</li>
                     <li class="nav-item"><a href="{{ route('monitoring') }}" class="nav-link {{ request()->routeIs('monitoring') ? 'active' : '' }}"><i class="nav-icon fas fa-eye"></i><p>Monitoring Item</p></a></li>
                     <li class="nav-item"><a href="{{ route('traceability.index') }}" class="nav-link {{ request()->routeIs('traceability.*') ? 'active' : '' }}"><i class="nav-icon fas fa-search"></i><p>Traceability</p></a></li>
                     <li class="nav-item"><a href="{{ route('reports.outstanding') }}" class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="nav-icon fas fa-chart-bar"></i><p>Laporan Outstanding</p></a></li>
-                    <li class="nav-item"><a href="{{ route('settings.index') }}" class="nav-link {{ request()->routeIs('settings.*') ? 'active' : '' }}"><i class="nav-icon fas fa-cogs"></i><p>Parameter Sistem</p></a></li>
                     <li class="nav-item"><a href="{{ route('audit.index') }}" class="nav-link {{ request()->routeIs('audit.*') ? 'active' : '' }}"><i class="nav-icon fas fa-history"></i><p>Audit Trail</p></a></li>
+                    @endif
+                    @if($currentUser?->hasRole('administrator'))
+                    <li class="nav-header">Administrasi</li>
+                    <li class="nav-item"><a href="{{ route('settings.index') }}" class="nav-link {{ request()->routeIs('settings.*') && !request()->routeIs('users.*') ? 'active' : '' }}"><i class="nav-icon fas fa-cogs"></i><p>Parameter Sistem</p></a></li>
+                    <li class="nav-item"><a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}"><i class="nav-icon fas fa-users"></i><p>Daftar User</p></a></li>
+                    @endif
                 </ul>
             </nav>
         </div>
@@ -93,6 +119,16 @@
         <section class="content">
             <div class="container-fluid">
                 @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div> @endif
+                @if (session('error'))<div class="alert alert-danger">{{ session('error') }}</div> @endif
+                @if ($errors->any())
+                    <div class="alert alert-danger">
+                        <ul class="mb-0 ps-3">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
                 @yield('content')
             </div>
         </section>

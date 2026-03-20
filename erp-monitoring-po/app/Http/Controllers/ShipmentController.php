@@ -9,6 +9,8 @@ use Illuminate\View\View;
 
 class ShipmentController extends Controller
 {
+    private const SHIPPABLE_PO_STATUSES = ['PO Issued', 'Confirmed', 'Shipped', 'Partial'];
+
     public function index(): View
     {
         $rows = DB::table('shipments as sh')
@@ -19,7 +21,7 @@ class ShipmentController extends Controller
             ->paginate(20);
 
         $pos = DB::table('purchase_orders')
-            ->whereIn('status', ['Approved', 'Sent to Supplier', 'Supplier Confirmed', 'Shipped', 'Partial Received'])
+            ->whereIn('status', self::SHIPPABLE_PO_STATUSES)
             ->orderByDesc('id')
             ->limit(200)
             ->get();
@@ -38,7 +40,7 @@ class ShipmentController extends Controller
         ], ['required' => ':attribute wajib diisi.']);
 
         $po = DB::table('purchase_orders')->where('id', $v['purchase_order_id'])->firstOrFail();
-        if (! in_array($po->status, ['Approved', 'Sent to Supplier', 'Supplier Confirmed', 'Shipped', 'Partial Received'], true)) {
+        if (! in_array($po->status, self::SHIPPABLE_PO_STATUSES, true)) {
             return back()->with('error', 'Status PO tidak valid untuk shipment.');
         }
 

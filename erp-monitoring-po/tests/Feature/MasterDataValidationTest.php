@@ -14,7 +14,7 @@ class MasterDataValidationTest extends TestCase
 
     private function adminUser(): User
     {
-        $role = Role::create(['name' => 'Admin', 'slug' => 'admin']);
+        $role = Role::firstOrCreate(['slug' => 'administrator'], ['name' => 'Administrator']);
         $user = User::factory()->create();
         DB::table('user_roles')->insert(['user_id' => $user->id, 'role_id' => $role->id]);
 

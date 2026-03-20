@@ -22,7 +22,7 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create();
 
         $response = $this->post('/login', [
-            'email' => $user->email,
+            'nik' => $user->nik,
             'password' => 'password',
         ]);
 
@@ -35,9 +35,21 @@ class AuthenticationTest extends TestCase
         $user = User::factory()->create();
 
         $this->post('/login', [
-            'email' => $user->email,
+            'nik' => $user->nik,
             'password' => 'wrong-password',
         ]);
+
+        $this->assertGuest();
+    }
+
+    public function test_inactive_users_can_not_authenticate(): void
+    {
+        $user = User::factory()->create(['is_active' => false]);
+
+        $this->post('/login', [
+            'nik' => $user->nik,
+            'password' => 'password',
+        ])->assertSessionHasErrors('nik');
 
         $this->assertGuest();
     }

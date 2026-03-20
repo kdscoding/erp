@@ -118,7 +118,7 @@ class PurchaseOrderController extends Controller
 
         DB::beginTransaction();
         try {
-            $poNumber = $validated['po_number'] ?: ErpFlow::generateNumber('PO', 'purchase_orders', 'po_number');
+            $poNumber = ($validated['po_number'] ?? null) ?: ErpFlow::generateNumber('PO', 'purchase_orders', 'po_number');
             $poId = DB::table('purchase_orders')->insertGetId([
                 'po_number' => $poNumber,
                 'po_date' => $validated['po_date'],

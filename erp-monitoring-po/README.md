@@ -50,15 +50,28 @@ DB_PASSWORD=
 - GR: `GR-YYYYMMDD-####`
 
 ## Akun Demo
+- NIK: `10000001`
 - Email: `admin@erp.local`
+- Password: `password`
+- NIK: `10000002`
+- Email: `staff@erp.local`
+- Password: `password`
+- NIK: `10000003`
+- Email: `supervisor@erp.local`
 - Password: `password`
 
 ## Ringkasan Role
-- Admin: full access, settings, audit, master data
-- Purchasing: PO creation/edit, shipment update
-- Purchasing Manager: approval & monitoring
-- Warehouse: goods receiving
-- Compliance/Viewer: monitoring read-only
+- Administrator: full access, settings, user management, audit, master data
+- Staff: operasional master data, PO, shipment, receiving
+- Supervisor: monitoring, review dokumen, audit, laporan outstanding
+
+## Aturan User & Login
+- Login menggunakan `NIK`, bukan email.
+- User tidak dihapus permanen; user hanya bisa `dinonaktifkan` agar tidak dapat login kembali.
+- Reset password berjalan dengan alur:
+  - user mengajukan request reset password dari halaman lupa password menggunakan NIK
+  - administrator memproses request yang statusnya masih `pending`
+  - tanpa request yang tercatat, administrator tidak dapat melanjutkan reset password
 
 ## Alur PO & Receiving
 1. Buat PO, sistem otomatis memberi status awal `PO Issued`.

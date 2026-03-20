@@ -29,8 +29,11 @@ class PoReceivingFlowTest extends TestCase
     private function seedBasic(): void
     {
         $roleIds = [];
-        foreach (['admin', 'purchasing', 'purchasing_manager', 'warehouse', 'viewer', 'compliance'] as $slug) {
-            $roleIds[$slug] = Role::create(['name' => ucfirst(str_replace('_', ' ', $slug)), 'slug' => $slug])->id;
+        foreach (['administrator', 'staff', 'supervisor'] as $slug) {
+            $roleIds[$slug] = Role::updateOrCreate(
+                ['slug' => $slug],
+                ['name' => ucfirst(str_replace('_', ' ', $slug))]
+            )->id;
         }
 
         DB::table('suppliers')->insert(['supplier_code' => 'SUP001', 'supplier_name' => 'Supplier A', 'status' => 1, 'created_at' => now(), 'updated_at' => now()]);
@@ -48,9 +51,9 @@ class PoReceivingFlowTest extends TestCase
         return $user;
     }
 
-    public function test_po_creation_and_submit_approval_flow(): void
+    public function test_po_creation_sets_initial_status_to_po_issued(): void
     {
-        $user = $this->makeUserWithRole('purchasing');
+        $user = $this->makeUserWithRole('staff');
         $supplierId = DB::table('suppliers')->value('id');
         $itemId = DB::table('items')->value('id');
 
@@ -62,18 +65,20 @@ class PoReceivingFlowTest extends TestCase
             ],
         ]);
 
-        $resp->assertRedirect('/po');
+        $resp->assertSessionHasNoErrors();
         $poId = DB::table('purchase_orders')->value('id');
         $this->assertNotNull($poId);
-        $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Draft']);
-
-        $this->actingAs($user)->post("/po/{$poId}/transition", ['to_status' => 'Submitted'])->assertSessionHas('success');
-        $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Submitted']);
+        $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'PO Issued']);
+        $this->assertDatabaseHas('po_status_histories', [
+            'purchase_order_id' => $poId,
+            'from_status' => null,
+            'to_status' => 'PO Issued',
+        ]);
     }
 
     public function test_shipment_partial_and_full_receipt_auto_close(): void
     {
-        $user = $this->makeUserWithRole('admin');
+        $user = $this->makeUserWithRole('administrator');
         $supplierId = DB::table('suppliers')->value('id');
         $itemId = DB::table('items')->value('id');
 
@@ -81,7 +86,7 @@ class PoReceivingFlowTest extends TestCase
             'po_number' => 'PO-TEST-0001',
             'po_date' => now()->toDateString(),
             'supplier_id' => $supplierId,
-            'status' => 'Approved',
+            'status' => 'Confirmed',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -110,7 +115,7 @@ class PoReceivingFlowTest extends TestCase
         ])->assertSessionHas('success');
 
         $this->assertDatabaseHas('purchase_order_items', ['id' => $poItemId, 'outstanding_qty' => 60]);
-        $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Partial Received']);
+        $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Partial']);
 
         $this->actingAs($user)->post('/receiving', [
             'purchase_order_item_id' => $poItemId,
@@ -124,7 +129,7 @@ class PoReceivingFlowTest extends TestCase
 
     public function test_over_receipt_is_blocked_by_default(): void
     {
-        $user = $this->makeUserWithRole('admin');
+        $user = $this->makeUserWithRole('administrator');
         $supplierId = DB::table('suppliers')->value('id');
         $itemId = DB::table('items')->value('id');
 
@@ -156,7 +161,7 @@ class PoReceivingFlowTest extends TestCase
 
     public function test_role_restriction_for_receiving_page(): void
     {
-        $viewer = $this->makeUserWithRole('viewer');
+        $viewer = $this->makeUserWithRole('supervisor');
 
         $this->actingAs($viewer)->get('/receiving')->assertForbidden();
     }

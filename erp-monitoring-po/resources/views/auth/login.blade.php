@@ -11,9 +11,9 @@
             @csrf
 
             <div>
-                <x-input-label for="email" :value="__('Email')" />
-                <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-                <x-input-error :messages="$errors->get('email')" class="mt-2" />
+                <x-input-label for="nik" :value="__('NIK')" />
+                <x-text-input id="nik" class="block mt-1 w-full" type="text" name="nik" :value="old('nik')" required autofocus autocomplete="username" />
+                <x-input-error :messages="$errors->get('nik')" class="mt-2" />
             </div>
 
             <div class="mt-4">

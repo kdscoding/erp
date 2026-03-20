@@ -13,27 +13,52 @@ class RolePermissionSeeder extends Seeder
     public function run(): void
     {
         $roles = [
-            ['name' => 'Admin', 'slug' => 'admin'],
-            ['name' => 'Purchasing', 'slug' => 'purchasing'],
-            ['name' => 'Purchasing Manager', 'slug' => 'purchasing_manager'],
-            ['name' => 'Warehouse', 'slug' => 'warehouse'],
-            ['name' => 'BC Compliance', 'slug' => 'compliance'],
-            ['name' => 'Viewer', 'slug' => 'viewer'],
+            ['name' => 'Administrator', 'slug' => 'administrator'],
+            ['name' => 'Staff', 'slug' => 'staff'],
+            ['name' => 'Supervisor', 'slug' => 'supervisor'],
         ];
 
         foreach ($roles as $role) {
             Role::updateOrCreate(['slug' => $role['slug']], $role);
         }
 
-        $admin = User::firstOrCreate(['email' => 'admin@erp.local'], [
-            'name' => 'Admin ERP',
+        $admin = User::updateOrCreate(['email' => 'admin@erp.local'], [
+            'name' => 'Administrator ERP',
+            'nik' => '10000001',
             'password' => Hash::make('password'),
+            'is_active' => true,
         ]);
 
-        $adminRoleId = Role::where('slug', 'admin')->value('id');
+        $adminRoleId = Role::where('slug', 'administrator')->value('id');
         DB::table('user_roles')->updateOrInsert([
             'user_id' => $admin->id,
             'role_id' => $adminRoleId,
+        ], []);
+
+        $staff = User::updateOrCreate(['email' => 'staff@erp.local'], [
+            'name' => 'Staff ERP',
+            'nik' => '10000002',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+
+        $staffRoleId = Role::where('slug', 'staff')->value('id');
+        DB::table('user_roles')->updateOrInsert([
+            'user_id' => $staff->id,
+            'role_id' => $staffRoleId,
+        ], []);
+
+        $supervisor = User::updateOrCreate(['email' => 'supervisor@erp.local'], [
+            'name' => 'Supervisor ERP',
+            'nik' => '10000003',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+
+        $supervisorRoleId = Role::where('slug', 'supervisor')->value('id');
+        DB::table('user_roles')->updateOrInsert([
+            'user_id' => $supervisor->id,
+            'role_id' => $supervisorRoleId,
         ], []);
 
         DB::table('settings')->updateOrInsert(
