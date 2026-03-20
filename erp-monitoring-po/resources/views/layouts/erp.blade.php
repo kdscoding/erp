@@ -4,7 +4,11 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $title ?? 'Portal Dokumen BC 4.0 - Internal' }}</title>
+    <title>{{ $title ?? 'Labeling internal Monitoring' }}</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('lemon/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('lemon/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('lemon/favicon-16x16.png') }}">
+    <link rel="shortcut icon" href="{{ asset('lemon/favicon.ico') }}">
     <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
@@ -15,8 +19,10 @@
         .main-header.navbar{background:linear-gradient(90deg,var(--bc-blue),var(--bc-blue-2));color:#fff;border-bottom:0}
         .main-header .nav-link,.main-header .small{color:#fff!important;text-shadow:0 1px 0 rgba(0,0,0,.15)}
         .main-sidebar{background:#2a2340!important}
-        .brand-link{background:#211a35!important;border-bottom:1px solid rgba(255,255,255,.12)!important;padding:.75rem .9rem}
-        .brand-text{color:#fff!important;font-weight:700!important;font-size:13px;letter-spacing:.3px}
+        .brand-link{background:#211a35!important;border-bottom:1px solid rgba(255,255,255,.12)!important;padding:.7rem .9rem}
+        .brand-link .brand-image{float:none;max-height:34px;margin-left:0;margin-right:.55rem;margin-top:0;opacity:.95}
+        .brand-text{color:#fff!important;font-weight:700!important;font-size:13px;letter-spacing:.3px;display:inline-flex;flex-direction:column;line-height:1.1;text-align:left}
+        .brand-text small{font-size:10px;font-weight:500;letter-spacing:.6px;color:#e7dcff}
         .content-wrapper{background:var(--bc-bg)}
         .content-header{padding:.6rem .5rem .2rem}
         .content-header h1{font-size:17px;font-weight:700;color:#3a2e58}
@@ -52,7 +58,6 @@
     <nav class="main-header navbar navbar-expand">
         <ul class="navbar-nav"><li class="nav-item"><a class="nav-link" data-widget="pushmenu" href="#"><i class="fas fa-bars"></i></a></li></ul>
         <ul class="navbar-nav ml-auto align-items-center">
-            <li class="nav-item mr-3"><span class="bc-chip">SIMULASI CEISA BEACUKAI - DARK THEME</span></li>
             @auth
             <li class="nav-item mr-3"><span class="bc-chip">{{ $roleLabel }}</span></li>
             @endauth
@@ -64,12 +69,18 @@
     </nav>
 
     <aside class="main-sidebar elevation-4">
-        <a href="{{ route('dashboard') }}" class="brand-link text-center"><span class="brand-text">BC 4.0 MONITORING INTERNAL</span></a>
+        <a href="{{ route('dashboard') }}" class="brand-link d-flex align-items-center">
+            <img src="{{ asset('lemon/apple-touch-icon.png') }}" alt="LEMON Logo" class="brand-image img-circle elevation-2">
+            <span class="brand-text">
+                <span>LEMON</span>
+                <small>Internal Monitoring</small>
+            </span>
+        </a>
         <div class="sidebar">
             <nav class="mt-2">
                 <ul class="nav nav-pills nav-sidebar flex-column" role="menu">
                     <li class="nav-item"><a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"><i class="nav-icon fas fa-gauge"></i><p>Dashboard</p></a></li>
-                    @if($currentUser?->hasAnyRole(['administrator', 'staff']))
+                    @if ($currentUser?->hasAnyRole(['administrator', 'staff']))
                     <li class="nav-header">Referensi Master</li>
                     <li class="nav-item"><a href="{{ route('suppliers.index') }}" class="nav-link {{ request()->routeIs('suppliers.*') ? 'active' : '' }}"><i class="nav-icon fas fa-truck"></i><p>Data Supplier</p></a></li>
                     <li class="nav-item"><a href="{{ route('items.index') }}" class="nav-link {{ request()->routeIs('items.*') ? 'active' : '' }}"><i class="nav-icon fas fa-tags"></i><p>Data Barang</p></a></li>
@@ -77,22 +88,22 @@
                     <li class="nav-item"><a href="{{ route('warehouses.index') }}" class="nav-link {{ request()->routeIs('warehouses.*') ? 'active' : '' }}"><i class="nav-icon fas fa-warehouse"></i><p>Data Gudang</p></a></li>
                     <li class="nav-item"><a href="{{ route('plants.index') }}" class="nav-link {{ request()->routeIs('plants.*') ? 'active' : '' }}"><i class="nav-icon fas fa-industry"></i><p>Data Plant</p></a></li>
                     @endif
-                    @if($currentUser?->hasAnyRole(['administrator', 'staff', 'supervisor']))
+                    @if ($currentUser?->hasAnyRole(['administrator', 'staff', 'supervisor']))
                     <li class="nav-header">Dokumen</li>
                     <li class="nav-item"><a href="{{ route('po.index') }}" class="nav-link {{ request()->routeIs('po.*') ? 'active' : '' }}"><i class="nav-icon fas fa-file-alt"></i><p>Dokumen PO</p></a></li>
                     @endif
-                    @if($currentUser?->hasAnyRole(['administrator', 'staff']))
+                    @if ($currentUser?->hasAnyRole(['administrator', 'staff']))
                     <li class="nav-item"><a href="{{ route('shipments.index') }}" class="nav-link {{ request()->routeIs('shipments.*') ? 'active' : '' }}"><i class="nav-icon fas fa-ship"></i><p>Dokumen Shipment</p></a></li>
                     <li class="nav-item"><a href="{{ route('receiving.index') }}" class="nav-link {{ request()->routeIs('receiving.*') ? 'active' : '' }}"><i class="nav-icon fas fa-box-open"></i><p>Dokumen Receiving</p></a></li>
                     @endif
-                    @if($currentUser?->hasAnyRole(['administrator', 'staff', 'supervisor']))
+                    @if ($currentUser?->hasAnyRole(['administrator', 'staff', 'supervisor']))
                     <li class="nav-header">Monitoring & Audit</li>
                     <li class="nav-item"><a href="{{ route('monitoring') }}" class="nav-link {{ request()->routeIs('monitoring') ? 'active' : '' }}"><i class="nav-icon fas fa-eye"></i><p>Monitoring Item</p></a></li>
                     <li class="nav-item"><a href="{{ route('traceability.index') }}" class="nav-link {{ request()->routeIs('traceability.*') ? 'active' : '' }}"><i class="nav-icon fas fa-search"></i><p>Traceability</p></a></li>
                     <li class="nav-item"><a href="{{ route('reports.outstanding') }}" class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}"><i class="nav-icon fas fa-chart-bar"></i><p>Laporan Outstanding</p></a></li>
                     <li class="nav-item"><a href="{{ route('audit.index') }}" class="nav-link {{ request()->routeIs('audit.*') ? 'active' : '' }}"><i class="nav-icon fas fa-history"></i><p>Audit Trail</p></a></li>
                     @endif
-                    @if($currentUser?->hasRole('administrator'))
+                    @if ($currentUser?->hasRole('administrator'))
                     <li class="nav-header">Administrasi</li>
                     <li class="nav-item"><a href="{{ route('settings.index') }}" class="nav-link {{ request()->routeIs('settings.*') && !request()->routeIs('users.*') ? 'active' : '' }}"><i class="nav-icon fas fa-cogs"></i><p>Parameter Sistem</p></a></li>
                     <li class="nav-item"><a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}"><i class="nav-icon fas fa-users"></i><p>Daftar User</p></a></li>
@@ -124,8 +135,7 @@
                     <div class="alert alert-danger">
                         <ul class="mb-0 pl-3">
                             @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
+                                <li>{{ $error }}</li> @endforeach
                         </ul>
                     </div>
                 @endif

@@ -1,6 +1,6 @@
 @extends('layouts.erp')
 
-@php($title = 'Dashboard ERP')
+@php($title = 'Dashboard Lemon')
 @php($header = 'Dashboard Monitoring PO')
 
 @section('content')
@@ -195,7 +195,7 @@
                         <div class="d-flex gap-2">
                             <input type="text" id="searchInput" class="form-control form-control-sm"
                                 placeholder="Cari PO, Item, atau Supplier..." style="width: 250px;">
-                            <select id="statusItemFilter" class="form-select form-select-sm" style="width: 150px;">
+                            <select id="statusItemFilter" class="form-control form-control-sm" style="width: 150px;">
                                 <option value="">Semua Status Item</option>
                                 <option value="Closed">Closed</option>
                                 <option value="Partial">Partial</option>
@@ -203,7 +203,7 @@
                                 <option value="Late">Late</option>
                                 <option value="Confirmed">Confirmed</option>
                             </select>
-                            <select id="statusEtdFilter" class="form-select form-select-sm" style="width: 150px;">
+                            <select id="statusEtdFilter" class="form-control form-control-sm" style="width: 150px;">
                                 <option value="">Semua Status ETD</option>
                                 <option value="On-Time">On-Time</option>
                                 <option value="At-Risk">At-Risk</option>
