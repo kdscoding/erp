@@ -77,6 +77,10 @@
                 Warehouse akan memproses dokumen <strong>{{ $selectedShipment->shipment_number }}</strong> dari supplier <strong>{{ $selectedShipment->supplier_name }}</strong> dengan delivery note <strong>{{ $selectedShipment->delivery_note_number }}</strong>.
             </div>
 
+            <div class="d-flex justify-content-end mb-3">
+                <a href="{{ route('receiving.index', ['clear_selection' => 1, 'supplier_id' => request('supplier_id'), 'document_number' => request('document_number'), 'keyword' => request('keyword')]) }}" class="btn btn-sm btn-outline-secondary">Batalkan Pilihan Dokumen</a>
+            </div>
+
             <form method="POST" action="{{ route('receiving.store') }}" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="shipment_id" value="{{ $selectedShipment->id }}">

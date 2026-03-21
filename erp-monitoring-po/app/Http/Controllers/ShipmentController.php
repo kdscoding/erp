@@ -477,7 +477,6 @@ class ShipmentController extends Controller
                 'poi.outstanding_qty',
                 'poi.etd_date'
             )
-            ->havingRaw('(poi.outstanding_qty - COALESCE(SUM(CASE WHEN sh_alloc.id IS NOT NULL THEN si.shipped_qty - si.received_qty ELSE 0 END), 0)) > 0')
             ->selectRaw('(poi.outstanding_qty - COALESCE(SUM(CASE WHEN sh_alloc.id IS NOT NULL THEN si.shipped_qty - si.received_qty ELSE 0 END), 0)) as available_to_ship_qty');
     }
 

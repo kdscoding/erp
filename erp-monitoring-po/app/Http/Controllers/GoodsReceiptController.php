@@ -8,11 +8,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Illuminate\Database\Query\Expression;
 
 class GoodsReceiptController extends Controller
 {
     public function index(Request $request): View
     {
+        $clearSelection = $request->boolean('clear_selection');
+
         $rows = DB::table('goods_receipts as gr')
             ->join('purchase_orders as po', 'po.id', '=', 'gr.purchase_order_id')
             ->leftJoin('shipments as sh', 'sh.id', '=', 'gr.shipment_id')
@@ -57,7 +60,7 @@ class GoodsReceiptController extends Controller
             ->get();
 
         $selectedShipmentId = $request->integer('shipment_id');
-        if (! $selectedShipmentId && $shipmentDocuments->isNotEmpty()) {
+        if (! $selectedShipmentId && ! $clearSelection && $shipmentDocuments->isNotEmpty()) {
             $selectedShipmentId = (int) $shipmentDocuments->first()->id;
         }
 
@@ -356,6 +359,8 @@ class GoodsReceiptController extends Controller
 
     private function shipmentItemsQuery()
     {
+        $currentDateSql = $this->currentDateExpression();
+
         return DB::table('shipment_items as si')
             ->join('shipments as sh', 'sh.id', '=', 'si.shipment_id')
             ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
@@ -389,7 +394,7 @@ class GoodsReceiptController extends Controller
                 WHEN (si.shipped_qty - si.received_qty) <= 0 THEN 'Received'
                 WHEN si.received_qty > 0 THEN 'Partial Received'
                 WHEN poi.etd_date IS NULL THEN 'Waiting'
-                WHEN DATE(poi.etd_date) < CURDATE() THEN 'Late'
+                WHEN DATE(poi.etd_date) < {$currentDateSql} THEN 'Late'
                 ELSE 'Shipped'
             END as monitoring_status")
             ->whereIn('sh.status', ['Shipped', 'Partial Received'])
@@ -415,6 +420,13 @@ class GoodsReceiptController extends Controller
                 'sh.delivery_note_number',
                 'sh.status'
             );
+    }
+
+    private function currentDateExpression(): string
+    {
+        return DB::connection()->getDriverName() === 'sqlite'
+            ? "date('now')"
+            : 'CURDATE()';
     }
 
     private function refreshShipmentStatus(int $shipmentId): void

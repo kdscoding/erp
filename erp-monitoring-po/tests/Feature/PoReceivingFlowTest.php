@@ -395,4 +395,62 @@ class PoReceivingFlowTest extends TestCase
 
         $this->actingAs($viewer)->get('/receiving')->assertForbidden();
     }
+
+    public function test_receiving_selection_can_be_cleared_explicitly(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-CLEAR-01',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Shipped',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemId,
+            'ordered_qty' => 50,
+            'received_qty' => 0,
+            'outstanding_qty' => 50,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $shipmentId = DB::table('shipments')->insertGetId([
+            'purchase_order_id' => $poId,
+            'supplier_id' => $supplierId,
+            'shipment_number' => 'SHP-TEST-CLEAR-01',
+            'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'SJ-CLEAR-01',
+            'status' => 'Shipped',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('shipment_items')->insert([
+            'shipment_id' => $shipmentId,
+            'purchase_order_item_id' => $poItemId,
+            'shipped_qty' => 50,
+            'received_qty' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get('/receiving?shipment_id='.$shipmentId)
+            ->assertOk()
+            ->assertSee('Warehouse akan memproses dokumen')
+            ->assertSee('Batalkan Pilihan Dokumen');
+
+        $this->actingAs($user)
+            ->get('/receiving?clear_selection=1')
+            ->assertOk()
+            ->assertDontSee('Warehouse akan memproses dokumen')
+            ->assertSee('Pilih dulu satu dokumen shipment di tabel atas');
+    }
 }

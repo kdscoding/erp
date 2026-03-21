@@ -118,11 +118,12 @@
                             </thead>
                             <tbody>
                                 @forelse($candidateItems as $candidate)
+                                    @php($isAllocatable = (float) $candidate->available_to_ship_qty > 0)
                                     <tr
-                                        class="{{ in_array((int) $candidate->purchase_order_item_id, $selectedItemIds, true) ? 'table-primary' : '' }}">
+                                        class="{{ in_array((int) $candidate->purchase_order_item_id, $selectedItemIds, true) ? 'table-primary' : (! $isAllocatable ? 'table-light' : '') }}">
                                         <td>
                                             <input type="checkbox" class="candidate-item-checkbox"
-                                                value="{{ $candidate->purchase_order_item_id }}">
+                                                value="{{ $candidate->purchase_order_item_id }}" {{ $isAllocatable ? '' : 'disabled' }}>
                                         </td>
                                         <td>{{ $candidate->supplier_name }}</td>
                                         <td>{{ $candidate->po_number }}<br><span
@@ -131,8 +132,12 @@
                                         </td>
                                         <td>{{ number_format($candidate->outstanding_qty, 2, ',', '.') }}</td>
                                         <td>{{ number_format($candidate->open_shipment_qty, 2, ',', '.') }}</td>
-                                        <td><span
-                                                class="badge bg-warning text-dark">{{ number_format($candidate->available_to_ship_qty, 2, ',', '.') }}</span>
+                                        <td>
+                                            <span
+                                                class="badge {{ $isAllocatable ? 'bg-warning text-dark' : 'bg-secondary' }}">{{ number_format(max(0, $candidate->available_to_ship_qty), 2, ',', '.') }}</span>
+                                            @if (! $isAllocatable)
+                                                <br><small class="text-muted">Sudah teralokasi di shipment aktif</small>
+                                            @endif
                                         </td>
                                         <td>{{ $candidate->etd_date ? \Carbon\Carbon::parse($candidate->etd_date)->format('d-m-Y') : '-' }}
                                         </td>
