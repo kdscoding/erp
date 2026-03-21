@@ -137,4 +137,60 @@ class UserManagementTest extends TestCase
         $this->actingAs($staff)->get('/settings/users')->assertForbidden();
         $this->actingAs($staff)->get('/settings/users/create')->assertForbidden();
     }
+
+    public function test_administrator_can_update_document_terms_from_settings(): void
+    {
+        $admin = $this->makeUserWithRole('administrator');
+
+        $termId = DB::table('document_terms')->insertGetId([
+            'group_key' => 'po_status',
+            'code' => 'PO Issued',
+            'label' => 'Released New PO',
+            'description' => 'Initial label',
+            'is_active' => true,
+            'sort_order' => 10,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('suppliers')->insert([
+            'supplier_code' => 'SUPSET001',
+            'supplier_name' => 'Supplier Settings',
+            'status' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $supplierId = DB::table('suppliers')->value('id');
+
+        DB::table('purchase_orders')->insert([
+            'po_number' => 'PO-SET-0001',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'PO Issued',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->post('/settings/document-terms', [
+            'document_terms' => [
+                $termId => [
+                    'label' => 'Released PO Baru',
+                    'description' => 'Updated label',
+                    'sort_order' => 10,
+                    'is_active' => '1',
+                ],
+            ],
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('document_terms', [
+            'id' => $termId,
+            'label' => 'Released PO Baru',
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/po')
+            ->assertOk()
+            ->assertSee('Released PO Baru');
+    }
 }

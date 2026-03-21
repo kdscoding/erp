@@ -47,7 +47,7 @@
                         <td>{{ $r->item_code }} - {{ $r->item_name }}</td>
                         <td>{{ $r->etd_date ? \Carbon\Carbon::parse($r->etd_date)->format('d-m-Y') : '-' }}</td>
                         <td>{{ number_format($r->received_qty, 2, ',', '.') }} / {{ number_format($r->ordered_qty, 2, ',', '.') }}<br><small class="text-muted">Parsial: {{ $r->receipt_count }}x</small></td>
-                        <td><span class="badge bg-{{ $statusBadge($r->item_status) }}">{{ $r->item_status }}</span></td>
+                        <td><span class="badge bg-{{ $statusBadge($r->item_status) }}">{{ \App\Support\TermCatalog::label('po_item_status', $r->item_status, $r->item_status) }}</span></td>
                         <td>
                             Dibuat: {{ \Carbon\Carbon::parse($r->po_date)->format('d-m-Y') }}<br>
                             ETD: {{ $r->etd_date ? \Carbon\Carbon::parse($r->etd_date)->format('d-m-Y') : '-' }}<br>

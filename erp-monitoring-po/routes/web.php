@@ -78,6 +78,7 @@ Route::get('/', fn() => redirect()->route('dashboard'));
     Route::middleware('role:administrator')->group(function () {
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
+        Route::post('/settings/document-terms', [SettingsController::class, 'updateDocumentTerms'])->name('settings.document-terms.update');
         Route::get('/settings/users', [UserManagementController::class, 'index'])->name('users.index');
         Route::get('/settings/users/create', [UserManagementController::class, 'create'])->name('users.create');
         Route::post('/settings/users', [UserManagementController::class, 'store'])->name('users.store');

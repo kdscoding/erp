@@ -106,8 +106,8 @@
                     <ul class="list-group list-group-flush">
                         @forelse($histories as $history)
                             <li class="list-group-item">
-                                <div class="fw-semibold">{{ $history->from_status ?: 'N/A' }} ->
-                                    {{ $history->to_status }}</div>
+                                <div class="fw-semibold">{{ $history->from_status ? \App\Support\TermCatalog::label('po_status', $history->from_status, $history->from_status) : 'N/A' }} ->
+                                    {{ \App\Support\TermCatalog::label('po_status', $history->to_status, $history->to_status) }}</div>
                                 <small class="text-muted">{{ $history->changed_by_name ?: 'System' }} |
                                     {{ \Carbon\Carbon::parse($history->changed_at)->format('d-m-Y H:i') }}</small>
                                 @if ($history->note)

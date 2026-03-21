@@ -97,6 +97,7 @@ return new class extends Migration {
                 $table->date('eta_date')->nullable();
                 $table->string('bc_reference_no')->nullable();
                 $table->date('bc_reference_date')->nullable();
+                $table->text('cancel_reason')->nullable();
                 $table->foreignId('created_by')->nullable()->constrained('users');
                 $table->foreignId('updated_by')->nullable()->constrained('users');
                 $table->timestamps();
@@ -112,31 +113,11 @@ return new class extends Migration {
                 $table->decimal('received_qty', 14, 2)->default(0);
                 $table->decimal('outstanding_qty', 14, 2)->default(0);
                 $table->decimal('unit_price', 14, 2)->nullable();
-                $table->text('remarks')->nullable();
-                $table->timestamps();
-            });
-        }
-
-        if (!Schema::hasTable('po_approvals')) {
-            Schema::create('po_approvals', function (Blueprint $table) {
-                $table->id();
-                $table->foreignId('purchase_order_id')->constrained('purchase_orders')->cascadeOnDelete();
-                $table->foreignId('approver_id')->constrained('users');
-                $table->string('status');
-                $table->text('note')->nullable();
-                $table->timestamp('approved_at')->nullable();
-                $table->timestamps();
-            });
-        }
-
-        if (!Schema::hasTable('supplier_confirmations')) {
-            Schema::create('supplier_confirmations', function (Blueprint $table) {
-                $table->id();
-                $table->foreignId('purchase_order_id')->constrained('purchase_orders')->cascadeOnDelete();
-                $table->date('confirmation_date')->nullable();
+                $table->date('etd_date')->nullable();
                 $table->date('eta_date')->nullable();
-                $table->text('remark')->nullable();
-                $table->foreignId('created_by')->nullable()->constrained('users');
+                $table->string('item_status', 50)->default('Waiting');
+                $table->text('cancel_reason')->nullable();
+                $table->text('remarks')->nullable();
                 $table->timestamps();
             });
         }
@@ -145,6 +126,7 @@ return new class extends Migration {
             Schema::create('shipments', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('purchase_order_id')->constrained('purchase_orders')->cascadeOnDelete();
+                $table->foreignId('supplier_id')->nullable()->constrained('suppliers');
                 $table->string('shipment_number')->unique();
                 $table->date('shipment_date')->nullable();
                 $table->date('eta_date')->nullable();
@@ -162,7 +144,10 @@ return new class extends Migration {
                 $table->foreignId('shipment_id')->constrained('shipments')->cascadeOnDelete();
                 $table->foreignId('purchase_order_item_id')->constrained('purchase_order_items');
                 $table->decimal('shipped_qty', 14, 2)->default(0);
+                $table->decimal('received_qty', 14, 2)->default(0);
+                $table->text('note')->nullable();
                 $table->timestamps();
+                $table->unique(['shipment_id', 'purchase_order_item_id']);
             });
         }
 
@@ -172,11 +157,15 @@ return new class extends Migration {
                 $table->string('gr_number')->unique();
                 $table->date('receipt_date');
                 $table->foreignId('purchase_order_id')->constrained('purchase_orders');
+                $table->foreignId('shipment_id')->nullable()->constrained('shipments');
                 $table->foreignId('warehouse_id')->nullable()->constrained('warehouses');
                 $table->foreignId('received_by')->nullable()->constrained('users');
                 $table->string('document_number')->nullable();
                 $table->text('remark')->nullable();
                 $table->string('status')->default('Posted');
+                $table->text('cancel_reason')->nullable();
+                $table->foreignId('cancelled_by')->nullable()->constrained('users');
+                $table->timestamp('cancelled_at')->nullable();
                 $table->timestamps();
             });
         }
@@ -185,9 +174,12 @@ return new class extends Migration {
             Schema::create('goods_receipt_items', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('goods_receipt_id')->constrained('goods_receipts')->cascadeOnDelete();
+                $table->foreignId('shipment_item_id')->nullable()->constrained('shipment_items');
                 $table->foreignId('purchase_order_item_id')->constrained('purchase_order_items');
                 $table->foreignId('item_id')->constrained('items');
                 $table->decimal('received_qty', 14, 2)->default(0);
+                $table->decimal('qty_variance', 14, 2)->default(0);
+                $table->text('note')->nullable();
                 $table->decimal('accepted_qty', 14, 2)->default(0);
                 $table->decimal('rejected_qty', 14, 2)->default(0);
                 $table->text('remark')->nullable();
@@ -243,6 +235,20 @@ return new class extends Migration {
                 $table->timestamps();
             });
         }
+
+        if (!Schema::hasTable('document_terms')) {
+            Schema::create('document_terms', function (Blueprint $table) {
+                $table->id();
+                $table->string('group_key', 100);
+                $table->string('code', 100);
+                $table->string('label', 150);
+                $table->text('description')->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->unsignedInteger('sort_order')->default(0);
+                $table->timestamps();
+                $table->unique(['group_key', 'code']);
+            });
+        }
     }
 
     public function down(): void
@@ -255,8 +261,6 @@ return new class extends Migration {
         Schema::dropIfExists('goods_receipts');
         Schema::dropIfExists('shipment_items');
         Schema::dropIfExists('shipments');
-        Schema::dropIfExists('supplier_confirmations');
-        Schema::dropIfExists('po_approvals');
         Schema::dropIfExists('purchase_order_items');
         Schema::dropIfExists('purchase_orders');
         Schema::dropIfExists('items');
@@ -264,6 +268,7 @@ return new class extends Migration {
         Schema::dropIfExists('warehouses');
         Schema::dropIfExists('units');
         Schema::dropIfExists('suppliers');
+        Schema::dropIfExists('document_terms');
         Schema::dropIfExists('user_roles');
         Schema::dropIfExists('roles');
     }

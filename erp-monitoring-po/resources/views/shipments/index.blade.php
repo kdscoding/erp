@@ -113,7 +113,7 @@
                                         </td>
                                         <td>{{ $candidate->supplier_name }}</td>
                                         <td>{{ $candidate->po_number }}<br><span
-                                                class="badge bg-light text-dark">{{ $candidate->po_status }}</span></td>
+                                                class="badge bg-light text-dark">{{ \App\Support\TermCatalog::label('po_status', $candidate->po_status, $candidate->po_status) }}</span></td>
                                         <td><strong>{{ $candidate->item_code }}</strong><br>{{ $candidate->item_name }}
                                         </td>
                                         <td>{{ number_format($candidate->outstanding_qty, 2, ',', '.') }}</td>
@@ -296,7 +296,7 @@
                                             PO</small></td>
                                     <td>{{ $r->line_count }}</td>
                                     <td><span
-                                            class="badge {{ $r->status === 'Draft' ? 'bg-secondary' : ($r->status === 'Shipped' ? 'bg-primary' : ($r->status === 'Partial Received' ? 'bg-warning text-dark' : ($r->status === 'Cancelled' ? 'bg-danger' : 'bg-success'))) }}">{{ $r->status }}</span>
+                                            class="badge {{ $r->status === 'Draft' ? 'bg-secondary' : ($r->status === 'Shipped' ? 'bg-primary' : ($r->status === 'Partial Received' ? 'bg-warning text-dark' : ($r->status === 'Cancelled' ? 'bg-danger' : 'bg-success'))) }}">{{ \App\Support\TermCatalog::label('shipment_status', $r->status, $r->status) }}</span>
                                     </td>
                                     <td>{{ $r->delivery_note_number ?: '-' }}</td>
                                     <td>{{ \Carbon\Carbon::parse($r->shipment_date)->format('d-m-Y') }}</td>

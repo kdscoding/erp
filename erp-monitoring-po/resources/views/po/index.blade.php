@@ -19,8 +19,8 @@
                     <label class="form-label">Status</label>
                     <select name="status" class="form-control form-control-sm">
                         <option value="">Semua Status</option>
-                        @foreach (['PO Issued', 'Confirmed', 'Partial', 'Closed', 'Cancelled'] as $status)
-                            <option value="{{ $status }}" @selected(request('status') === $status)>{{ $status }}</option>
+                        @foreach (\App\Support\TermCatalog::options('po_status', ['PO Issued', 'Confirmed', 'Partial', 'Closed', 'Cancelled']) as $status => $label)
+                            <option value="{{ $status }}" @selected(request('status') === $status)>{{ $label }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -50,7 +50,7 @@
                             <td>{{ \Carbon\Carbon::parse($r->po_date)->format('d-m-Y') }}</td>
                             <td>{{ $r->supplier_name }}</td>
                             <td><span
-                                    class="badge {{ in_array($r->status, ['Closed']) ? 'bg-success' : (in_array($r->status, ['Cancelled', 'Late']) ? 'bg-danger' : 'bg-warning text-dark') }}">{{ $r->status }}</span>
+                                    class="badge {{ in_array($r->status, ['Closed']) ? 'bg-success' : (in_array($r->status, ['Cancelled', 'Late']) ? 'bg-danger' : 'bg-warning text-dark') }}">{{ \App\Support\TermCatalog::label('po_status', $r->status, $r->status) }}</span>
                             </td>
                             <td class="text-end"><a href="{{ route('po.show', $r->id) }}"
                                     class="btn btn-sm btn-outline-primary">Detail</a></td>

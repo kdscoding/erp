@@ -12,11 +12,9 @@
                     placeholder="Cari PO, Item, atau Supplier..." style="width: 250px;">
                 <select id="statusItemFilter" class="form-select form-select-sm" style="width: 150px;">
                     <option value="">Semua Status Item</option>
-                    <option value="Closed">Closed</option>
-                    <option value="Partial">Partial</option>
-                    <option value="Waiting">Waiting</option>
-                    <option value="Late">Late</option>
-                    <option value="Confirmed">Confirmed</option>
+                    @foreach (\App\Support\TermCatalog::options('po_item_status', ['Closed', 'Partial', 'Waiting', 'Late', 'Confirmed']) as $status => $label)
+                        <option value="{{ $status }}">{{ $label }}</option>
+                    @endforeach
                 </select>
                 <select id="statusEtdFilter" class="form-select form-select-sm" style="width: 150px;">
                     <option value="">Semua Status ETD</option>
@@ -48,7 +46,7 @@
                             <td>
                                 <a href="{{ route('po.show', $item->po_id) }}"
                                     class="fw-semibold text-decoration-none">{{ $item->po_number }}</a>
-                                <div class="small text-muted">PO: {{ $item->po_status }}</div>
+                                <div class="small text-muted">PO: {{ \App\Support\TermCatalog::label('po_status', $item->po_status, $item->po_status) }}</div>
                             </td>
                             <td>{{ $item->item_code }} - {{ $item->item_name }}</td>
                             <td>{{ $item->supplier_name }}</td>
@@ -59,7 +57,7 @@
                                         'Partial', 'Confirmed', 'PO Issued', 'Waiting' => 'bg-warning text-dark',
                                         'Late', 'Cancelled' => 'bg-danger',
                                         default => 'bg-secondary',
-                                    } }}">{{ $item->monitoring_status }}</span>
+                                    } }}">{{ \App\Support\TermCatalog::label('po_item_status', $item->monitoring_status, $item->monitoring_status) }}</span>
                             </td>
                             <td>
                                 @if ($etdStatus === 'At-Risk')
