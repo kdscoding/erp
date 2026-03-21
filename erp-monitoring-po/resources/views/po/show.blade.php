@@ -31,7 +31,7 @@
                                 'Late', 'Cancelled' => 'bg-danger',
                                 default => 'bg-secondary',
                             } }}">
-                            {{ $po->status ?? '-' }}
+                            {{ \App\Support\TermCatalog::label('po_status', $po->status, $po->status ?? '-') }}
                         </span>
                     </div>
                     <div class="col-md-12"><strong>Catatan:</strong> {{ $po->notes ?: '-' }}</div>
@@ -159,7 +159,7 @@
                                                 'Partial', 'Confirmed', 'PO Issued', 'Waiting' => 'bg-warning text-dark',
                                                 'Late', 'Cancelled' => 'bg-danger',
                                                 default => 'bg-secondary',
-                                            } }}">{{ $item->monitoring_status }}</span>
+                                            } }}">{{ \App\Support\TermCatalog::label('po_item_status', $item->monitoring_status, $item->monitoring_status) }}</span>
                                         @if ($item->cancel_reason)
                                             <div class="small text-danger mt-1">Alasan: {{ $item->cancel_reason }}</div>
                                         @elseif ($item->monitoring_status === 'Waiting')

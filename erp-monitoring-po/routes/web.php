@@ -72,6 +72,7 @@ Route::get('/', fn() => redirect()->route('dashboard'));
         Route::get('/receiving/history', [GoodsReceiptController::class, 'index'])->defaults('mode', 'history')->name('receiving.history');
         Route::get('/receiving/history/{id}', [GoodsReceiptController::class, 'show'])->name('receiving.show');
         Route::post('/receiving', [GoodsReceiptController::class, 'store'])->name('receiving.store');
+        Route::patch('/receiving/history/{id}/cancel', [GoodsReceiptController::class, 'cancel'])->name('receiving.cancel');
     });
 
     Route::middleware('role:administrator')->group(function () {

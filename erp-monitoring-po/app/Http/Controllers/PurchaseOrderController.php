@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\ErpFlow;
+use App\Support\TermCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -161,7 +162,7 @@ class PurchaseOrderController extends Controller
                 ]);
             }
 
-            ErpFlow::pushPoStatus($poId, null, 'PO Issued', $userId, 'Released new PO');
+            ErpFlow::pushPoStatus($poId, null, 'PO Issued', $userId, TermCatalog::label('po_history_note', 'released_new_po', 'Released new PO'));
             ErpFlow::audit('purchase_orders', $poId, 'create', null, ['status' => 'PO Issued'], $userId, $request->ip());
             DB::commit();
         } catch (\Throwable $e) {

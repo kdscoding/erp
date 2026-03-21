@@ -132,6 +132,92 @@ class GoodsReceiptController extends Controller
         return view('receiving.show', compact('receipt', 'items'));
     }
 
+    public function cancel(string $id, Request $request)
+    {
+        $validated = $request->validate([
+            'cancel_reason' => 'required|string|max:1000',
+        ], [
+            'cancel_reason.required' => 'Alasan pembatalan GR wajib diisi.',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $receipt = DB::table('goods_receipts')->where('id', $id)->lockForUpdate()->firstOrFail();
+            if ($receipt->status !== 'Posted') {
+                throw new \RuntimeException('Hanya GR berstatus Posted yang bisa dibatalkan.');
+            }
+
+            $receiptItems = DB::table('goods_receipt_items')
+                ->where('goods_receipt_id', $receipt->id)
+                ->lockForUpdate()
+                ->get();
+
+            if ($receiptItems->isEmpty()) {
+                throw new \RuntimeException('GR tidak memiliki item untuk dibatalkan.');
+            }
+
+            foreach ($receiptItems as $receiptItem) {
+                $poItem = DB::table('purchase_order_items')->where('id', $receiptItem->purchase_order_item_id)->lockForUpdate()->firstOrFail();
+                $shipmentItem = $receiptItem->shipment_item_id
+                    ? DB::table('shipment_items')->where('id', $receiptItem->shipment_item_id)->lockForUpdate()->first()
+                    : null;
+
+                $newPoReceived = max(0, (float) $poItem->received_qty - (float) $receiptItem->received_qty);
+                $newOutstanding = max(0, (float) $poItem->ordered_qty - $newPoReceived);
+                $newItemStatus = $this->resolvePoItemStatus($poItem, $newPoReceived, $newOutstanding);
+
+                DB::table('purchase_order_items')->where('id', $poItem->id)->update([
+                    'received_qty' => $newPoReceived,
+                    'outstanding_qty' => $newOutstanding,
+                    'item_status' => $newItemStatus,
+                    'updated_at' => now(),
+                ]);
+
+                if ($shipmentItem) {
+                    DB::table('shipment_items')->where('id', $shipmentItem->id)->update([
+                        'received_qty' => max(0, (float) $shipmentItem->received_qty - (float) $receiptItem->received_qty),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+
+            $poIds = $receiptItems->pluck('purchase_order_item_id')
+                ->map(fn ($itemId) => (int) DB::table('purchase_order_items')->where('id', $itemId)->value('purchase_order_id'))
+                ->filter()
+                ->unique()
+                ->values();
+
+            foreach ($poIds as $poId) {
+                ErpFlow::refreshPoStatusByOutstanding((int) $poId, optional($request->user())->id);
+            }
+
+            if ($receipt->shipment_id) {
+                $this->refreshShipmentStatus((int) $receipt->shipment_id);
+            }
+
+            DB::table('goods_receipts')->where('id', $receipt->id)->update([
+                'status' => 'Cancelled',
+                'cancel_reason' => $validated['cancel_reason'],
+                'cancelled_by' => optional($request->user())->id,
+                'cancelled_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            ErpFlow::audit('goods_receipts', (int) $receipt->id, 'cancel', $receipt, [
+                'status' => 'Cancelled',
+                'cancel_reason' => $validated['cancel_reason'],
+            ], optional($request->user())->id, $request->ip());
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('receiving.show', $id)->with('success', 'Goods Receipt berhasil dibatalkan dan qty receiving telah dikembalikan.');
+    }
+
     public function store(Request $request)
     {
         if ($request->filled('shipment_id')) {
@@ -471,6 +557,19 @@ class GoodsReceiptController extends Controller
                 'sh.delivery_note_number',
                 'sh.status'
             );
+    }
+
+    private function resolvePoItemStatus(object $poItem, float $newReceived, float $newOutstanding): string
+    {
+        if ($newOutstanding <= 0) {
+            return 'Closed';
+        }
+
+        if ($newReceived > 0) {
+            return 'Partial';
+        }
+
+        return $poItem->etd_date ? 'Confirmed' : 'Waiting';
     }
 
     private function currentDateExpression(): string

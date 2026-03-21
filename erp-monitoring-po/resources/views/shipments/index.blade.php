@@ -21,23 +21,9 @@
     @endif
 
     @php($selectedItemIds = collect(request('selected_items', []))->map(fn($id) => (int) $id)->filter()->values()->all())
+    @php($isHistoryView = request()->routeIs('shipments.history') || request('view') === 'history')
 
-    <ul class="nav nav-tabs mb-3" id="shipmentTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <a class="nav-link {{ request('view', 'draft') !== 'history' ? 'active' : '' }}" id="draft-tab" data-toggle="tab"
-                href="#draft-pane" role="tab" aria-controls="draft-pane"
-                aria-selected="{{ request('view', 'draft') !== 'history' ? 'true' : 'false' }}">Pembuatan Draft</a>
-        </li>
-        <li class="nav-item" role="presentation">
-            <a class="nav-link {{ request('view') === 'history' ? 'active' : '' }}" id="history-tab" data-toggle="tab"
-                href="#history-pane" role="tab" aria-controls="history-pane"
-                aria-selected="{{ request('view') === 'history' ? 'true' : 'false' }}">Riwayat Shipment</a>
-        </li>
-    </ul>
-
-    <div class="tab-content" id="shipmentTabsContent">
-        <div class="tab-pane fade {{ request('view', 'draft') !== 'history' ? 'show active' : '' }}" id="draft-pane"
-            role="tabpanel" aria-labelledby="draft-tab">
+    @if (! $isHistoryView)
             <div class="card card-outline card-primary mb-3">
                 <div class="card-header">
                     <h3 class="card-title">Pembuatan Draft Shipment</h3>
@@ -260,10 +246,7 @@
                     </form>
                 </div>
             </div>
-        </div>
-
-        <div class="tab-pane fade {{ request('view') === 'history' ? 'show active' : '' }}" id="history-pane"
-            role="tabpanel" aria-labelledby="history-tab">
+    @else
             <div class="card card-outline card-secondary mb-3">
                 <div class="card-header">
                     <h3 class="card-title">Riwayat Shipment</h3>
@@ -350,8 +333,7 @@
                 </div>
             </div>
             <div class="mt-2">{{ $rows->links() }}</div>
-        </div>
-    </div>
+    @endif
     <script>
         const draftStorageKey = 'shipment-draft-state-{{ auth()->id() ?? 'guest' }}';
 

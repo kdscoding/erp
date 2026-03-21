@@ -49,7 +49,7 @@
             <tbody>
                 @forelse($shipmentDocuments as $document)
                     <tr>
-                        <td>{{ $document->shipment_number }}<br><span class="badge {{ $document->status === 'Shipped' ? 'bg-primary' : 'bg-warning text-dark' }}">{{ $document->status }}</span></td>
+                        <td>{{ $document->shipment_number }}<br><span class="badge {{ $document->status === 'Shipped' ? 'bg-primary' : 'bg-warning text-dark' }}">{{ \App\Support\TermCatalog::label('shipment_status', $document->status, $document->status) }}</span></td>
                         <td>{{ $document->supplier_name }}</td>
                         <td>{{ $document->delivery_note_number }}</td>
                         <td>{{ \Carbon\Carbon::parse($document->shipment_date)->format('d-m-Y') }}</td>
@@ -181,7 +181,7 @@
             <tbody>
                 @foreach($rows as $r)
                     <tr>
-                        <td>{{ $r->gr_number }}</td>
+                        <td>{{ $r->gr_number }} @if(($r->status ?? null) === 'Cancelled')<br><span class="badge bg-danger">{{ \App\Support\TermCatalog::label('goods_receipt_status', 'Cancelled', 'Cancelled') }}</span>@endif</td>
                         <td>{{ $r->shipment_number ?: '-' }}</td>
                         <td>{{ $r->po_number }}</td>
                         <td>{{ $r->supplier_name }}</td>

@@ -17,7 +17,7 @@
         <div class="row">
             <div class="col-md-3"><strong>No Shipment</strong><div>{{ $shipment->shipment_number }}</div></div>
             <div class="col-md-3"><strong>Supplier</strong><div>{{ $shipment->supplier_name }}</div></div>
-            <div class="col-md-2"><strong>Status</strong><div><span class="badge {{ $shipment->status === 'Draft' ? 'bg-secondary' : ($shipment->status === 'Shipped' ? 'bg-primary' : ($shipment->status === 'Partial Received' ? 'bg-warning text-dark' : ($shipment->status === 'Cancelled' ? 'bg-danger' : 'bg-success'))) }}">{{ $shipment->status }}</span></div></div>
+            <div class="col-md-2"><strong>Status</strong><div><span class="badge {{ $shipment->status === 'Draft' ? 'bg-secondary' : ($shipment->status === 'Shipped' ? 'bg-primary' : ($shipment->status === 'Partial Received' ? 'bg-warning text-dark' : ($shipment->status === 'Cancelled' ? 'bg-danger' : 'bg-success'))) }}">{{ \App\Support\TermCatalog::label('shipment_status', $shipment->status, $shipment->status) }}</span></div></div>
             <div class="col-md-2"><strong>Tanggal Dokumen</strong><div>{{ \Carbon\Carbon::parse($shipment->shipment_date)->format('d-m-Y') }}</div></div>
             <div class="col-md-2"><strong>Delivery Note</strong><div>{{ $shipment->delivery_note_number }}</div></div>
             <div class="col-12 mt-3"><strong>Catatan</strong><div>{{ $shipment->supplier_remark ?: '-' }}</div></div>

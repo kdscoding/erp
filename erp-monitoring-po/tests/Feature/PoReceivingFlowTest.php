@@ -595,4 +595,111 @@ class PoReceivingFlowTest extends TestCase
             ->assertRedirect('/po/'.$poId)
             ->assertSessionHas('error');
     }
+
+    public function test_posted_goods_receipt_can_be_cancelled_and_reversed(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-GR-CANCEL-01',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Partial',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemId,
+            'ordered_qty' => 100,
+            'received_qty' => 40,
+            'outstanding_qty' => 60,
+            'item_status' => 'Partial',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $shipmentId = DB::table('shipments')->insertGetId([
+            'purchase_order_id' => $poId,
+            'supplier_id' => $supplierId,
+            'shipment_number' => 'SHP-TEST-GR-CANCEL-01',
+            'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'SJ-GR-CANCEL-01',
+            'status' => 'Partial Received',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $shipmentItemId = DB::table('shipment_items')->insertGetId([
+            'shipment_id' => $shipmentId,
+            'purchase_order_item_id' => $poItemId,
+            'shipped_qty' => 100,
+            'received_qty' => 40,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $grId = DB::table('goods_receipts')->insertGetId([
+            'gr_number' => 'GR-TEST-CANCEL-01',
+            'receipt_date' => now()->toDateString(),
+            'purchase_order_id' => $poId,
+            'shipment_id' => $shipmentId,
+            'document_number' => 'SJ-GR-CANCEL-01',
+            'status' => 'Posted',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('goods_receipt_items')->insert([
+            'goods_receipt_id' => $grId,
+            'shipment_item_id' => $shipmentItemId,
+            'purchase_order_item_id' => $poItemId,
+            'item_id' => $itemId,
+            'received_qty' => 40,
+            'accepted_qty' => 40,
+            'rejected_qty' => 0,
+            'qty_variance' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->from('/receiving/history/'.$grId)
+            ->patch('/receiving/history/'.$grId.'/cancel', [
+                'cancel_reason' => 'Dokumen receiving salah posting',
+            ])
+            ->assertRedirect('/receiving/history/'.$grId)
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('goods_receipts', [
+            'id' => $grId,
+            'status' => 'Cancelled',
+            'cancel_reason' => 'Dokumen receiving salah posting',
+        ]);
+
+        $this->assertDatabaseHas('purchase_order_items', [
+            'id' => $poItemId,
+            'received_qty' => 0,
+            'outstanding_qty' => 100,
+            'item_status' => 'Waiting',
+        ]);
+
+        $this->assertDatabaseHas('shipment_items', [
+            'id' => $shipmentItemId,
+            'received_qty' => 0,
+        ]);
+
+        $this->assertDatabaseHas('shipments', [
+            'id' => $shipmentId,
+            'status' => 'Shipped',
+        ]);
+
+        $this->assertDatabaseHas('purchase_orders', [
+            'id' => $poId,
+            'status' => 'PO Issued',
+        ]);
+    }
 }
