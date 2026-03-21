@@ -2,17 +2,15 @@
 @php($title='Edit Warehouse')
 @php($header='Ubah Data Warehouse')
 @section('content')
-@if ($errors->any())<div class="alert alert-danger"><ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
-<div class="card card-outline card-primary">
-    <div class="card-header"><h3 class="card-title">Form Edit Warehouse</h3></div>
-    <div class="card-body">
-        <form method="POST" action="{{ route('warehouses.update', $warehouse->id) }}" class="row g-3">
-            @csrf @method('PUT')
-            <div class="col-md-3"><label class="form-label">Kode</label><input class="form-control form-control-sm" name="warehouse_code" value="{{ old('warehouse_code', $warehouse->warehouse_code) }}" required></div>
-            <div class="col-md-5"><label class="form-label">Nama</label><input class="form-control form-control-sm" name="warehouse_name" value="{{ old('warehouse_name', $warehouse->warehouse_name) }}" required></div>
-            <div class="col-md-4"><label class="form-label">Lokasi</label><input class="form-control form-control-sm" name="location" value="{{ old('location', $warehouse->location) }}"></div>
-            <div class="col-12 d-flex justify-content-end gap-2"><a href="{{ route('warehouses.index') }}" class="btn btn-secondary btn-sm">Kembali</a><button class="btn btn-primary btn-sm">Simpan Perubahan</button></div>
-        </form>
-    </div>
-</div>
+<form method="POST" action="{{ route('warehouses.update', $warehouse->id) }}" class="row g-3">
+    @csrf @method('PUT')
+    <x-master-edit-layout
+        title="Form Edit Warehouse"
+        subtitle="Pastikan kode gudang, nama, dan lokasi tetap jelas karena master ini dipakai pada PO dan GR."
+        :back-route="route('warehouses.index')">
+        <div class="col-md-3"><label class="form-label">Kode Gudang</label><input class="form-control form-control-sm" name="warehouse_code" value="{{ old('warehouse_code', $warehouse->warehouse_code) }}" required></div>
+        <div class="col-md-5"><label class="form-label">Nama Gudang</label><input class="form-control form-control-sm" name="warehouse_name" value="{{ old('warehouse_name', $warehouse->warehouse_name) }}" required></div>
+        <div class="col-md-4"><label class="form-label">Lokasi</label><textarea class="form-control form-control-sm" name="location" rows="3" placeholder="Lokasi fisik gudang">{{ old('location', $warehouse->location) }}</textarea></div>
+    </x-master-edit-layout>
+</form>
 @endsection
