@@ -7,7 +7,7 @@
     <div class="card-header d-flex justify-content-between align-items-center">
         <h3 class="card-title">Dokumen Shipment {{ $shipment->shipment_number }}</h3>
         <div class="d-flex gap-2">
-            <a href="{{ route('shipments.index', ['view' => 'history', 'focus' => $shipment->id]) }}" class="btn btn-sm btn-light">Kembali ke Riwayat</a>
+            <a href="{{ route('shipments.history', ['focus' => $shipment->id]) }}" class="btn btn-sm btn-light">Kembali ke Riwayat</a>
             @if ($shipment->status === 'Draft')
                 <a href="{{ route('shipments.edit', $shipment->id) }}" class="btn btn-sm btn-primary">Edit Draft</a>
             @endif

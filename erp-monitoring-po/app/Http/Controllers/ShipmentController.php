@@ -229,8 +229,7 @@ class ShipmentController extends Controller
         $request->session()->forget('shipment_shipped_qty');
         $request->session()->flash('shipment_builder_reset', true);
 
-        return redirect()->route('shipments.index', [
-            'view' => 'history',
+        return redirect()->route('shipments.history', [
             'focus' => $shipmentId,
         ])->with('success', 'Shipment dokumen supplier tersimpan dengan status Draft. Lanjutkan dari riwayat shipment untuk review atau tandai barang sudah berangkat.');
     }
@@ -307,7 +306,7 @@ class ShipmentController extends Controller
             throw $e;
         }
 
-        return redirect()->route('receiving.index', [
+        return redirect()->route('receiving.process', [
             'supplier_id' => $shipment->supplier_id,
             'shipment_id' => $shipment->id,
             'document_number' => $shipment->delivery_note_number,

@@ -35,6 +35,13 @@
                         </span>
                     </div>
                     <div class="col-md-12"><strong>Catatan:</strong> {{ $po->notes ?: '-' }}</div>
+                    @if ($poIsFinal)
+                        <div class="col-md-12">
+                            <div class="alert alert-light border mb-0 mt-2">
+                                Dokumen ini sudah final. Aksi operasional seperti cancel PO, cancel item, force close, dan update ETD dinonaktifkan.
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -79,8 +86,11 @@
                     <h3 class="card-title">Cancel PO</h3>
                 </div>
                 <div class="card-body">
-                    <button class="btn btn-danger btn-sm w-100" data-toggle="modal" data-target="#cancelPoModal">Batalkan
+                    <button class="btn btn-danger btn-sm w-100" data-toggle="modal" data-target="#cancelPoModal" @disabled(! $poCanCancel)>Batalkan
                         PO</button>
+                    @if (! $poCanCancel)
+                        <div class="small text-muted mt-2">PO dengan status final tidak bisa dibatalkan lagi.</div>
+                    @endif
                     @if ($po->cancel_reason)
                         <div class="alert alert-danger mt-2 mb-0"><strong>Alasan:</strong> {{ $po->cancel_reason }}</div>
                     @endif
@@ -168,22 +178,33 @@
                                             @method('PATCH')
                                             <div class="col-md-7">
                                                 <input type="date" name="etd_date" value="{{ $item->etd_date }}"
-                                                    class="form-control form-control-sm" @disabled($item->monitoring_status === 'Cancelled')>
+                                                    class="form-control form-control-sm" @disabled(! $item->can_update_etd)>
                                             </div>
                                             <div class="col-md-5">
                                                 <button class="btn btn-sm btn-primary w-100"
-                                                    @disabled($item->monitoring_status === 'Cancelled')>Simpan ETD</button>
+                                                    @disabled(! $item->can_update_etd)>Simpan ETD</button>
                                             </div>
                                         </form>
 
                                         <div class="d-flex gap-1 flex-wrap">
                                             <button class="btn btn-sm btn-outline-danger" data-toggle="modal"
                                                 data-target="#cancelItemModal{{ $item->id }}"
-                                                @disabled($item->monitoring_status === 'Cancelled')>Cancel</button>
+                                                @disabled(! $item->can_cancel)>Cancel</button>
                                             <button class="btn btn-sm btn-danger" data-toggle="modal"
                                                 data-target="#forceCloseModal{{ $item->id }}"
-                                                @disabled(!in_array($item->monitoring_status, ['Confirmed', 'Partial']))>Force Close</button>
+                                                @disabled(! $item->can_force_close)>Force Close</button>
                                         </div>
+                                        @if (! $item->can_update_etd || ! $item->can_cancel || ! $item->can_force_close)
+                                            <div class="small text-muted mt-2">
+                                                @if (! $item->can_update_etd)
+                                                    ETD terkunci karena item atau PO sudah final.
+                                                @elseif (! $item->can_cancel)
+                                                    Cancel item hanya tersedia untuk item aktif yang belum pernah diterima.
+                                                @elseif (! $item->can_force_close)
+                                                    Force close hanya tersedia saat item masih outstanding dan belum final.
+                                                @endif
+                                            </div>
+                                        @endif
                                     </td>
                                 </tr>
 

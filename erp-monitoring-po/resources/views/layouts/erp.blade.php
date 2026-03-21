@@ -153,8 +153,10 @@
                     <li class="nav-item"><a href="{{ route('po.index') }}" class="nav-link {{ request()->routeIs('po.*') ? 'active' : '' }}"><i class="nav-icon fas fa-file-alt"></i><p>Dokumen PO</p></a></li>
                     @endif
                     @if ($currentUser?->hasAnyRole(['administrator', 'staff']))
-                    <li class="nav-item"><a href="{{ route('shipments.index') }}" class="nav-link {{ request()->routeIs('shipments.*') ? 'active' : '' }}"><i class="nav-icon fas fa-ship"></i><p>Dokumen Shipment</p></a></li>
-                    <li class="nav-item"><a href="{{ route('receiving.index') }}" class="nav-link {{ request()->routeIs('receiving.*') ? 'active' : '' }}"><i class="nav-icon fas fa-box-open"></i><p>Dokumen Receiving</p></a></li>
+                    <li class="nav-item"><a href="{{ route('shipments.process') }}" class="nav-link {{ request()->routeIs('shipments.process') || (request()->routeIs('shipments.index') && request('view', 'draft') !== 'history') ? 'active' : '' }}"><i class="nav-icon fas fa-ship"></i><p>Proses Shipment</p></a></li>
+                    <li class="nav-item"><a href="{{ route('shipments.history') }}" class="nav-link {{ request()->routeIs('shipments.history') || (request()->routeIs('shipments.index') && request('view') === 'history') || request()->routeIs('shipments.show') || request()->routeIs('shipments.edit') ? 'active' : '' }}"><i class="nav-icon fas fa-clock-rotate-left"></i><p>Riwayat Shipment</p></a></li>
+                    <li class="nav-item"><a href="{{ route('receiving.process') }}" class="nav-link {{ request()->routeIs('receiving.process') || request()->routeIs('receiving.index') ? 'active' : '' }}"><i class="nav-icon fas fa-box-open"></i><p>Proses Receiving</p></a></li>
+                    <li class="nav-item"><a href="{{ route('receiving.history') }}" class="nav-link {{ request()->routeIs('receiving.history') || request()->routeIs('receiving.show') ? 'active' : '' }}"><i class="nav-icon fas fa-receipt"></i><p>Riwayat GR</p></a></li>
                     @endif
                     @if ($currentUser?->hasAnyRole(['administrator', 'staff', 'supervisor']))
                     <li class="nav-header">Monitoring & Audit</li>

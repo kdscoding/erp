@@ -1,16 +1,13 @@
 @extends('layouts.erp')
-@php($title='Goods Receiving')
-@php($header='Goods Receiving')
+@php($title = $mode === 'history' ? 'Riwayat Goods Receipt' : 'Goods Receiving')
+@php($header = $mode === 'history' ? 'Riwayat Goods Receipt' : 'Goods Receiving')
 
 @section('content')
-@if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
-@if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
-@if ($errors->any())<div class="alert alert-danger"><ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
-
+@if ($mode === 'process')
 <div class="card card-outline card-primary mb-3">
     <div class="card-header"><h3 class="card-title">1. Cari Dokumen Shipment</h3></div>
     <div class="card-body">
-        <form method="GET" class="row g-2 align-items-end">
+        <form method="GET" action="{{ route('receiving.process') }}" class="row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="form-label">Supplier</label>
                 <select name="supplier_id" class="form-select form-select-sm">
@@ -51,7 +48,7 @@
             </thead>
             <tbody>
                 @forelse($shipmentDocuments as $document)
-                    <tr class="{{ $selectedShipment && (int) $selectedShipment->id === (int) $document->id ? 'table-success' : '' }}">
+                    <tr>
                         <td>{{ $document->shipment_number }}<br><span class="badge {{ $document->status === 'Shipped' ? 'bg-primary' : 'bg-warning text-dark' }}">{{ $document->status }}</span></td>
                         <td>{{ $document->supplier_name }}</td>
                         <td>{{ $document->delivery_note_number }}</td>
@@ -59,7 +56,7 @@
                         <td>{{ $document->po_count }}</td>
                         <td>{{ $document->line_count }}</td>
                         <td>{{ number_format($document->outstanding_qty, 2, ',', '.') }}</td>
-                        <td><a href="{{ route('receiving.index', ['shipment_id' => $document->id, 'supplier_id' => request('supplier_id'), 'document_number' => request('document_number'), 'keyword' => request('keyword')]) }}" class="btn btn-sm btn-outline-primary">Pilih Dokumen</a></td>
+                        <td><a href="{{ route('receiving.process', ['shipment_id' => $document->id, 'supplier_id' => request('supplier_id'), 'document_number' => request('document_number'), 'keyword' => request('keyword')]) }}" class="btn btn-sm btn-outline-primary">Pilih Dokumen</a></td>
                     </tr>
                 @empty
                     <tr><td colspan="8" class="text-center text-muted">Belum ada dokumen shipment yang siap diterima.</td></tr>
@@ -78,7 +75,7 @@
             </div>
 
             <div class="d-flex justify-content-end mb-3">
-                <a href="{{ route('receiving.index', ['clear_selection' => 1, 'supplier_id' => request('supplier_id'), 'document_number' => request('document_number'), 'keyword' => request('keyword')]) }}" class="btn btn-sm btn-outline-secondary">Batalkan Pilihan Dokumen</a>
+                <a href="{{ route('receiving.process', ['clear_selection' => 1, 'supplier_id' => request('supplier_id'), 'document_number' => request('document_number'), 'keyword' => request('keyword')]) }}" class="btn btn-sm btn-outline-secondary">Batalkan Pilihan Dokumen</a>
             </div>
 
             <form method="POST" action="{{ route('receiving.store') }}" enctype="multipart/form-data">
@@ -142,12 +139,45 @@
         @endif
     </div>
 </div>
+@endif
+
+@if ($mode === 'history')
+<div class="card card-outline card-secondary mb-3">
+    <div class="card-header"><h3 class="card-title">Filter Riwayat Goods Receipt</h3></div>
+    <div class="card-body">
+        <form method="GET" action="{{ route('receiving.history') }}" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">No Dokumen Receiving</label>
+                <input type="text" name="document_number" value="{{ request('document_number') }}" class="form-control form-control-sm" placeholder="Nomor dokumen GR">
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-outline-secondary btn-sm w-100">Cari Riwayat</button>
+            </div>
+            <div class="col-md-6">
+                <div class="alert alert-light border mb-0">Riwayat GR dipisah dari halaman proses supaya user warehouse fokus ke dokumen aktif saat posting receiving.</div>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 
 <div class="card">
-    <div class="card-header"><h3 class="card-title">Riwayat Goods Receipt</h3></div>
+    <div class="card-header"><h3 class="card-title">{{ $mode === 'history' ? 'Daftar Riwayat Goods Receipt' : 'Riwayat Goods Receipt' }}</h3></div>
     <div class="card-body table-responsive p-0">
-        <table class="table table-hover text-nowrap mb-0 data-table">
-            <thead><tr><th>GR</th><th>Shipment</th><th>PO</th><th>Supplier</th><th>No Dok</th><th>Tgl</th></tr></thead>
+        <table class="table table-hover text-nowrap mb-0 {{ $mode === 'history' ? '' : 'data-table' }}">
+            <thead>
+                <tr>
+                    <th>GR</th>
+                    <th>Shipment</th>
+                    <th>PO</th>
+                    <th>Supplier</th>
+                    <th>No Dok</th>
+                    <th>Tgl</th>
+                    @if ($mode === 'history')
+                        <th>Aksi</th>
+                    @endif
+                </tr>
+            </thead>
             <tbody>
                 @foreach($rows as $r)
                     <tr>
@@ -157,6 +187,9 @@
                         <td>{{ $r->supplier_name }}</td>
                         <td>{{ $r->document_number ?: $r->delivery_note_number ?: '-' }}</td>
                         <td>{{ \Carbon\Carbon::parse($r->receipt_date)->format('d-m-Y') }}</td>
+                        @if ($mode === 'history')
+                            <td><a href="{{ route('receiving.show', $r->id) }}" class="btn btn-sm btn-light">Detail</a></td>
+                        @endif
                     </tr>
                 @endforeach
             </tbody>

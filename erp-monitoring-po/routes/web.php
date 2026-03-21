@@ -53,7 +53,9 @@ Route::get('/', fn() => redirect()->route('dashboard'));
         Route::post('/po/items/{itemId}/force-close', [PurchaseOrderController::class, 'forceCloseItem'])->name('po.items.force-close');
         Route::post('/po/{id}/cancel', [PurchaseOrderController::class, 'cancelPo'])->name('po.cancel');
 
-        Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
+        Route::get('/shipments', [ShipmentController::class, 'index'])->defaults('view', 'draft')->name('shipments.index');
+        Route::get('/shipments/process', [ShipmentController::class, 'index'])->defaults('view', 'draft')->name('shipments.process');
+        Route::get('/shipments/history', [ShipmentController::class, 'index'])->defaults('view', 'history')->name('shipments.history');
         Route::get('/shipments/{id}', [ShipmentController::class, 'show'])->name('shipments.show');
         Route::get('/shipments/{id}/edit', [ShipmentController::class, 'edit'])->name('shipments.edit');
         Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
@@ -65,7 +67,10 @@ Route::get('/', fn() => redirect()->route('dashboard'));
     Route::get('/po/{id}', [PurchaseOrderController::class, 'show'])->middleware('role:administrator|staff|supervisor')->name('po.show');
 
     Route::middleware('role:administrator|staff')->group(function () {
-        Route::get('/receiving', [GoodsReceiptController::class, 'index'])->name('receiving.index');
+        Route::get('/receiving', [GoodsReceiptController::class, 'index'])->defaults('mode', 'process')->name('receiving.index');
+        Route::get('/receiving/process', [GoodsReceiptController::class, 'index'])->defaults('mode', 'process')->name('receiving.process');
+        Route::get('/receiving/history', [GoodsReceiptController::class, 'index'])->defaults('mode', 'history')->name('receiving.history');
+        Route::get('/receiving/history/{id}', [GoodsReceiptController::class, 'show'])->name('receiving.show');
         Route::post('/receiving', [GoodsReceiptController::class, 'store'])->name('receiving.store');
     });
 

@@ -119,7 +119,7 @@ class PoReceivingFlowTest extends TestCase
         $this->assertDatabaseHas('shipment_items', ['id' => $shipmentItemId, 'shipment_id' => $shipmentId, 'purchase_order_item_id' => $poItemId, 'shipped_qty' => 100]);
 
         $this->actingAs($user)->patch("/shipments/{$shipmentId}/mark-shipped")
-            ->assertRedirect('/receiving?supplier_id='.$supplierId.'&shipment_id='.$shipmentId.'&document_number=SJ-0001')
+            ->assertRedirect('/receiving/process?supplier_id='.$supplierId.'&shipment_id='.$shipmentId.'&document_number=SJ-0001')
             ->assertSessionHas('success');
 
         $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Shipped']);
@@ -221,7 +221,7 @@ class PoReceivingFlowTest extends TestCase
         ]);
 
         $this->actingAs($user)->patch("/shipments/{$shipmentId}/mark-shipped")
-            ->assertRedirect('/receiving?supplier_id='.$supplierId.'&shipment_id='.$shipmentId.'&document_number=SJ-MULTI-01')
+            ->assertRedirect('/receiving/process?supplier_id='.$supplierId.'&shipment_id='.$shipmentId.'&document_number=SJ-MULTI-01')
             ->assertSessionHas('success');
 
         $this->assertDatabaseHas('purchase_orders', ['id' => $poOneId, 'status' => 'Shipped']);
@@ -452,5 +452,147 @@ class PoReceivingFlowTest extends TestCase
             ->assertOk()
             ->assertDontSee('Warehouse akan memproses dokumen')
             ->assertSee('Pilih dulu satu dokumen shipment di tabel atas');
+    }
+
+    public function test_receiving_history_has_detail_page(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-HISTORY-01',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Closed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemId,
+            'ordered_qty' => 25,
+            'received_qty' => 25,
+            'outstanding_qty' => 0,
+            'item_status' => 'Closed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $shipmentId = DB::table('shipments')->insertGetId([
+            'purchase_order_id' => $poId,
+            'supplier_id' => $supplierId,
+            'shipment_number' => 'SHP-TEST-HISTORY-01',
+            'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'SJ-HISTORY-01',
+            'status' => 'Received',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $shipmentItemId = DB::table('shipment_items')->insertGetId([
+            'shipment_id' => $shipmentId,
+            'purchase_order_item_id' => $poItemId,
+            'shipped_qty' => 25,
+            'received_qty' => 25,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $grId = DB::table('goods_receipts')->insertGetId([
+            'gr_number' => 'GR-TEST-HISTORY-01',
+            'receipt_date' => now()->toDateString(),
+            'purchase_order_id' => $poId,
+            'shipment_id' => $shipmentId,
+            'document_number' => 'SJ-HISTORY-01',
+            'status' => 'Posted',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('goods_receipt_items')->insert([
+            'goods_receipt_id' => $grId,
+            'shipment_item_id' => $shipmentItemId,
+            'purchase_order_item_id' => $poItemId,
+            'item_id' => $itemId,
+            'received_qty' => 25,
+            'accepted_qty' => 25,
+            'rejected_qty' => 0,
+            'qty_variance' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get('/receiving/history')
+            ->assertOk()
+            ->assertSee('GR-TEST-HISTORY-01')
+            ->assertSee('Detail');
+
+        $this->actingAs($user)
+            ->get('/receiving/history/'.$grId)
+            ->assertOk()
+            ->assertSee('GR-TEST-HISTORY-01')
+            ->assertSee('Detail Item Goods Receipt');
+    }
+
+    public function test_final_po_actions_are_blocked(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-FINAL-01',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Closed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemId,
+            'ordered_qty' => 10,
+            'received_qty' => 10,
+            'outstanding_qty' => 0,
+            'item_status' => 'Closed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->from('/po/'.$poId)
+            ->patch('/po/items/'.$poItemId.'/schedule', [
+                'etd_date' => now()->addDay()->toDateString(),
+            ])
+            ->assertRedirect('/po/'.$poId)
+            ->assertSessionHas('error');
+
+        $this->actingAs($user)
+            ->from('/po/'.$poId)
+            ->post('/po/items/'.$poItemId.'/cancel', [
+                'cancel_reason' => 'Tidak boleh saat final',
+            ])
+            ->assertRedirect('/po/'.$poId)
+            ->assertSessionHas('error');
+
+        $this->actingAs($user)
+            ->from('/po/'.$poId)
+            ->post('/po/items/'.$poItemId.'/force-close', [
+                'cancel_reason' => 'Tidak boleh saat final',
+            ])
+            ->assertRedirect('/po/'.$poId)
+            ->assertSessionHas('error');
+
+        $this->actingAs($user)
+            ->from('/po/'.$poId)
+            ->post('/po/'.$poId.'/cancel', [
+                'cancel_reason' => 'Tidak boleh saat final',
+            ])
+            ->assertRedirect('/po/'.$poId)
+            ->assertSessionHas('error');
     }
 }

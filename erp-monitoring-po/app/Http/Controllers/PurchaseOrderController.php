@@ -41,6 +41,8 @@ class PurchaseOrderController extends Controller
 
     public function show(string $id): View
     {
+        $currentDateSql = $this->currentDateExpression();
+
         $po = DB::table('purchase_orders as po')
             ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->leftJoin('plants as p', 'p.id', '=', 'po.plant_id')
@@ -58,12 +60,23 @@ class PurchaseOrderController extends Controller
                 WHEN poi.outstanding_qty <= 0 THEN 'Closed'
                 WHEN poi.received_qty > 0 THEN 'Partial'
                 WHEN poi.etd_date IS NULL THEN 'Waiting'
-                WHEN DATE(poi.etd_date) < CURDATE() THEN 'Late'
+                WHEN DATE(poi.etd_date) < {$currentDateSql} THEN 'Late'
                 ELSE 'Confirmed'
             END as monitoring_status")
             ->where('poi.purchase_order_id', $id)
             ->orderBy('poi.id')
             ->get();
+
+        $poIsFinal = in_array($po->status, ['Closed', 'Cancelled'], true);
+        $items = $items->map(function ($item) use ($poIsFinal) {
+            $itemIsFinal = in_array($item->monitoring_status, ['Closed', 'Cancelled'], true);
+
+            $item->can_update_etd = ! $poIsFinal && ! $itemIsFinal;
+            $item->can_cancel = ! $poIsFinal && ! $itemIsFinal && (float) $item->received_qty <= 0;
+            $item->can_force_close = ! $poIsFinal && ! $itemIsFinal && (float) $item->outstanding_qty > 0;
+
+            return $item;
+        });
 
         $itemSummary = [
             'total' => $items->count(),
@@ -95,7 +108,9 @@ class PurchaseOrderController extends Controller
             ->select('h.*', 'u.name as changed_by_name')
             ->get();
 
-        return view('po.show', compact('po', 'items', 'itemSummary', 'histories'));
+        $poCanCancel = ! $poIsFinal;
+
+        return view('po.show', compact('po', 'items', 'itemSummary', 'histories', 'poCanCancel', 'poIsFinal'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -161,14 +176,15 @@ class PurchaseOrderController extends Controller
     public function updateItemSchedule(Request $request, string $itemId): RedirectResponse
     {
         $item = DB::table('purchase_order_items')->where('id', $itemId)->firstOrFail();
+        $poStatus = DB::table('purchase_orders')->where('id', $item->purchase_order_id)->value('status');
 
         $v = $request->validate([
             'etd_date' => 'nullable|date',
             'remarks' => 'nullable|string|max:500',
         ]);
 
-        if ($item->item_status === 'Cancelled') {
-            return back()->with('error', 'Item yang sudah dibatalkan tidak dapat diubah ETD-nya.');
+        if (! $this->canUpdateItemSchedule($item, $poStatus)) {
+            return back()->with('error', 'ETD hanya bisa diubah untuk item aktif pada PO yang belum final.');
         }
 
         $newStatus = $item->outstanding_qty <= 0
@@ -208,6 +224,11 @@ class PurchaseOrderController extends Controller
         DB::beginTransaction();
         try {
             $item = DB::table('purchase_order_items')->where('id', $itemId)->lockForUpdate()->firstOrFail();
+            $poStatus = DB::table('purchase_orders')->where('id', $item->purchase_order_id)->value('status');
+
+            if (! $this->canCancelItem($item, $poStatus)) {
+                throw new \RuntimeException('Cancel item hanya boleh untuk item aktif yang belum pernah diterima dan PO belum final.');
+            }
 
             DB::table('purchase_order_items')->where('id', $itemId)->update([
                 'item_status' => 'Cancelled',
@@ -248,9 +269,10 @@ class PurchaseOrderController extends Controller
         DB::beginTransaction();
         try {
             $item = DB::table('purchase_order_items')->where('id', $itemId)->lockForUpdate()->firstOrFail();
+            $poStatus = DB::table('purchase_orders')->where('id', $item->purchase_order_id)->value('status');
 
-            if (! in_array($item->item_status, ['Confirmed', 'Partial'], true)) {
-                throw new \RuntimeException('Force close hanya boleh untuk item status Confirmed atau Partial.');
+            if (! $this->canForceCloseItem($item, $poStatus)) {
+                throw new \RuntimeException('Force close hanya boleh untuk item aktif yang masih memiliki outstanding dan PO belum final.');
             }
 
             DB::table('purchase_order_items')->where('id', $itemId)->update([
@@ -294,6 +316,10 @@ class PurchaseOrderController extends Controller
             $po = DB::table('purchase_orders')->where('id', $id)->lockForUpdate()->firstOrFail();
             $userId = optional($request->user())->id;
 
+            if (! $this->canCancelPo($po)) {
+                throw new \RuntimeException('PO yang sudah Closed atau Cancelled tidak dapat dibatalkan lagi.');
+            }
+
             DB::table('purchase_orders')->where('id', $id)->update([
                 'status' => 'Cancelled',
                 'cancel_reason' => $validated['cancel_reason'],
@@ -321,5 +347,37 @@ class PurchaseOrderController extends Controller
         }
 
         return back()->with('success', 'PO berhasil dibatalkan.');
+    }
+
+    private function canCancelPo(object $po): bool
+    {
+        return ! in_array($po->status, ['Closed', 'Cancelled'], true);
+    }
+
+    private function canUpdateItemSchedule(object $item, ?string $poStatus): bool
+    {
+        return ! in_array($poStatus, ['Closed', 'Cancelled'], true)
+            && ! in_array($item->item_status, ['Closed', 'Cancelled'], true);
+    }
+
+    private function canCancelItem(object $item, ?string $poStatus): bool
+    {
+        return ! in_array($poStatus, ['Closed', 'Cancelled'], true)
+            && ! in_array($item->item_status, ['Closed', 'Cancelled'], true)
+            && (float) $item->received_qty <= 0;
+    }
+
+    private function canForceCloseItem(object $item, ?string $poStatus): bool
+    {
+        return ! in_array($poStatus, ['Closed', 'Cancelled'], true)
+            && ! in_array($item->item_status, ['Closed', 'Cancelled'], true)
+            && (float) $item->outstanding_qty > 0;
+    }
+
+    private function currentDateExpression(): string
+    {
+        return DB::connection()->getDriverName() === 'sqlite'
+            ? "date('now')"
+            : 'CURDATE()';
     }
 }

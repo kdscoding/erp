@@ -336,7 +336,7 @@
                                         @elseif (in_array($r->status, ['Shipped', 'Partial Received'], true))
                                             <div class="d-flex gap-1">
                                                 <a href="{{ route('shipments.show', $r->id) }}" class="btn btn-sm btn-light">Lihat</a>
-                                                <a href="{{ route('receiving.index', ['supplier_id' => $r->supplier_id, 'shipment_id' => $r->id, 'document_number' => $r->delivery_note_number]) }}"
+                                                <a href="{{ route('receiving.process', ['supplier_id' => $r->supplier_id, 'shipment_id' => $r->id, 'document_number' => $r->delivery_note_number]) }}"
                                                     class="btn btn-sm btn-outline-primary">Lanjut ke Receiving</a>
                                             </div>
                                         @else
@@ -428,7 +428,7 @@
 
             const form = document.createElement('form');
             form.method = 'GET';
-            form.action = '{{ route('shipments.index') }}';
+            form.action = '{{ route('shipments.process') }}';
 
             const appendHidden = (name, value) => {
                 const input = document.createElement('input');
@@ -623,7 +623,7 @@
         };
 
         document.querySelectorAll(
-            'form[action="{{ route('shipments.store') }}"], form[action="{{ route('shipments.index') }}"]').forEach((
+            'form[action="{{ route('shipments.store') }}"], form[action="{{ route('shipments.process') }}"]').forEach((
             form) => {
             form.addEventListener('submit', persistDraftState);
         });

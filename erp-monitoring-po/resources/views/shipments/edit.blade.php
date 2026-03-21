@@ -15,7 +15,7 @@
             <h3 class="card-title">Ubah Draft {{ $shipment->shipment_number }}</h3>
             <div class="d-flex gap-2">
                 <a href="{{ route('shipments.show', $shipment->id) }}" class="btn btn-sm btn-light">Lihat Detail</a>
-                <a href="{{ route('shipments.index', ['view' => 'history', 'focus' => $shipment->id]) }}" class="btn btn-sm btn-light">Kembali ke Riwayat</a>
+                <a href="{{ route('shipments.history', ['focus' => $shipment->id]) }}" class="btn btn-sm btn-light">Kembali ke Riwayat</a>
             </div>
         </div>
         <div class="card-body">

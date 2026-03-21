@@ -14,6 +14,7 @@ class GoodsReceiptController extends Controller
 {
     public function index(Request $request): View
     {
+        $mode = $request->route('mode', 'process');
         $clearSelection = $request->boolean('clear_selection');
 
         $rows = DB::table('goods_receipts as gr')
@@ -60,7 +61,7 @@ class GoodsReceiptController extends Controller
             ->get();
 
         $selectedShipmentId = $request->integer('shipment_id');
-        if (! $selectedShipmentId && ! $clearSelection && $shipmentDocuments->isNotEmpty()) {
+        if ($mode === 'process' && ! $selectedShipmentId && ! $clearSelection && $shipmentDocuments->isNotEmpty()) {
             $selectedShipmentId = (int) $shipmentDocuments->first()->id;
         }
 
@@ -68,7 +69,13 @@ class GoodsReceiptController extends Controller
             ? $shipmentDocuments->firstWhere('id', $selectedShipmentId)
             : null;
 
-        $shipmentItems = $selectedShipmentId
+        if ($mode === 'process' && $selectedShipmentId) {
+            $shipmentDocuments = $shipmentDocuments
+                ->reject(fn ($document) => (int) $document->id === $selectedShipmentId)
+                ->values();
+        }
+
+        $shipmentItems = $mode === 'process' && $selectedShipmentId
             ? $this->shipmentItemsQuery()
                 ->where('sh.id', $selectedShipmentId)
                 ->orderBy('po.po_number')
@@ -78,7 +85,51 @@ class GoodsReceiptController extends Controller
 
         $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name']);
 
-        return view('receiving.index', compact('rows', 'shipmentDocuments', 'shipmentItems', 'selectedShipment', 'suppliers'));
+        return view('receiving.index', compact('rows', 'shipmentDocuments', 'shipmentItems', 'selectedShipment', 'suppliers', 'mode'));
+    }
+
+    public function show(string $id): View
+    {
+        $receipt = DB::table('goods_receipts as gr')
+            ->join('purchase_orders as po', 'po.id', '=', 'gr.purchase_order_id')
+            ->leftJoin('shipments as sh', 'sh.id', '=', 'gr.shipment_id')
+            ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->leftJoin('warehouses as w', 'w.id', '=', 'gr.warehouse_id')
+            ->leftJoin('users as u', 'u.id', '=', 'gr.received_by')
+            ->select(
+                'gr.*',
+                'po.po_number',
+                'po.status as po_status',
+                's.supplier_name',
+                'sh.shipment_number',
+                'sh.delivery_note_number',
+                'sh.status as shipment_status',
+                'w.warehouse_name',
+                'u.name as receiver_name'
+            )
+            ->where('gr.id', $id)
+            ->firstOrFail();
+
+        $items = DB::table('goods_receipt_items as gri')
+            ->join('purchase_order_items as poi', 'poi.id', '=', 'gri.purchase_order_item_id')
+            ->join('items as i', 'i.id', '=', 'gri.item_id')
+            ->leftJoin('units as u', 'u.id', '=', 'i.unit_id')
+            ->leftJoin('shipment_items as si', 'si.id', '=', 'gri.shipment_item_id')
+            ->select(
+                'gri.*',
+                'poi.ordered_qty',
+                'poi.received_qty as total_po_received_qty',
+                'poi.outstanding_qty',
+                'i.item_code',
+                'i.item_name',
+                'u.unit_name',
+                'si.shipped_qty'
+            )
+            ->where('gri.goods_receipt_id', $id)
+            ->orderBy('gri.id')
+            ->get();
+
+        return view('receiving.show', compact('receipt', 'items'));
     }
 
     public function store(Request $request)
@@ -224,7 +275,7 @@ class GoodsReceiptController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
-        return redirect()->route('receiving.index', [
+        return redirect()->route('receiving.process', [
             'shipment_id' => $v['shipment_id'],
             'supplier_id' => $request->input('supplier_id'),
             'document_number' => $request->input('search_document_number', $request->input('document_number')),
