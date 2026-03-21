@@ -149,9 +149,9 @@
                                 <tr class="{{ $item->monitoring_status === 'Late' ? 'table-danger' : '' }}">
                                     <td class="align-top">{{ $item->item_code }}</td>
                                     <td class="align-top">{{ $item->item_name }}</td>
-                                    <td class="align-top">{{ number_format($item->ordered_qty, 2, ',', '.') }} {{ $item->unit_name }}</td>
-                                    <td class="align-top">{{ number_format($item->received_qty, 2, ',', '.') }} {{ $item->unit_name }}</td>
-                                    <td class="align-top">{{ number_format($item->outstanding_qty, 2, ',', '.') }} {{ $item->unit_name }}</td>
+                                    <td class="align-top">{{ \App\Support\NumberFormatter::trim($item->ordered_qty) }} {{ $item->unit_name }}</td>
+                                    <td class="align-top">{{ \App\Support\NumberFormatter::trim($item->received_qty) }} {{ $item->unit_name }}</td>
+                                    <td class="align-top">{{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }} {{ $item->unit_name }}</td>
                                     <td class="align-top">
                                         <span
                                             class="badge {{ match ($item->monitoring_status) {

@@ -24,7 +24,7 @@ Aplikasi internal ERP-like untuk kontrol proses purchasing hingga receiving mate
   - `Kode supplier sudah digunakan`
   - `Kode item sudah digunakan`
 
-## Instalasi
+## Instalasi Baru
 ```bash
 cp .env.example .env
 composer install
@@ -32,6 +32,54 @@ php artisan key:generate
 php artisan migrate --seed
 php artisan serve
 ```
+
+## Upgrade Database Lama
+Jika codebase diperbarui tetapi database sudah pernah dibuat dari versi lama, jangan pakai `migrate:fresh` kecuali memang ingin menghapus semua data. Jalankan:
+
+```bash
+php artisan migrate
+php artisan db:seed --class=MasterDataSeeder
+php artisan db:seed --class=DocumentTermSeeder
+```
+
+Catatan:
+- `php artisan migrate` untuk menambahkan kolom/tabel baru ke database existing.
+- `php artisan migrate:fresh --seed` hanya untuk environment baru atau demo yang boleh dihapus total.
+- Jika muncul error tabel seperti `item_categories` atau `document_terms` tidak ada, hampir selalu artinya database lama belum menjalankan migration terbaru.
+
+## Memindahkan Sistem ke Server/PC Lain
+Ada 2 skenario umum:
+
+### 1. Install baru di tempat lain
+Gunakan ini kalau target belum punya database lama.
+
+```bash
+git clone <repo>
+cd erp-monitoring-po
+composer install
+copy .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve
+```
+
+### 2. Pindah aplikasi + membawa data lama
+Gunakan ini kalau database lama mau tetap dipakai.
+
+1. Backup database lama.
+2. Copy source code terbaru ke server/PC tujuan.
+3. Atur `.env` sesuai database tujuan.
+4. Jalankan `composer install`.
+5. Jalankan `php artisan migrate`.
+6. Jalankan seeder aman:
+
+```bash
+php artisan db:seed --class=RolePermissionSeeder
+php artisan db:seed --class=MasterDataSeeder
+php artisan db:seed --class=DocumentTermSeeder
+```
+
+Seeder di atas memakai `updateOrInsert`, jadi aman untuk melengkapi master data tanpa menghapus transaksi lama.
 
 ## Konfigurasi Environment
 ```env

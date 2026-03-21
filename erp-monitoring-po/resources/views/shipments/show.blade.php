@@ -43,9 +43,9 @@
                     <tr>
                         <td>{{ $line->po_number }}</td>
                         <td><strong>{{ $line->item_code }}</strong><br>{{ $line->item_name }}</td>
-                        <td>{{ number_format($line->shipped_qty, 2, ',', '.') }}</td>
-                        <td>{{ number_format($line->received_qty, 2, ',', '.') }}</td>
-                        <td>{{ number_format(max(0, $line->shipped_qty - $line->received_qty), 2, ',', '.') }}</td>
+                        <td>{{ \App\Support\NumberFormatter::trim($line->shipped_qty) }}</td>
+                        <td>{{ \App\Support\NumberFormatter::trim($line->received_qty) }}</td>
+                        <td>{{ \App\Support\NumberFormatter::trim(max(0, $line->shipped_qty - $line->received_qty)) }}</td>
                     </tr>
                 @endforeach
             </tbody>

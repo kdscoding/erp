@@ -144,6 +144,7 @@
                     <li class="nav-header">Referensi Master</li>
                     <li class="nav-item"><a href="{{ route('suppliers.index') }}" class="nav-link {{ request()->routeIs('suppliers.*') ? 'active' : '' }}"><i class="nav-icon fas fa-truck"></i><p>Data Supplier</p></a></li>
                     <li class="nav-item"><a href="{{ route('items.index') }}" class="nav-link {{ request()->routeIs('items.*') ? 'active' : '' }}"><i class="nav-icon fas fa-tags"></i><p>Data Barang</p></a></li>
+                    <li class="nav-item"><a href="{{ route('item-categories.index') }}" class="nav-link {{ request()->routeIs('item-categories.*') ? 'active' : '' }}"><i class="nav-icon fas fa-layer-group"></i><p>Kategori Barang</p></a></li>
                     <li class="nav-item"><a href="{{ route('units.index') }}" class="nav-link {{ request()->routeIs('units.*') ? 'active' : '' }}"><i class="nav-icon fas fa-ruler"></i><p>Data Satuan</p></a></li>
                     <li class="nav-item"><a href="{{ route('warehouses.index') }}" class="nav-link {{ request()->routeIs('warehouses.*') ? 'active' : '' }}"><i class="nav-icon fas fa-warehouse"></i><p>Data Gudang</p></a></li>
                     <li class="nav-item"><a href="{{ route('plants.index') }}" class="nav-link {{ request()->routeIs('plants.*') ? 'active' : '' }}"><i class="nav-icon fas fa-industry"></i><p>Data Plant</p></a></li>

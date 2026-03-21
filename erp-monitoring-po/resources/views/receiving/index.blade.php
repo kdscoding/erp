@@ -55,7 +55,7 @@
                         <td>{{ \Carbon\Carbon::parse($document->shipment_date)->format('d-m-Y') }}</td>
                         <td>{{ $document->po_count }}</td>
                         <td>{{ $document->line_count }}</td>
-                        <td>{{ number_format($document->outstanding_qty, 2, ',', '.') }}</td>
+                        <td>{{ \App\Support\NumberFormatter::trim($document->outstanding_qty) }}</td>
                         <td><a href="{{ route('receiving.process', ['shipment_id' => $document->id, 'supplier_id' => request('supplier_id'), 'document_number' => request('document_number'), 'keyword' => request('keyword')]) }}" class="btn btn-sm btn-outline-primary">Pilih Dokumen</a></td>
                     </tr>
                 @empty
@@ -120,9 +120,9 @@
                                 <tr>
                                     <td>{{ $item->po_number }}</td>
                                     <td><strong>{{ $item->item_code }}</strong><br>{{ $item->item_name }}</td>
-                                    <td>{{ number_format($item->shipped_qty, 2, ',', '.') }}</td>
-                                    <td>{{ number_format($item->shipment_received_qty, 2, ',', '.') }}</td>
-                                    <td><span class="badge bg-warning text-dark">{{ number_format($item->shipment_outstanding_qty, 2, ',', '.') }}</span></td>
+                                    <td>{{ \App\Support\NumberFormatter::trim($item->shipped_qty) }}</td>
+                                    <td>{{ \App\Support\NumberFormatter::trim($item->shipment_received_qty) }}</td>
+                                    <td><span class="badge bg-warning text-dark">{{ \App\Support\NumberFormatter::trim($item->shipment_outstanding_qty) }}</span></td>
                                     <td><input type="number" step="0.01" min="0" max="{{ $item->shipment_outstanding_qty }}" name="received_qty[{{ $item->shipment_item_id }}]" value="{{ old('received_qty.'.$item->shipment_item_id) }}" class="form-control form-control-sm" placeholder="Isi jika datang"></td>
                                 </tr>
                             @endforeach

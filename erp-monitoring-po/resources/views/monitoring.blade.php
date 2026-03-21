@@ -71,7 +71,7 @@
                             <td>{{ $item->monitoring_note }}</td>
                             <td>{{ $item->etd_date ? \Carbon\Carbon::parse($item->etd_date)->format('d-m-Y') : '-' }}
                             </td>
-                            <td>{{ number_format($item->outstanding_qty, 2, ',', '.') }}</td>
+                            <td>{{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }}</td>
                         </tr>
                     @empty
                         <tr>

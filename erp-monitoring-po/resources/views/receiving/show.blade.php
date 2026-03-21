@@ -67,13 +67,13 @@
                 @foreach ($items as $item)
                     <tr>
                         <td><strong>{{ $item->item_code }}</strong><br>{{ $item->item_name }}</td>
-                        <td>{{ number_format($item->shipped_qty ?? 0, 2, ',', '.') }} {{ $item->unit_name }}</td>
-                        <td>{{ number_format($item->received_qty, 2, ',', '.') }} {{ $item->unit_name }}</td>
-                        <td>{{ number_format($item->accepted_qty, 2, ',', '.') }} {{ $item->unit_name }}</td>
-                        <td>{{ number_format($item->rejected_qty, 2, ',', '.') }} {{ $item->unit_name }}</td>
-                        <td>{{ number_format($item->qty_variance, 2, ',', '.') }}</td>
-                        <td>{{ number_format($item->total_po_received_qty, 2, ',', '.') }} {{ $item->unit_name }}</td>
-                        <td>{{ number_format($item->outstanding_qty, 2, ',', '.') }} {{ $item->unit_name }}</td>
+                        <td>{{ \App\Support\NumberFormatter::trim($item->shipped_qty ?? 0) }} {{ $item->unit_name }}</td>
+                        <td>{{ \App\Support\NumberFormatter::trim($item->received_qty) }} {{ $item->unit_name }}</td>
+                        <td>{{ \App\Support\NumberFormatter::trim($item->accepted_qty) }} {{ $item->unit_name }}</td>
+                        <td>{{ \App\Support\NumberFormatter::trim($item->rejected_qty) }} {{ $item->unit_name }}</td>
+                        <td>{{ \App\Support\NumberFormatter::trim($item->qty_variance) }}</td>
+                        <td>{{ \App\Support\NumberFormatter::trim($item->total_po_received_qty) }} {{ $item->unit_name }}</td>
+                        <td>{{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }} {{ $item->unit_name }}</td>
                         <td>{{ $item->note ?: $item->remark ?: '-' }}</td>
                     </tr>
                 @endforeach

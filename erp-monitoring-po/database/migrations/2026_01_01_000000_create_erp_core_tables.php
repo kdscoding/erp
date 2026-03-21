@@ -48,6 +48,17 @@ return new class extends Migration {
             });
         }
 
+        if (!Schema::hasTable('item_categories')) {
+            Schema::create('item_categories', function (Blueprint $table) {
+                $table->id();
+                $table->string('category_code')->unique();
+                $table->string('category_name');
+                $table->text('description')->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+            });
+        }
+
         if (!Schema::hasTable('warehouses')) {
             Schema::create('warehouses', function (Blueprint $table) {
                 $table->id();
@@ -72,7 +83,7 @@ return new class extends Migration {
                 $table->id();
                 $table->string('item_code')->unique();
                 $table->string('item_name');
-                $table->string('category')->nullable();
+                $table->foreignId('category_id')->nullable()->constrained('item_categories');
                 $table->text('specification')->nullable();
                 $table->foreignId('unit_id')->nullable()->constrained('units');
                 $table->boolean('active')->default(true);
@@ -264,6 +275,7 @@ return new class extends Migration {
         Schema::dropIfExists('purchase_order_items');
         Schema::dropIfExists('purchase_orders');
         Schema::dropIfExists('items');
+        Schema::dropIfExists('item_categories');
         Schema::dropIfExists('plants');
         Schema::dropIfExists('warehouses');
         Schema::dropIfExists('units');

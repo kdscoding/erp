@@ -67,7 +67,7 @@
                             <td>{{ $line->po_number }}</td>
                             <td><strong>{{ $line->item_code }}</strong><br>{{ $line->item_name }}</td>
                             <td><input type="number" step="0.01" min="0.01" max="{{ $maxQty }}" name="shipment_items[{{ $loop->index }}][shipped_qty]" class="form-control form-control-sm" value="{{ old("shipment_items.{$loop->index}.shipped_qty", $line->shipped_qty) }}" required></td>
-                            <td>{{ number_format($maxQty, 2, ',', '.') }}</td>
+                            <td>{{ \App\Support\NumberFormatter::trim($maxQty) }}</td>
                         </tr>
                     @endforeach
                 </tbody>

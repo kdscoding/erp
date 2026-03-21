@@ -116,11 +116,11 @@
                                                 class="badge bg-light text-dark">{{ \App\Support\TermCatalog::label('po_status', $candidate->po_status, $candidate->po_status) }}</span></td>
                                         <td><strong>{{ $candidate->item_code }}</strong><br>{{ $candidate->item_name }}
                                         </td>
-                                        <td>{{ number_format($candidate->outstanding_qty, 2, ',', '.') }}</td>
-                                        <td>{{ number_format($candidate->open_shipment_qty, 2, ',', '.') }}</td>
+                                        <td>{{ \App\Support\NumberFormatter::trim($candidate->outstanding_qty) }}</td>
+                                        <td>{{ \App\Support\NumberFormatter::trim($candidate->open_shipment_qty) }}</td>
                                         <td>
                                             <span
-                                                class="badge {{ $isAllocatable ? 'bg-warning text-dark' : 'bg-secondary' }}">{{ number_format(max(0, $candidate->available_to_ship_qty), 2, ',', '.') }}</span>
+                                                class="badge {{ $isAllocatable ? 'bg-warning text-dark' : 'bg-secondary' }}">{{ \App\Support\NumberFormatter::trim(max(0, $candidate->available_to_ship_qty)) }}</span>
                                             @if (! $isAllocatable)
                                                 <br><small class="text-muted">Sudah teralokasi di shipment aktif</small>
                                             @endif
@@ -213,7 +213,7 @@
                                                         value="{{ $item->purchase_order_item_id }}"></td>
                                                 <td>{{ $item->po_number }}</td>
                                                 <td><strong>{{ $item->item_code }}</strong><br>{{ $item->item_name }}</td>
-                                                <td>{{ number_format($item->available_to_ship_qty, 2, ',', '.') }}</td>
+                                                <td>{{ \App\Support\NumberFormatter::trim($item->available_to_ship_qty) }}</td>
                                                 <td>
                                                     <input type="hidden" name="selected_items[]"
                                                         value="{{ $item->purchase_order_item_id }}">

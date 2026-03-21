@@ -29,11 +29,21 @@
                             <option value="{{ $unit->id }}" @selected(old('unit_id', $item->unit_id) == $unit->id)>{{ $unit->unit_name }}</option>
                         @endforeach
                     </select></div>
-                <div class="col-md-6"><label class="form-label">Kategori</label><input class="form-control form-control-sm"
-                        name="category" value="{{ old('category', $item->category) }}"></div>
-                <div class="col-md-6"><label class="form-label">Spesifikasi</label><input
-                        class="form-control form-control-sm" name="specification"
-                        value="{{ old('specification', $item->specification) }}"></div>
+                @if ($supportsCategoryMaster)
+                    <div class="col-md-6"><label class="form-label">Kategori</label><select class="form-control form-control-sm"
+                            name="category_id">
+                            <option value="">Pilih Kategori</option>
+                            @foreach ($categories as $category)
+                                <option value="{{ $category->id }}" @selected(old('category_id', $item->category_id) == $category->id)>{{ $category->category_name }}</option>
+                            @endforeach
+                        </select></div>
+                @else
+                    <div class="col-md-6"><label class="form-label">Kategori</label><input class="form-control form-control-sm"
+                            name="category" value="{{ old('category', $item->category ?? null) }}"></div>
+                @endif
+                <div class="col-md-6"><label class="form-label">Spesifikasi</label><textarea
+                        class="form-control form-control-sm" name="specification" rows="3"
+                        placeholder="Ukuran, bahan, warna, finishing, atau catatan teknis lain">{{ old('specification', $item->specification) }}</textarea></div>
                 <div class="col-12 d-flex justify-content-end gap-2"><a href="{{ route('items.index') }}"
                         class="btn btn-secondary btn-sm">Kembali</a><button class="btn btn-primary btn-sm">Simpan
                         Perubahan</button></div>
