@@ -208,12 +208,6 @@
                     </div>
 
                     <div class="col-md-3">
-                        <label class="doc-label">Nomor Referensi</label>
-                        <input type="text" class="form-control form-control-sm" name="reference_number"
-                            value="{{ old('reference_number') }}">
-                    </div>
-
-                    <div class="col-md-3">
                         <label class="doc-label">Jenis Dokumen</label>
                         <input type="text" class="form-control form-control-sm field-readonly"
                             value="Purchase Order Manual" readonly>
