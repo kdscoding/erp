@@ -161,7 +161,7 @@ class PurchaseOrderController extends Controller
                 ]);
             }
 
-            ErpFlow::pushPoStatus($poId, null, 'PO Issued', $userId, 'PO direct entry (tanpa approval internal).');
+            ErpFlow::pushPoStatus($poId, null, 'PO Issued', $userId, 'Released new PO');
             ErpFlow::audit('purchase_orders', $poId, 'create', null, ['status' => 'PO Issued'], $userId, $request->ip());
             DB::commit();
         } catch (\Throwable $e) {
