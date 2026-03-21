@@ -37,10 +37,16 @@ Route::get('/', fn() => redirect()->route('dashboard'));
 
         Route::get('/masters/units', [UnitController::class, 'index'])->name('units.index');
         Route::post('/masters/units', [UnitController::class, 'store'])->name('units.store');
+        Route::get('/masters/units/{id}/edit', [UnitController::class, 'edit'])->name('units.edit');
+        Route::put('/masters/units/{id}', [UnitController::class, 'update'])->name('units.update');
         Route::get('/masters/warehouses', [WarehouseController::class, 'index'])->name('warehouses.index');
         Route::post('/masters/warehouses', [WarehouseController::class, 'store'])->name('warehouses.store');
+        Route::get('/masters/warehouses/{id}/edit', [WarehouseController::class, 'edit'])->name('warehouses.edit');
+        Route::put('/masters/warehouses/{id}', [WarehouseController::class, 'update'])->name('warehouses.update');
         Route::get('/masters/plants', [PlantController::class, 'index'])->name('plants.index');
         Route::post('/masters/plants', [PlantController::class, 'store'])->name('plants.store');
+        Route::get('/masters/plants/{id}/edit', [PlantController::class, 'edit'])->name('plants.edit');
+        Route::put('/masters/plants/{id}', [PlantController::class, 'update'])->name('plants.update');
         Route::get('/masters/item-categories', [ItemCategoryController::class, 'index'])->name('item-categories.index');
         Route::post('/masters/item-categories', [ItemCategoryController::class, 'store'])->name('item-categories.store');
         Route::get('/masters/item-categories/{id}/edit', [ItemCategoryController::class, 'edit'])->name('item-categories.edit');

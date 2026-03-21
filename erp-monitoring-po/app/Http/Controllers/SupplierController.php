@@ -17,15 +17,25 @@ class SupplierController extends Controller
                 $q = trim((string) $request->input('q'));
                 $query->where(function ($qBuilder) use ($q) {
                     $qBuilder->where('supplier_code', 'like', "%{$q}%")
-                        ->orWhere('supplier_name', 'like', "%{$q}%");
+                        ->orWhere('supplier_name', 'like', "%{$q}%")
+                        ->orWhere('contact_person', 'like', "%{$q}%")
+                        ->orWhere('phone', 'like', "%{$q}%")
+                        ->orWhere('email', 'like', "%{$q}%");
                 });
             })
             ->when($request->filled('status'), fn ($query) => $query->where('status', (int) $request->input('status')))
-            ->orderByDesc('id')
+            ->orderBy('supplier_name')
             ->paginate(20)
             ->withQueryString();
 
-        return view('suppliers.index', compact('suppliers'));
+        $stats = [
+            'total' => DB::table('suppliers')->count(),
+            'active' => DB::table('suppliers')->where('status', true)->count(),
+            'inactive' => DB::table('suppliers')->where('status', false)->count(),
+            'used_in_po' => DB::table('purchase_orders')->whereNotNull('supplier_id')->distinct('supplier_id')->count('supplier_id'),
+        ];
+
+        return view('suppliers.index', compact('suppliers', 'stats'));
     }
 
     public function store(Request $request): RedirectResponse

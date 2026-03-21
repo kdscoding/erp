@@ -176,4 +176,73 @@ class MasterDataValidationTest extends TestCase
             ->assertDontSee('ITM-B');
     }
 
+    public function test_unit_can_be_updated(): void
+    {
+        $user = $this->adminUser();
+        $unitId = DB::table('units')->insertGetId([
+            'unit_code' => 'pcs',
+            'unit_name' => 'Pieces',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)->put("/masters/units/{$unitId}", [
+            'unit_code' => ' box ',
+            'unit_name' => 'Box',
+        ])->assertRedirect('/masters/units');
+
+        $this->assertDatabaseHas('units', [
+            'id' => $unitId,
+            'unit_code' => 'BOX',
+            'unit_name' => 'Box',
+        ]);
+    }
+
+    public function test_warehouse_can_be_updated(): void
+    {
+        $user = $this->adminUser();
+        $warehouseId = DB::table('warehouses')->insertGetId([
+            'warehouse_code' => 'wh-a',
+            'warehouse_name' => 'Gudang Lama',
+            'location' => 'Area A',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)->put("/masters/warehouses/{$warehouseId}", [
+            'warehouse_code' => ' wh-b ',
+            'warehouse_name' => 'Gudang Baru',
+            'location' => 'Area B',
+        ])->assertRedirect('/masters/warehouses');
+
+        $this->assertDatabaseHas('warehouses', [
+            'id' => $warehouseId,
+            'warehouse_code' => 'WH-B',
+            'warehouse_name' => 'Gudang Baru',
+            'location' => 'Area B',
+        ]);
+    }
+
+    public function test_plant_can_be_updated(): void
+    {
+        $user = $this->adminUser();
+        $plantId = DB::table('plants')->insertGetId([
+            'plant_code' => 'plt-a',
+            'plant_name' => 'Plant Lama',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)->put("/masters/plants/{$plantId}", [
+            'plant_code' => ' plt-b ',
+            'plant_name' => 'Plant Baru',
+        ])->assertRedirect('/masters/plants');
+
+        $this->assertDatabaseHas('plants', [
+            'id' => $plantId,
+            'plant_code' => 'PLT-B',
+            'plant_name' => 'Plant Baru',
+        ]);
+    }
+
 }
