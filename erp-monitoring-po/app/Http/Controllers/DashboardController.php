@@ -106,7 +106,7 @@ class DashboardController extends Controller
         $recentReceivings = DB::table('goods_receipts as gr')
             ->join('purchase_orders as po', 'po.id', '=', 'gr.purchase_order_id')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
-            ->select('gr.gr_number', 'gr.receipt_date', 'po.po_number', 's.supplier_name')
+            ->select('gr.id', 'gr.gr_number', 'gr.receipt_date', 'po.po_number', 's.supplier_name')
             ->orderByDesc('gr.id')
             ->limit(8)
             ->get();
