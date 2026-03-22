@@ -902,7 +902,55 @@ class PoReceivingFlowTest extends TestCase
 
         $this->assertDatabaseHas('purchase_orders', [
             'id' => $poId,
-            'status' => 'Confirmed',
+            'status' => 'PO Issued',
+        ]);
+    }
+
+    public function test_po_status_stays_po_issued_when_only_some_items_have_etd(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemAId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+        $itemBId = DB::table('items')->where('item_code', 'ITM002')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-MIXED-CONFIRM-01',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'PO Issued',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $firstItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemAId,
+            'ordered_qty' => 20,
+            'received_qty' => 0,
+            'outstanding_qty' => 20,
+            'item_status' => 'Waiting',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('purchase_order_items')->insert([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemBId,
+            'ordered_qty' => 15,
+            'received_qty' => 0,
+            'outstanding_qty' => 15,
+            'item_status' => 'Waiting',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)->patch("/po/items/{$firstItemId}/schedule", [
+            'etd_date' => now()->addDays(5)->toDateString(),
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('purchase_orders', [
+            'id' => $poId,
+            'status' => 'PO Issued',
         ]);
     }
 }

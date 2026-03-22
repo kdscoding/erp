@@ -130,18 +130,22 @@
                         <thead>
                             <tr>
                                 <th>Supplier</th>
-                                <th class="text-end">Jumlah PO Terlambat</th>
+                                <th class="text-end">Item Terlambat</th>
+                                <th class="text-end">PO Terdampak</th>
+                                <th>ETD Terlama</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($supplierDelay as $row)
                                 <tr>
                                     <td>{{ $row->supplier_name }}</td>
-                                    <td class="text-end"><span class="badge bg-danger">{{ $row->late_count }}</span></td>
+                                    <td class="text-end"><span class="badge bg-danger">{{ $row->late_item_count }}</span></td>
+                                    <td class="text-end">{{ $row->late_po_count }}</td>
+                                    <td>{{ $row->oldest_late_etd ? \Carbon\Carbon::parse($row->oldest_late_etd)->format('d-m-Y') : '-' }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="2" class="text-center text-muted">Belum ada keterlambatan.</td>
+                                    <td colspan="4" class="text-center text-muted">Belum ada keterlambatan.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -187,6 +191,46 @@
 
         <!-- Comprehensive Item Monitoring -->
         <div class="col-12">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h3 class="card-title">Komposisi Item per PO</h3>
+                </div>
+                <div class="card-body table-responsive p-0">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>PO</th>
+                                <th>Supplier</th>
+                                <th>Header</th>
+                                <th>Waiting</th>
+                                <th>Confirmed</th>
+                                <th>Late</th>
+                                <th>Partial</th>
+                                <th>Closed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($poMonitoringSummary as $summary)
+                                <tr>
+                                    <td><a href="{{ route('po.show', $summary->po_id) }}">{{ $summary->po_number }}</a></td>
+                                    <td>{{ $summary->supplier_name }}</td>
+                                    <td><span class="badge bg-light text-dark">{{ \App\Support\TermCatalog::label('po_status', $summary->po_status, $summary->po_status) }}</span></td>
+                                    <td>{{ $summary->waiting_items }}</td>
+                                    <td>{{ $summary->confirmed_items }}</td>
+                                    <td>{{ $summary->late_items }}</td>
+                                    <td>{{ $summary->partial_items }}</td>
+                                    <td>{{ $summary->closed_items }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">Belum ada ringkasan monitoring.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title">Comprehensive Item Monitoring</h3>

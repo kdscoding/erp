@@ -62,6 +62,7 @@ class ErpFlow
             ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != 'Cancelled' THEN 1 ELSE 0 END) active_items")
             ->selectRaw('SUM(CASE WHEN outstanding_qty > 0 THEN 1 ELSE 0 END) outstanding_items')
             ->selectRaw('SUM(CASE WHEN received_qty > 0 THEN 1 ELSE 0 END) received_items')
+            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != 'Cancelled' AND outstanding_qty > 0 AND etd_date IS NULL THEN 1 ELSE 0 END) waiting_open_items")
             ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != 'Cancelled' AND outstanding_qty > 0 AND etd_date IS NOT NULL THEN 1 ELSE 0 END) confirmed_open_items")
             ->first();
 
@@ -94,7 +95,10 @@ class ErpFlow
             (int) ($shipmentCoverage->fully_allocated_open_items ?? 0) === (int) ($shipmentCoverage->open_item_count ?? 0)
         ) {
             $newStatus = 'Shipped';
-        } elseif ((int) ($summary->confirmed_open_items ?? 0) > 0) {
+        } elseif (
+            (int) ($summary->confirmed_open_items ?? 0) > 0 &&
+            (int) ($summary->waiting_open_items ?? 0) === 0
+        ) {
             $newStatus = 'Confirmed';
         }
 
