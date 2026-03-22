@@ -27,7 +27,7 @@
                         <span
                             class="badge {{ match ($po->status) {
                                 'Closed' => 'bg-success',
-                                'Partial', 'Confirmed', 'PO Issued', 'Waiting' => 'bg-warning text-dark',
+                                'Open', 'Partial', 'Confirmed', 'PO Issued', 'Waiting' => 'bg-warning text-dark',
                                 'Late', 'Cancelled' => 'bg-danger',
                                 default => 'bg-secondary',
                             } }}">

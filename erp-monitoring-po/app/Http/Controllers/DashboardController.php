@@ -29,8 +29,8 @@ class DashboardController extends Controller
                 ->whereRaw('DATE(receipt_date) = CURDATE()')
                 ->count(),
 
-            'partial_po' => DB::table('purchase_orders')
-                ->where('status', 'Partial')
+            'late_po' => DB::table('purchase_orders')
+                ->where('status', 'Late')
                 ->count(),
 
             'suppliers' => DB::table('suppliers')

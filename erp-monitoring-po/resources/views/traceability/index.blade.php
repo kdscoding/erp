@@ -6,7 +6,7 @@
     $statusBadge = static function ($status) {
         return match ($status) {
             'Closed' => 'success',
-            'Partial', 'Confirmed', 'Waiting', 'PO Issued' => 'warning text-dark',
+            'Open', 'Partial', 'Confirmed', 'Waiting', 'PO Issued' => 'warning text-dark',
             'Late', 'Cancelled' => 'danger',
             default => 'secondary',
         };

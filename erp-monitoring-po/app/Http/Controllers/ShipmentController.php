@@ -11,7 +11,7 @@ use Illuminate\View\View;
 
 class ShipmentController extends Controller
 {
-    private const SHIPPABLE_PO_STATUSES = ['PO Issued', 'Confirmed', 'Shipped', 'Partial'];
+    private const SHIPPABLE_PO_STATUSES = ['PO Issued', 'Open', 'Late'];
 
     public function index(Request $request): View
     {

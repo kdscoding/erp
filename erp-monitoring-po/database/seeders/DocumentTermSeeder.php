@@ -13,11 +13,10 @@ class DocumentTermSeeder extends Seeder
 
         $terms = [
             ['group_key' => 'po_status', 'code' => 'PO Issued', 'label' => 'Released New PO', 'sort_order' => 10],
-            ['group_key' => 'po_status', 'code' => 'Confirmed', 'label' => 'Supplier Confirmed', 'sort_order' => 20],
-            ['group_key' => 'po_status', 'code' => 'Shipped', 'label' => 'Shipment In Transit', 'sort_order' => 30],
-            ['group_key' => 'po_status', 'code' => 'Partial', 'label' => 'Partially Received', 'sort_order' => 40],
-            ['group_key' => 'po_status', 'code' => 'Closed', 'label' => 'Completed', 'sort_order' => 50],
-            ['group_key' => 'po_status', 'code' => 'Cancelled', 'label' => 'Cancelled', 'sort_order' => 60],
+            ['group_key' => 'po_status', 'code' => 'Open', 'label' => 'Open / In Progress', 'sort_order' => 20],
+            ['group_key' => 'po_status', 'code' => 'Late', 'label' => 'Late / Need Follow Up', 'sort_order' => 30],
+            ['group_key' => 'po_status', 'code' => 'Closed', 'label' => 'Completed', 'sort_order' => 40],
+            ['group_key' => 'po_status', 'code' => 'Cancelled', 'label' => 'Cancelled', 'sort_order' => 50],
 
             ['group_key' => 'po_item_status', 'code' => 'Waiting', 'label' => 'Waiting Supplier Confirmation', 'sort_order' => 10],
             ['group_key' => 'po_item_status', 'code' => 'Confirmed', 'label' => 'ETD Confirmed', 'sort_order' => 20],
@@ -51,5 +50,13 @@ class DocumentTermSeeder extends Seeder
                 ]
             );
         }
+
+        DB::table('document_terms')
+            ->where('group_key', 'po_status')
+            ->whereNotIn('code', ['PO Issued', 'Open', 'Late', 'Closed', 'Cancelled'])
+            ->update([
+                'is_active' => false,
+                'updated_at' => $now,
+            ]);
     }
 }

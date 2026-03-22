@@ -19,7 +19,7 @@
                     <label class="form-label">Status</label>
                     <select name="status" class="form-control form-control-sm">
                         <option value="">Semua Status</option>
-                        @foreach (\App\Support\TermCatalog::options('po_status', ['PO Issued', 'Confirmed', 'Partial', 'Closed', 'Cancelled']) as $status => $label)
+                        @foreach (\App\Support\TermCatalog::options('po_status', ['PO Issued', 'Open', 'Late', 'Closed', 'Cancelled']) as $status => $label)
                             <option value="{{ $status }}" @selected(request('status') === $status)>{{ $label }}</option>
                         @endforeach
                     </select>

@@ -23,13 +23,13 @@ class ShipmentSampleSeeder extends Seeder
             $this->cleanupExistingDemoData();
 
             $samples = [
-                ['suffix' => '0001', 'shipment_status' => 'Draft', 'po_status' => 'Confirmed', 'ordered_qty' => 120, 'shipped_qty' => 120, 'received_qty' => 0, 'po_date_offset' => 18, 'shipment_date_offset' => 2, 'etd_offset' => 7],
-                ['suffix' => '0002', 'shipment_status' => 'Draft', 'po_status' => 'Confirmed', 'ordered_qty' => 85, 'shipped_qty' => 60, 'received_qty' => 0, 'po_date_offset' => 17, 'shipment_date_offset' => 1, 'etd_offset' => 5],
+                ['suffix' => '0001', 'shipment_status' => 'Draft', 'po_status' => 'Open', 'ordered_qty' => 120, 'shipped_qty' => 120, 'received_qty' => 0, 'po_date_offset' => 18, 'shipment_date_offset' => 2, 'etd_offset' => 7],
+                ['suffix' => '0002', 'shipment_status' => 'Draft', 'po_status' => 'Open', 'ordered_qty' => 85, 'shipped_qty' => 60, 'received_qty' => 0, 'po_date_offset' => 17, 'shipment_date_offset' => 1, 'etd_offset' => 5],
                 ['suffix' => '0003', 'shipment_status' => 'Draft', 'po_status' => 'PO Issued', 'ordered_qty' => 150, 'shipped_qty' => 90, 'received_qty' => 0, 'po_date_offset' => 15, 'shipment_date_offset' => 0, 'etd_offset' => 10],
-                ['suffix' => '0004', 'shipment_status' => 'Shipped', 'po_status' => 'Shipped', 'ordered_qty' => 200, 'shipped_qty' => 200, 'received_qty' => 0, 'po_date_offset' => 13, 'shipment_date_offset' => 3, 'etd_offset' => 2],
-                ['suffix' => '0005', 'shipment_status' => 'Shipped', 'po_status' => 'Shipped', 'ordered_qty' => 140, 'shipped_qty' => 80, 'received_qty' => 0, 'po_date_offset' => 12, 'shipment_date_offset' => 2, 'etd_offset' => -1],
-                ['suffix' => '0006', 'shipment_status' => 'Partial Received', 'po_status' => 'Partial', 'ordered_qty' => 160, 'shipped_qty' => 160, 'received_qty' => 70, 'po_date_offset' => 10, 'shipment_date_offset' => 5, 'receipt_date_offset' => 3, 'etd_offset' => -2],
-                ['suffix' => '0007', 'shipment_status' => 'Partial Received', 'po_status' => 'Partial', 'ordered_qty' => 110, 'shipped_qty' => 90, 'received_qty' => 45, 'po_date_offset' => 9, 'shipment_date_offset' => 4, 'receipt_date_offset' => 1, 'etd_offset' => -1],
+                ['suffix' => '0004', 'shipment_status' => 'Shipped', 'po_status' => 'Open', 'ordered_qty' => 200, 'shipped_qty' => 200, 'received_qty' => 0, 'po_date_offset' => 13, 'shipment_date_offset' => 3, 'etd_offset' => 2],
+                ['suffix' => '0005', 'shipment_status' => 'Shipped', 'po_status' => 'Late', 'ordered_qty' => 140, 'shipped_qty' => 80, 'received_qty' => 0, 'po_date_offset' => 12, 'shipment_date_offset' => 2, 'etd_offset' => -1],
+                ['suffix' => '0006', 'shipment_status' => 'Partial Received', 'po_status' => 'Late', 'ordered_qty' => 160, 'shipped_qty' => 160, 'received_qty' => 70, 'po_date_offset' => 10, 'shipment_date_offset' => 5, 'receipt_date_offset' => 3, 'etd_offset' => -2],
+                ['suffix' => '0007', 'shipment_status' => 'Partial Received', 'po_status' => 'Late', 'ordered_qty' => 110, 'shipped_qty' => 90, 'received_qty' => 45, 'po_date_offset' => 9, 'shipment_date_offset' => 4, 'receipt_date_offset' => 1, 'etd_offset' => -1],
                 ['suffix' => '0008', 'shipment_status' => 'Received', 'po_status' => 'Closed', 'ordered_qty' => 95, 'shipped_qty' => 95, 'received_qty' => 95, 'po_date_offset' => 8, 'shipment_date_offset' => 6, 'receipt_date_offset' => 2, 'etd_offset' => -3],
                 ['suffix' => '0009', 'shipment_status' => 'Received', 'po_status' => 'Closed', 'ordered_qty' => 175, 'shipped_qty' => 175, 'received_qty' => 175, 'po_date_offset' => 7, 'shipment_date_offset' => 5, 'receipt_date_offset' => 1, 'etd_offset' => -4],
                 ['suffix' => '0010', 'shipment_status' => 'Received', 'po_status' => 'Closed', 'ordered_qty' => 130, 'shipped_qty' => 100, 'received_qty' => 100, 'po_date_offset' => 6, 'shipment_date_offset' => 4, 'receipt_date_offset' => 0, 'etd_offset' => -2],
@@ -62,7 +62,13 @@ class ShipmentSampleSeeder extends Seeder
                     'ordered_qty' => $orderedQty,
                     'received_qty' => $receivedQty,
                     'outstanding_qty' => $remainingQty,
-                    'item_status' => $receivedQty <= 0 ? ($sample['po_status'] === 'PO Issued' ? 'Waiting' : 'Confirmed') : ($remainingQty > 0 ? 'Partial' : 'Closed'),
+                    'item_status' => $receivedQty <= 0
+                        ? match ($sample['po_status']) {
+                            'PO Issued' => 'Waiting',
+                            'Late' => 'Late',
+                            default => 'Confirmed',
+                        }
+                        : ($remainingQty > 0 ? 'Partial' : 'Closed'),
                     'eta_date' => now()->addDays($sample['etd_offset'] + 5)->toDateString(),
                     'etd_date' => now()->addDays($sample['etd_offset'])->toDateString(),
                     'remarks' => 'Line sample '.$sample['suffix'],

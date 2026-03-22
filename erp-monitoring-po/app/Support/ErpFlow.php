@@ -6,6 +6,13 @@ use Illuminate\Support\Facades\DB;
 
 class ErpFlow
 {
+    public static function currentDateExpression(): string
+    {
+        return DB::connection()->getDriverName() === 'sqlite'
+            ? "date('now')"
+            : 'CURDATE()';
+    }
+
     public static function generateNumber(string $prefix, string $table, string $column): string
     {
         $date = now()->format('Ymd');
@@ -55,29 +62,29 @@ class ErpFlow
 
     public static function refreshPoStatusByOutstanding(int $poId, ?int $userId = null): string
     {
+        $currentDateSql = self::currentDateExpression();
+
         $summary = DB::table('purchase_order_items')
             ->where('purchase_order_id', $poId)
             ->selectRaw('COUNT(*) total_items')
             ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') = 'Cancelled' THEN 1 ELSE 0 END) cancelled_items")
             ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != 'Cancelled' THEN 1 ELSE 0 END) active_items")
-            ->selectRaw('SUM(CASE WHEN outstanding_qty > 0 THEN 1 ELSE 0 END) outstanding_items')
-            ->selectRaw('SUM(CASE WHEN received_qty > 0 THEN 1 ELSE 0 END) received_items')
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != 'Cancelled' AND outstanding_qty > 0 AND etd_date IS NULL THEN 1 ELSE 0 END) waiting_open_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != 'Cancelled' AND outstanding_qty > 0 AND etd_date IS NOT NULL THEN 1 ELSE 0 END) confirmed_open_items")
+            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != 'Cancelled' AND outstanding_qty > 0 AND received_qty = 0 AND etd_date IS NULL THEN 1 ELSE 0 END) waiting_items")
+            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != 'Cancelled' AND outstanding_qty > 0 AND received_qty = 0 AND etd_date IS NOT NULL AND DATE(etd_date) >= {$currentDateSql} THEN 1 ELSE 0 END) confirmed_items")
+            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != 'Cancelled' AND outstanding_qty > 0 AND received_qty = 0 AND etd_date IS NOT NULL AND DATE(etd_date) < {$currentDateSql} THEN 1 ELSE 0 END) late_items")
+            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != 'Cancelled' AND received_qty > 0 AND outstanding_qty > 0 THEN 1 ELSE 0 END) partial_items")
+            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != 'Cancelled' AND outstanding_qty <= 0 THEN 1 ELSE 0 END) closed_items")
             ->first();
 
-        $shipmentCoverage = DB::table('purchase_order_items as poi')
+        $allocationSummary = DB::table('purchase_order_items as poi')
+            ->leftJoin('shipment_items as si', 'si.purchase_order_item_id', '=', 'poi.id')
+            ->leftJoin('shipments as sh', function ($join) {
+                $join->on('sh.id', '=', 'si.shipment_id')
+                    ->where('sh.status', '!=', 'Cancelled');
+            })
             ->where('poi.purchase_order_id', $poId)
             ->whereRaw("COALESCE(poi.item_status, '') != 'Cancelled'")
-            ->where('poi.outstanding_qty', '>', 0)
-            ->selectRaw('COUNT(*) as open_item_count')
-            ->selectRaw('SUM(CASE WHEN COALESCE((
-                SELECT SUM(si2.shipped_qty)
-                FROM shipment_items si2
-                INNER JOIN shipments sh2 ON sh2.id = si2.shipment_id
-                WHERE si2.purchase_order_item_id = poi.id
-                  AND sh2.status IN (\'Shipped\', \'Partial Received\', \'Received\')
-            ), 0) >= poi.outstanding_qty THEN 1 ELSE 0 END) as fully_allocated_open_items')
+            ->selectRaw('COUNT(DISTINCT CASE WHEN sh.id IS NOT NULL THEN poi.id END) as allocated_items')
             ->first();
 
         $oldStatus = DB::table('purchase_orders')->where('id', $poId)->value('status');
@@ -86,20 +93,25 @@ class ErpFlow
         $newStatus = 'PO Issued';
         if ((int) ($summary->total_items ?? 0) > 0 && (int) ($summary->cancelled_items ?? 0) === (int) ($summary->total_items ?? 0)) {
             $newStatus = 'Cancelled';
-        } elseif ((int) ($summary->active_items ?? 0) > 0 && (int) ($summary->outstanding_items ?? 0) === 0) {
+        } elseif ((int) ($summary->active_items ?? 0) > 0 && (int) ($summary->closed_items ?? 0) === (int) ($summary->active_items ?? 0)) {
             $newStatus = 'Closed';
-        } elseif ((int) ($summary->received_items ?? 0) > 0) {
-            $newStatus = 'Partial';
+        } elseif ((int) ($summary->late_items ?? 0) > 0) {
+            $newStatus = 'Late';
         } elseif (
-            (int) ($shipmentCoverage->open_item_count ?? 0) > 0 &&
-            (int) ($shipmentCoverage->fully_allocated_open_items ?? 0) === (int) ($shipmentCoverage->open_item_count ?? 0)
+            (int) ($summary->active_items ?? 0) > 0 &&
+            (
+                (int) ($summary->confirmed_items ?? 0) > 0 ||
+                (int) ($summary->partial_items ?? 0) > 0 ||
+                (int) ($summary->closed_items ?? 0) > 0 ||
+                (int) ($allocationSummary->allocated_items ?? 0) > 0
+            )
         ) {
-            $newStatus = 'Shipped';
+            $newStatus = 'Open';
         } elseif (
-            (int) ($summary->confirmed_open_items ?? 0) > 0 &&
-            (int) ($summary->waiting_open_items ?? 0) === 0
+            (int) ($summary->active_items ?? 0) > 0 &&
+            (int) ($summary->waiting_items ?? 0) > 0
         ) {
-            $newStatus = 'Confirmed';
+            $newStatus = 'PO Issued';
         }
 
         if ($oldStatus !== $newStatus) {

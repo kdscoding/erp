@@ -87,7 +87,7 @@ class PoReceivingFlowTest extends TestCase
             'po_number' => 'PO-TEST-0001',
             'po_date' => now()->toDateString(),
             'supplier_id' => $supplierId,
-            'status' => 'Confirmed',
+            'status' => 'Open',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -122,7 +122,7 @@ class PoReceivingFlowTest extends TestCase
             ->assertRedirect('/receiving/process?supplier_id='.$supplierId.'&shipment_id='.$shipmentId.'&document_number=SJ-0001')
             ->assertSessionHas('success');
 
-        $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Shipped']);
+        $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Open']);
         $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Shipped']);
 
         $this->actingAs($user)->post('/receiving', [
@@ -133,7 +133,7 @@ class PoReceivingFlowTest extends TestCase
         ])->assertSessionHas('success');
 
         $this->assertDatabaseHas('purchase_order_items', ['id' => $poItemId, 'outstanding_qty' => 60]);
-        $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Partial']);
+        $this->assertDatabaseHas('purchase_orders', ['id' => $poId, 'status' => 'Open']);
         $this->assertDatabaseHas('shipment_items', ['id' => $shipmentItemId, 'received_qty' => 40]);
         $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Partial Received']);
 
@@ -161,7 +161,7 @@ class PoReceivingFlowTest extends TestCase
             'po_number' => 'PO-TEST-1001',
             'po_date' => now()->toDateString(),
             'supplier_id' => $supplierId,
-            'status' => 'Confirmed',
+            'status' => 'Open',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -170,7 +170,7 @@ class PoReceivingFlowTest extends TestCase
             'po_number' => 'PO-TEST-1002',
             'po_date' => now()->toDateString(),
             'supplier_id' => $supplierId,
-            'status' => 'Confirmed',
+            'status' => 'Open',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -224,8 +224,8 @@ class PoReceivingFlowTest extends TestCase
             ->assertRedirect('/receiving/process?supplier_id='.$supplierId.'&shipment_id='.$shipmentId.'&document_number=SJ-MULTI-01')
             ->assertSessionHas('success');
 
-        $this->assertDatabaseHas('purchase_orders', ['id' => $poOneId, 'status' => 'PO Issued']);
-        $this->assertDatabaseHas('purchase_orders', ['id' => $poTwoId, 'status' => 'Shipped']);
+        $this->assertDatabaseHas('purchase_orders', ['id' => $poOneId, 'status' => 'Open']);
+        $this->assertDatabaseHas('purchase_orders', ['id' => $poTwoId, 'status' => 'Open']);
     }
 
     public function test_draft_shipment_can_be_cancelled_without_being_deleted(): void
@@ -238,7 +238,7 @@ class PoReceivingFlowTest extends TestCase
             'po_number' => 'PO-TEST-CANCEL',
             'po_date' => now()->toDateString(),
             'supplier_id' => $supplierId,
-            'status' => 'Confirmed',
+            'status' => 'Open',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -281,7 +281,7 @@ class PoReceivingFlowTest extends TestCase
             'po_number' => 'PO-TEST-DN-01',
             'po_date' => now()->toDateString(),
             'supplier_id' => $supplierId,
-            'status' => 'Confirmed',
+            'status' => 'Open',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -290,7 +290,7 @@ class PoReceivingFlowTest extends TestCase
             'po_number' => 'PO-TEST-DN-02',
             'po_date' => now()->toDateString(),
             'supplier_id' => $supplierId,
-            'status' => 'Confirmed',
+            'status' => 'Open',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -346,7 +346,7 @@ class PoReceivingFlowTest extends TestCase
             'po_number' => 'PO-TEST-0002',
             'po_date' => now()->toDateString(),
             'supplier_id' => $supplierId,
-            'status' => 'Shipped',
+            'status' => 'Open',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -367,7 +367,7 @@ class PoReceivingFlowTest extends TestCase
             'shipment_number' => 'SHP-TEST-0002',
             'shipment_date' => now()->toDateString(),
             'delivery_note_number' => 'SJ-0002',
-            'status' => 'Shipped',
+            'status' => 'Open',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -406,7 +406,7 @@ class PoReceivingFlowTest extends TestCase
             'po_number' => 'PO-TEST-CLEAR-01',
             'po_date' => now()->toDateString(),
             'supplier_id' => $supplierId,
-            'status' => 'Shipped',
+            'status' => 'Open',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -606,7 +606,7 @@ class PoReceivingFlowTest extends TestCase
             'po_number' => 'PO-TEST-GR-CANCEL-01',
             'po_date' => now()->toDateString(),
             'supplier_id' => $supplierId,
-            'status' => 'Partial',
+            'status' => 'Open',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -699,7 +699,7 @@ class PoReceivingFlowTest extends TestCase
 
         $this->assertDatabaseHas('purchase_orders', [
             'id' => $poId,
-            'status' => 'Shipped',
+            'status' => 'Open',
         ]);
     }
 
@@ -771,7 +771,7 @@ class PoReceivingFlowTest extends TestCase
             'po_number' => 'PO-TEST-DRAFT-LIMIT-01',
             'po_date' => now()->toDateString(),
             'supplier_id' => $supplierId,
-            'status' => 'Confirmed',
+            'status' => 'Open',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -857,7 +857,7 @@ class PoReceivingFlowTest extends TestCase
             'po_number' => 'PO-TEST-MIXED-SHIP-01',
             'po_date' => now()->toDateString(),
             'supplier_id' => $supplierId,
-            'status' => 'Confirmed',
+            'status' => 'Open',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -902,11 +902,11 @@ class PoReceivingFlowTest extends TestCase
 
         $this->assertDatabaseHas('purchase_orders', [
             'id' => $poId,
-            'status' => 'PO Issued',
+            'status' => 'Open',
         ]);
     }
 
-    public function test_po_status_stays_po_issued_when_only_some_items_have_etd(): void
+    public function test_po_status_becomes_open_when_only_some_items_have_etd(): void
     {
         $user = $this->makeUserWithRole('administrator');
         $supplierId = DB::table('suppliers')->value('id');
@@ -917,7 +917,7 @@ class PoReceivingFlowTest extends TestCase
             'po_number' => 'PO-TEST-MIXED-CONFIRM-01',
             'po_date' => now()->toDateString(),
             'supplier_id' => $supplierId,
-            'status' => 'PO Issued',
+            'status' => 'Open',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -950,7 +950,7 @@ class PoReceivingFlowTest extends TestCase
 
         $this->assertDatabaseHas('purchase_orders', [
             'id' => $poId,
-            'status' => 'PO Issued',
+            'status' => 'Open',
         ]);
     }
 }

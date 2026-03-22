@@ -102,8 +102,8 @@
         <div class="col-xl-2 col-md-4 col-6">
             <div class="card kpi-card bg-kpi-5">
                 <div class="card-body">
-                    <div class="kpi-label">Partial PO</div>
-                    <div class="kpi-value">{{ $metrics['partial_po'] }}</div><i class="fas fa-balance-scale kpi-icon"></i>
+                    <div class="kpi-label">Late PO</div>
+                    <div class="kpi-value">{{ $metrics['late_po'] }}</div><i class="fas fa-balance-scale kpi-icon"></i>
                 </div>
             </div>
         </div>
