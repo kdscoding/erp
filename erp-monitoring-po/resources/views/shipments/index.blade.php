@@ -3,6 +3,139 @@
 @php($header = 'Shipment Tracking')
 @section('content')
     @php($focusedShipmentId = (int) request('focus'))
+    <style>
+        .history-shell {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .history-hero,
+        .history-surface {
+            border: 1px solid rgba(111, 150, 40, .12);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, .94);
+            box-shadow: 0 14px 32px rgba(111, 150, 40, .05);
+        }
+
+        .history-hero {
+            padding: 1rem 1.1rem;
+            background:
+                radial-gradient(circle at top right, rgba(241, 217, 59, .24), transparent 30%),
+                linear-gradient(135deg, rgba(255, 255, 255, .96), rgba(245, 249, 221, .96));
+        }
+
+        .history-hero-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #314216;
+            margin-bottom: .25rem;
+        }
+
+        .history-hero-copy {
+            color: #6f7d52;
+            margin-bottom: 0;
+            font-size: .88rem;
+        }
+
+        .history-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: .75rem;
+        }
+
+        .history-stat {
+            padding: .85rem .95rem;
+            border-radius: 16px;
+            border: 1px solid rgba(111, 150, 40, .1);
+            background: rgba(255, 255, 255, .8);
+        }
+
+        .history-stat-label {
+            font-size: .72rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: #7a8660;
+            margin-bottom: .25rem;
+        }
+
+        .history-stat-value {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: #314216;
+            line-height: 1;
+        }
+
+        .surface-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: .75rem;
+            flex-wrap: wrap;
+            padding: 1rem 1rem 0;
+        }
+
+        .surface-title {
+            margin: 0;
+            font-size: .96rem;
+            font-weight: 800;
+            color: #314216;
+        }
+
+        .surface-subtitle {
+            font-size: .8rem;
+            color: #7a8660;
+        }
+
+        .history-filter {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: .75rem;
+            padding: 1rem;
+            align-items: end;
+        }
+
+        .history-table-wrap {
+            padding: 1rem;
+        }
+
+        .history-table {
+            margin-bottom: 0;
+        }
+
+        .history-table thead th {
+            font-size: .69rem;
+            letter-spacing: .08em;
+        }
+
+        .shipment-number {
+            font-weight: 700;
+            color: #314216;
+        }
+
+        .shipment-meta {
+            font-size: .8rem;
+            color: #7a8660;
+        }
+
+        .action-stack {
+            display: flex;
+            gap: .35rem;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 991.98px) {
+            .history-stat-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .history-stat-grid,
+            .history-filter {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
     @if (session('success'))
         <div class="alert alert-success">
             {{ session('success') }}</div>
@@ -247,28 +380,65 @@
                 </div>
             </div>
     @else
-            <div class="card card-outline card-secondary mb-3">
-                <div class="card-header">
-                    <h3 class="card-title">Riwayat Shipment</h3>
-                </div>
-                <div class="card-body">
-                    <form method="GET" class="row g-2 align-items-end">
-                        <div class="col-md-4"><label class="form-label">Cari Delivery Note</label><input type="text"
-                                name="delivery_note_number" value="{{ request('delivery_note_number') }}"
-                                class="form-control form-control-sm" placeholder="No surat jalan supplier"></div>
-                        <input type="hidden" name="view" value="history">
-                        <div class="col-md-2"><button class="btn btn-outline-secondary btn-sm w-100">Cari Riwayat</button>
+            @php($historyRows = $rows->getCollection())
+            <div class="history-shell">
+                <section class="history-hero">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-lg-5">
+                            <div class="history-hero-title">Riwayat shipment dibuat lebih ringkas dan cepat dipindai.</div>
+                            <p class="history-hero-copy">Lihat status dokumen supplier, jumlah PO terkait, dan lanjut ke aksi yang relevan.</p>
                         </div>
-                    </form>
-                </div>
-            </div>
+                        <div class="col-lg-7">
+                            <div class="history-stat-grid">
+                                <div class="history-stat">
+                                    <div class="history-stat-label">Draft</div>
+                                    <div class="history-stat-value">{{ $historyRows->where('status', 'Draft')->count() }}</div>
+                                </div>
+                                <div class="history-stat">
+                                    <div class="history-stat-label">Shipped</div>
+                                    <div class="history-stat-value">{{ $historyRows->where('status', 'Shipped')->count() }}</div>
+                                </div>
+                                <div class="history-stat">
+                                    <div class="history-stat-label">Partial</div>
+                                    <div class="history-stat-value">{{ $historyRows->where('status', 'Partial Received')->count() }}</div>
+                                </div>
+                                <div class="history-stat">
+                                    <div class="history-stat-label">Received</div>
+                                    <div class="history-stat-value">{{ $historyRows->where('status', 'Received')->count() }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Daftar Riwayat Shipment</h3>
-                </div>
-                <div class="card-body table-responsive p-0">
-                    <table class="table table-hover text-nowrap mb-0">
+                <section class="history-surface">
+                    <div class="surface-head">
+                        <div>
+                            <h3 class="surface-title">Filter Riwayat Shipment</h3>
+                            <div class="surface-subtitle">Cari berdasarkan delivery note supplier.</div>
+                        </div>
+                    </div>
+                    <form method="GET" class="history-filter">
+                        <div>
+                            <label class="form-label">Cari Delivery Note</label>
+                            <input type="text" name="delivery_note_number" value="{{ request('delivery_note_number') }}"
+                                class="form-control form-control-sm" placeholder="No surat jalan supplier">
+                        </div>
+                        <input type="hidden" name="view" value="history">
+                        <div><button class="btn btn-primary btn-sm w-100">Cari Riwayat</button></div>
+                        <div><a href="{{ route('shipments.history') }}" class="btn btn-light btn-sm w-100">Reset</a></div>
+                    </form>
+                </section>
+
+                <section class="history-surface">
+                    <div class="surface-head">
+                        <div>
+                            <h3 class="surface-title">Daftar Riwayat Shipment</h3>
+                            <div class="surface-subtitle">Dokumen shipment dari draft sampai selesai.</div>
+                        </div>
+                    </div>
+                    <div class="history-table-wrap table-responsive">
+                        <table class="table table-hover history-table">
                         <thead>
                             <tr>
                                 <th>No Shipment</th>
@@ -286,14 +456,13 @@
                             @foreach ($rows as $r)
                                 <tr class="{{ $focusedShipmentId === (int) $r->id ? 'table-success' : '' }}">
                                     <td>
-                                        {{ $r->shipment_number }}
+                                        <div class="shipment-number">{{ $r->shipment_number }}</div>
                                         @if ($focusedShipmentId === (int) $r->id)
-                                            <br><small class="text-success font-weight-bold">Draft terbaru</small>
+                                            <div class="shipment-meta text-success font-weight-bold">Draft terbaru</div>
                                         @endif
                                     </td>
                                     <td>{{ $r->supplier_name }}</td>
-                                    <td>{{ $r->po_numbers ?: '-' }}<br><small class="text-muted">{{ $r->po_count }}
-                                            PO</small></td>
+                                    <td>{{ $r->po_numbers ?: '-' }}<br><span class="shipment-meta">{{ $r->po_count }} PO</span></td>
                                     <td>{{ $r->line_count }}</td>
                                     <td><span
                                             class="badge {{ $r->status === 'Draft' ? 'bg-secondary' : ($r->status === 'Shipped' ? 'bg-primary' : ($r->status === 'Partial Received' ? 'bg-warning text-dark' : ($r->status === 'Cancelled' ? 'bg-danger' : 'bg-success'))) }}">{{ \App\Support\TermCatalog::label('shipment_status', $r->status, $r->status) }}</span>
@@ -303,7 +472,7 @@
                                     <td>{{ $r->supplier_remark ?: '-' }}</td>
                                     <td>
                                         @if ($r->status === 'Draft')
-                                            <div class="d-flex gap-1">
+                                            <div class="action-stack">
                                                 <a href="{{ route('shipments.show', $r->id) }}" class="btn btn-sm btn-light">Lihat</a>
                                                 <a href="{{ route('shipments.edit', $r->id) }}" class="btn btn-sm btn-outline-secondary">Edit Draft</a>
                                                 <form method="POST"
@@ -317,7 +486,7 @@
                                                         Draft</button></form>
                                             </div>
                                         @elseif (in_array($r->status, ['Shipped', 'Partial Received'], true))
-                                            <div class="d-flex gap-1">
+                                            <div class="action-stack">
                                                 <a href="{{ route('shipments.show', $r->id) }}" class="btn btn-sm btn-light">Lihat</a>
                                                 <a href="{{ route('receiving.process', ['supplier_id' => $r->supplier_id, 'shipment_id' => $r->id, 'document_number' => $r->delivery_note_number]) }}"
                                                     class="btn btn-sm btn-outline-primary">Lanjut ke Receiving</a>
@@ -329,8 +498,9 @@
                                 </tr>
                             @endforeach
                         </tbody>
-                    </table>
-                </div>
+                        </table>
+                    </div>
+                </section>
             </div>
             <div class="mt-2">{{ $rows->links() }}</div>
     @endif
