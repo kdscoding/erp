@@ -281,21 +281,8 @@ class ShipmentController extends Controller
                     'updated_at' => now(),
                 ]);
 
-                $purchaseOrders = DB::table('purchase_orders')
-                    ->whereIn('id', $linePoIds)
-                    ->lockForUpdate()
-                    ->get();
-
-                foreach ($purchaseOrders as $po) {
-                    DB::table('purchase_orders')->where('id', $po->id)->update([
-                        'status' => 'Shipped',
-                        'updated_by' => $userId,
-                        'updated_at' => now(),
-                    ]);
-
-                    if ($po->status !== 'Shipped') {
-                        ErpFlow::pushPoStatus((int) $po->id, $po->status, 'Shipped', $userId, 'Shipment '.$shipment->shipment_number.' dikonfirmasi berangkat.');
-                    }
+                foreach ($linePoIds as $poId) {
+                    ErpFlow::refreshPoStatusByOutstanding((int) $poId, $userId);
                 }
 
                 ErpFlow::audit('shipments', (int) $shipment->id, 'mark_shipped', ['status' => 'Draft'], ['status' => 'Shipped'], $userId, request()->ip());
@@ -369,7 +356,7 @@ class ShipmentController extends Controller
                     ]);
                 }
 
-                $maxQty = (float) $existing->available_to_ship_qty + (float) $existing->shipped_qty;
+                $maxQty = (float) $existing->available_to_ship_qty;
                 if ((float) $line['shipped_qty'] > $maxQty) {
                     throw ValidationException::withMessages([
                         'shipment_items' => "Qty kirim untuk {$existing->item_code} melebihi batas yang masih tersedia.",

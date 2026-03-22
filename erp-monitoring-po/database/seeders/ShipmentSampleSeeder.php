@@ -114,7 +114,6 @@ class ShipmentSampleSeeder extends Seeder
                         'item_id' => $itemId,
                         'received_qty' => $receivedQty,
                         'qty_variance' => (float) $sample['shipped_qty'] - $receivedQty,
-                        'note' => 'Receiving item sample '.$sample['suffix'],
                         'accepted_qty' => $receivedQty,
                         'rejected_qty' => 0,
                         'remark' => 'Receiving sample shipment '.$sample['suffix'],

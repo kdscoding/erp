@@ -55,7 +55,7 @@
                 </thead>
                 <tbody>
                     @foreach ($lines as $line)
-                        @php($maxQty = $line->available_to_ship_qty + $line->shipped_qty)
+                        @php($maxQty = $line->available_to_ship_qty)
                         <tr>
                             <td>
                                 <input type="hidden" name="shipment_items[{{ $loop->index }}][id]" value="{{ $line->shipment_item_id }}">
@@ -66,7 +66,7 @@
                             </td>
                             <td>{{ $line->po_number }}</td>
                             <td><strong>{{ $line->item_code }}</strong><br>{{ $line->item_name }}</td>
-                            <td><input type="number" step="0.01" min="0.01" max="{{ $maxQty }}" name="shipment_items[{{ $loop->index }}][shipped_qty]" class="form-control form-control-sm" value="{{ old("shipment_items.{$loop->index}.shipped_qty", $line->shipped_qty) }}" required></td>
+                            <td><input type="number" step="0.01" min="0.01" max="{{ \App\Support\NumberFormatter::input($maxQty) }}" name="shipment_items[{{ $loop->index }}][shipped_qty]" class="form-control form-control-sm" value="{{ \App\Support\NumberFormatter::input(old("shipment_items.{$loop->index}.shipped_qty", $line->shipped_qty)) }}" required></td>
                             <td>{{ \App\Support\NumberFormatter::trim($maxQty) }}</td>
                         </tr>
                     @endforeach

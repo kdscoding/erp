@@ -224,7 +224,7 @@ class PoReceivingFlowTest extends TestCase
             ->assertRedirect('/receiving/process?supplier_id='.$supplierId.'&shipment_id='.$shipmentId.'&document_number=SJ-MULTI-01')
             ->assertSessionHas('success');
 
-        $this->assertDatabaseHas('purchase_orders', ['id' => $poOneId, 'status' => 'Shipped']);
+        $this->assertDatabaseHas('purchase_orders', ['id' => $poOneId, 'status' => 'PO Issued']);
         $this->assertDatabaseHas('purchase_orders', ['id' => $poTwoId, 'status' => 'Shipped']);
     }
 
@@ -699,7 +699,210 @@ class PoReceivingFlowTest extends TestCase
 
         $this->assertDatabaseHas('purchase_orders', [
             'id' => $poId,
+            'status' => 'Shipped',
+        ]);
+    }
+
+    public function test_po_header_eta_is_synced_from_active_item_schedule(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemAId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+        $itemBId = DB::table('items')->where('item_code', 'ITM002')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-ETA-01',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
             'status' => 'PO Issued',
+            'eta_date' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $firstItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemAId,
+            'ordered_qty' => 30,
+            'received_qty' => 0,
+            'outstanding_qty' => 30,
+            'item_status' => 'Waiting',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $secondItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemBId,
+            'ordered_qty' => 20,
+            'received_qty' => 0,
+            'outstanding_qty' => 20,
+            'item_status' => 'Waiting',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)->patch("/po/items/{$firstItemId}/schedule", [
+            'etd_date' => now()->addDays(7)->toDateString(),
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('purchase_orders', [
+            'id' => $poId,
+            'eta_date' => now()->addDays(7)->toDateString(),
+        ]);
+
+        $this->actingAs($user)->patch("/po/items/{$secondItemId}/schedule", [
+            'etd_date' => now()->addDays(3)->toDateString(),
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('purchase_orders', [
+            'id' => $poId,
+            'eta_date' => now()->addDays(3)->toDateString(),
+        ]);
+    }
+
+    public function test_edit_draft_shipment_blocks_qty_above_actual_available_limit(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-DRAFT-LIMIT-01',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Confirmed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemId,
+            'ordered_qty' => 100,
+            'received_qty' => 0,
+            'outstanding_qty' => 100,
+            'item_status' => 'Confirmed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $firstShipmentId = DB::table('shipments')->insertGetId([
+            'purchase_order_id' => $poId,
+            'supplier_id' => $supplierId,
+            'shipment_number' => 'SHP-TEST-DRAFT-LIMIT-A',
+            'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'SJ-DRAFT-LIMIT-A',
+            'status' => 'Draft',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $firstShipmentItemId = DB::table('shipment_items')->insertGetId([
+            'shipment_id' => $firstShipmentId,
+            'purchase_order_item_id' => $poItemId,
+            'shipped_qty' => 40,
+            'received_qty' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('shipments')->insert([
+            'purchase_order_id' => $poId,
+            'supplier_id' => $supplierId,
+            'shipment_number' => 'SHP-TEST-DRAFT-LIMIT-B',
+            'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'SJ-DRAFT-LIMIT-B',
+            'status' => 'Draft',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $secondShipmentId = DB::table('shipments')->where('shipment_number', 'SHP-TEST-DRAFT-LIMIT-B')->value('id');
+
+        DB::table('shipment_items')->insert([
+            'shipment_id' => $secondShipmentId,
+            'purchase_order_item_id' => $poItemId,
+            'shipped_qty' => 30,
+            'received_qty' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->from("/shipments/{$firstShipmentId}/edit")
+            ->put("/shipments/{$firstShipmentId}", [
+                'shipment_date' => now()->toDateString(),
+                'delivery_note_number' => 'SJ-DRAFT-LIMIT-A',
+                'shipment_items' => [
+                    [
+                        'id' => $firstShipmentItemId,
+                        'keep' => '1',
+                        'shipped_qty' => 80,
+                    ],
+                ],
+            ])
+            ->assertRedirect("/shipments/{$firstShipmentId}/edit")
+            ->assertSessionHasErrors('shipment_items');
+    }
+
+    public function test_po_status_is_not_marked_shipped_when_other_items_are_still_unshipped(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemAId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+        $itemBId = DB::table('items')->where('item_code', 'ITM002')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-MIXED-SHIP-01',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Confirmed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $shippedItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemAId,
+            'ordered_qty' => 40,
+            'received_qty' => 0,
+            'outstanding_qty' => 40,
+            'item_status' => 'Confirmed',
+            'etd_date' => now()->addDays(2)->toDateString(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('purchase_order_items')->insert([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemBId,
+            'ordered_qty' => 60,
+            'received_qty' => 0,
+            'outstanding_qty' => 60,
+            'item_status' => 'Waiting',
+            'etd_date' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)->post('/shipments', [
+            'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'SJ-MIXED-SHIP-01',
+            'selected_items' => [$shippedItemId],
+            'shipped_qty' => [
+                $shippedItemId => 40,
+            ],
+        ])->assertSessionHas('success');
+
+        $shipmentId = DB::table('shipments')->value('id');
+
+        $this->actingAs($user)->patch("/shipments/{$shipmentId}/mark-shipped")
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('purchase_orders', [
+            'id' => $poId,
+            'status' => 'Confirmed',
         ]);
     }
 }

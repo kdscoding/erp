@@ -14,4 +14,15 @@ class NumberFormatter
 
         return rtrim(rtrim($formatted, '0'), ',');
     }
+
+    public static function input(float|int|string|null $value, int $decimals = 2): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        $formatted = number_format((float) $value, $decimals, '.', '');
+
+        return rtrim(rtrim($formatted, '0'), '.');
+    }
 }

@@ -74,7 +74,7 @@
                         <td>{{ \App\Support\NumberFormatter::trim($item->qty_variance) }}</td>
                         <td>{{ \App\Support\NumberFormatter::trim($item->total_po_received_qty) }} {{ $item->unit_name }}</td>
                         <td>{{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }} {{ $item->unit_name }}</td>
-                        <td>{{ $item->note ?: $item->remark ?: '-' }}</td>
+                        <td>{{ $item->remark ?: '-' }}</td>
                     </tr>
                 @endforeach
             </tbody>

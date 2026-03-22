@@ -190,7 +190,6 @@ return new class extends Migration {
                 $table->foreignId('item_id')->constrained('items');
                 $table->decimal('received_qty', 14, 2)->default(0);
                 $table->decimal('qty_variance', 14, 2)->default(0);
-                $table->text('note')->nullable();
                 $table->decimal('accepted_qty', 14, 2)->default(0);
                 $table->decimal('rejected_qty', 14, 2)->default(0);
                 $table->text('remark')->nullable();

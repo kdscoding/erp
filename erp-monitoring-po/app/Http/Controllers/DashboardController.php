@@ -46,12 +46,24 @@ class DashboardController extends Controller
                 ->count(),
         ];
 
-        $supplierDelay = DB::table('purchase_orders as po')
+        $supplierDelayBase = DB::table('purchase_orders as po')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
-            ->select('s.supplier_name', DB::raw('COUNT(*) as late_count'))
-            ->whereRaw('DATE(po.eta_date) < CURDATE()')
+            ->leftJoin('purchase_order_items as poi_eta', function ($join) {
+                $join->on('poi_eta.purchase_order_id', '=', 'po.id')
+                    ->where('poi_eta.item_status', '!=', 'Cancelled')
+                    ->where('poi_eta.outstanding_qty', '>', 0);
+            })
+            ->select('po.id', 's.supplier_name')
+            ->selectRaw('COALESCE(po.eta_date, MIN(COALESCE(poi_eta.eta_date, poi_eta.etd_date))) as po_eta_date')
             ->whereNotIn('po.status', ['Closed', 'Cancelled'])
-            ->groupBy('s.supplier_name')
+            ->groupBy('po.id', 's.supplier_name', 'po.eta_date');
+
+        $supplierDelay = DB::query()
+            ->fromSub($supplierDelayBase, 'late_po')
+            ->select('supplier_name', DB::raw('COUNT(*) as late_count'))
+            ->whereNotNull('po_eta_date')
+            ->whereRaw('DATE(po_eta_date) < CURDATE()')
+            ->groupBy('supplier_name')
             ->orderByDesc('late_count')
             ->limit(5)
             ->get();
@@ -65,7 +77,7 @@ class DashboardController extends Controller
                 'po.po_date',
                 'po.status',
                 's.supplier_name',
-                'po.eta_date'
+                DB::raw('COALESCE(po.eta_date, MIN(COALESCE(poi.eta_date, poi.etd_date))) as po_eta_date')
             )
             ->selectRaw("SUM(CASE WHEN poi.item_status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_items")
             ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty > 0 THEN 1 ELSE 0 END) as partial_items")
@@ -75,7 +87,7 @@ class DashboardController extends Controller
             ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) < CURDATE() AND poi.item_status != 'Cancelled' THEN 1 ELSE 0 END) as late_items")
             ->whereNotIn('po.status', ['Closed', 'Cancelled'])
             ->groupBy('po.id', 'po.po_number', 'po.po_date', 'po.status', 's.supplier_name', 'po.eta_date')
-            ->orderBy('po.eta_date')
+            ->orderBy('po_eta_date')
             ->limit(8)
             ->get();
 
@@ -217,4 +229,5 @@ class DashboardController extends Controller
 
         return view('monitoring', compact('itemMonitoringList'));
     }
+
 }
