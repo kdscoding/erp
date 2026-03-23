@@ -8,12 +8,10 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->call([
-            DocumentTermSeeder::class,
-            MasterDataSeeder::class,
-            PurchaseOrderDemoSeeder::class,
-            ShipmentDemoSeeder::class,
-            GoodsReceiptDemoSeeder::class,
-        ]);
+        $this->call(ProductionBaselineSeeder::class);
+
+        if (! app()->environment('production')) {
+            $this->call(DevDemoSeeder::class);
+        }
     }
 }

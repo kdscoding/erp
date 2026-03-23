@@ -28,19 +28,12 @@ class ShipmentDemoSeeder extends Seeder
 
       $suffix = str_replace('PO-DEMO-', '', $po->po_number);
 
-      $shipmentMap = match ($po->status) {
-        DocumentTermCodes::PO_OPEN => [
-          '2003' => [DocumentTermCodes::SHIPMENT_DRAFT, 60, 1825.50],
-          '2004' => [DocumentTermCodes::SHIPMENT_SHIPPED, 180, 1950.00],
-        ],
-        DocumentTermCodes::PO_LATE => [
-          '2006' => [DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED, 120, 2100.75],
-        ],
-        DocumentTermCodes::PO_CLOSED => [
-          '2007' => [DocumentTermCodes::SHIPMENT_RECEIVED, 110, 1675.00],
-        ],
-        default => [],
-      };
+      $shipmentMap = [
+        '3003' => [DocumentTermCodes::SHIPMENT_DRAFT, 60, 1825.50],
+        '3004' => [DocumentTermCodes::SHIPMENT_SHIPPED, 180, 1950.00],
+        '3006' => [DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED, 120, 2100.75],
+        '3007' => [DocumentTermCodes::SHIPMENT_RECEIVED, 110, 1675.00],
+      ];
 
       if (! isset($shipmentMap[$suffix])) {
         continue;

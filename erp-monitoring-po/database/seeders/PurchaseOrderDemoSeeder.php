@@ -12,26 +12,26 @@ class PurchaseOrderDemoSeeder extends Seeder
   {
     $now = now();
 
-    $this->cleanupExistingDemoData();
+    $this->cleanup();
 
     $suppliers = DB::table('suppliers')->orderBy('id')->pluck('id')->all();
     $items = DB::table('items')->orderBy('id')->pluck('id')->all();
-    $warehouseId = DB::table('warehouses')->value('id');
     $plantId = DB::table('plants')->value('id');
+    $warehouseId = DB::table('warehouses')->value('id');
 
-    if (empty($suppliers) || empty($items) || ! $warehouseId || ! $plantId) {
+    if (empty($suppliers) || empty($items) || ! $plantId || ! $warehouseId) {
       return;
     }
 
     $samples = [
-      ['suffix' => '2001', 'po_status' => DocumentTermCodes::PO_ISSUED, 'ordered_qty' => 120, 'received_qty' => 0, 'etd_offset' => null],
-      ['suffix' => '2002', 'po_status' => DocumentTermCodes::PO_OPEN, 'ordered_qty' => 150, 'received_qty' => 0, 'etd_offset' => 5],
-      ['suffix' => '2003', 'po_status' => DocumentTermCodes::PO_OPEN, 'ordered_qty' => 100, 'received_qty' => 0, 'etd_offset' => 4],
-      ['suffix' => '2004', 'po_status' => DocumentTermCodes::PO_OPEN, 'ordered_qty' => 180, 'received_qty' => 0, 'etd_offset' => 2],
-      ['suffix' => '2005', 'po_status' => DocumentTermCodes::PO_LATE, 'ordered_qty' => 90, 'received_qty' => 0, 'etd_offset' => -2],
-      ['suffix' => '2006', 'po_status' => DocumentTermCodes::PO_LATE, 'ordered_qty' => 160, 'received_qty' => 70, 'etd_offset' => -3],
-      ['suffix' => '2007', 'po_status' => DocumentTermCodes::PO_CLOSED, 'ordered_qty' => 110, 'received_qty' => 110, 'etd_offset' => -5],
-      ['suffix' => '2008', 'po_status' => DocumentTermCodes::PO_CANCELLED, 'ordered_qty' => 130, 'received_qty' => 0, 'etd_offset' => null],
+      ['suffix' => '3001', 'status' => DocumentTermCodes::PO_ISSUED, 'ordered_qty' => 120, 'received_qty' => 0, 'etd_offset' => null],
+      ['suffix' => '3002', 'status' => DocumentTermCodes::PO_OPEN, 'ordered_qty' => 150, 'received_qty' => 0, 'etd_offset' => 5],
+      ['suffix' => '3003', 'status' => DocumentTermCodes::PO_OPEN, 'ordered_qty' => 100, 'received_qty' => 0, 'etd_offset' => 4],
+      ['suffix' => '3004', 'status' => DocumentTermCodes::PO_OPEN, 'ordered_qty' => 180, 'received_qty' => 0, 'etd_offset' => 2],
+      ['suffix' => '3005', 'status' => DocumentTermCodes::PO_LATE, 'ordered_qty' => 90, 'received_qty' => 0, 'etd_offset' => -2],
+      ['suffix' => '3006', 'status' => DocumentTermCodes::PO_LATE, 'ordered_qty' => 160, 'received_qty' => 70, 'etd_offset' => -3],
+      ['suffix' => '3007', 'status' => DocumentTermCodes::PO_CLOSED, 'ordered_qty' => 110, 'received_qty' => 110, 'etd_offset' => -5],
+      ['suffix' => '3008', 'status' => DocumentTermCodes::PO_CANCELLED, 'ordered_qty' => 130, 'received_qty' => 0, 'etd_offset' => null],
     ];
 
     foreach ($samples as $index => $sample) {
@@ -43,20 +43,20 @@ class PurchaseOrderDemoSeeder extends Seeder
 
       $poId = DB::table('purchase_orders')->insertGetId([
         'po_number' => 'PO-DEMO-' . $sample['suffix'],
-        'po_date' => now()->subDays(5 + $index)->toDateString(),
+        'po_date' => now()->subDays(8 + $index)->toDateString(),
         'supplier_id' => $supplierId,
         'plant_id' => $plantId,
         'warehouse_id' => $warehouseId,
         'currency' => 'IDR',
-        'status' => $sample['po_status'],
+        'status' => $sample['status'],
         'eta_date' => $sample['etd_offset'] !== null ? now()->addDays($sample['etd_offset'] + 3)->toDateString() : null,
         'notes' => 'Demo PO ' . $sample['suffix'],
-        'cancel_reason' => $sample['po_status'] === DocumentTermCodes::PO_CANCELLED ? 'Demo cancelled PO' : null,
+        'cancel_reason' => $sample['status'] === DocumentTermCodes::PO_CANCELLED ? 'Demo cancelled PO' : null,
         'created_at' => $now,
         'updated_at' => $now,
       ]);
 
-      $itemStatus = match ($sample['po_status']) {
+      $itemStatus = match ($sample['status']) {
         DocumentTermCodes::PO_CANCELLED => DocumentTermCodes::ITEM_CANCELLED,
         DocumentTermCodes::PO_CLOSED => DocumentTermCodes::ITEM_CLOSED,
         default => $receivedQty > 0
@@ -77,7 +77,7 @@ class PurchaseOrderDemoSeeder extends Seeder
         'eta_date' => $sample['etd_offset'] !== null ? now()->addDays($sample['etd_offset'] + 3)->toDateString() : null,
         'etd_date' => $sample['etd_offset'] !== null ? now()->addDays($sample['etd_offset'])->toDateString() : null,
         'cancel_reason' => $itemStatus === DocumentTermCodes::ITEM_CANCELLED ? 'Demo cancelled item' : null,
-        'remarks' => 'Demo line ' . $sample['suffix'],
+        'remarks' => 'Demo item PO ' . $sample['suffix'],
         'created_at' => $now,
         'updated_at' => $now,
       ]);
@@ -85,7 +85,7 @@ class PurchaseOrderDemoSeeder extends Seeder
       DB::table('po_status_histories')->insert([
         'purchase_order_id' => $poId,
         'from_status' => null,
-        'to_status' => $sample['po_status'],
+        'to_status' => $sample['status'],
         'changed_by' => null,
         'changed_at' => $now,
         'note' => 'Seeded demo data',
@@ -95,7 +95,7 @@ class PurchaseOrderDemoSeeder extends Seeder
     }
   }
 
-  private function cleanupExistingDemoData(): void
+  private function cleanup(): void
   {
     $poIds = DB::table('purchase_orders')
       ->where('po_number', 'like', 'PO-DEMO-%')
@@ -106,15 +106,12 @@ class PurchaseOrderDemoSeeder extends Seeder
     }
 
     $shipmentIds = DB::table('shipments')->whereIn('purchase_order_id', $poIds)->pluck('id');
-    $goodsReceiptIds = DB::table('goods_receipts')
-      ->whereIn('purchase_order_id', $poIds)
-      ->orWhereIn('shipment_id', $shipmentIds)
-      ->pluck('id');
+    $grIds = DB::table('goods_receipts')->whereIn('purchase_order_id', $poIds)->orWhereIn('shipment_id', $shipmentIds)->pluck('id');
 
-    if ($goodsReceiptIds->isNotEmpty()) {
-      DB::table('goods_receipt_items')->whereIn('goods_receipt_id', $goodsReceiptIds)->delete();
-      DB::table('attachments')->where('module', 'goods_receipts')->whereIn('record_id', $goodsReceiptIds)->delete();
-      DB::table('goods_receipts')->whereIn('id', $goodsReceiptIds)->delete();
+    if ($grIds->isNotEmpty()) {
+      DB::table('goods_receipt_items')->whereIn('goods_receipt_id', $grIds)->delete();
+      DB::table('attachments')->where('module', 'goods_receipts')->whereIn('record_id', $grIds)->delete();
+      DB::table('goods_receipts')->whereIn('id', $grIds)->delete();
     }
 
     if ($shipmentIds->isNotEmpty()) {
