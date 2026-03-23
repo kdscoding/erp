@@ -2,8 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Support\PurchaseOrderItemStatus;
-use App\Support\PurchaseOrderStatus;
+use App\Support\DocumentTermCodes;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -27,91 +26,99 @@ class ShipmentSampleSeeder extends Seeder
             $samples = [
                 [
                     'suffix' => '1001',
-                    'po_status' => PurchaseOrderStatus::PO_ISSUED,
+                    'po_status' => DocumentTermCodes::PO_ISSUED,
                     'shipment_status' => null,
                     'ordered_qty' => 120,
                     'received_qty' => 0,
                     'has_etd' => false,
                     'shipment_qty' => 0,
+                    'invoice_unit_price' => null,
                     'days_ago_po' => 3,
                     'etd_offset' => null,
                 ],
                 [
                     'suffix' => '1002',
-                    'po_status' => PurchaseOrderStatus::OPEN,
+                    'po_status' => DocumentTermCodes::PO_OPEN,
                     'shipment_status' => null,
                     'ordered_qty' => 150,
                     'received_qty' => 0,
                     'has_etd' => true,
                     'shipment_qty' => 0,
+                    'invoice_unit_price' => null,
                     'days_ago_po' => 5,
                     'etd_offset' => 5,
                 ],
                 [
                     'suffix' => '1003',
-                    'po_status' => PurchaseOrderStatus::OPEN,
-                    'shipment_status' => 'Draft',
+                    'po_status' => DocumentTermCodes::PO_OPEN,
+                    'shipment_status' => DocumentTermCodes::SHIPMENT_DRAFT,
                     'ordered_qty' => 100,
                     'received_qty' => 0,
                     'has_etd' => true,
                     'shipment_qty' => 60,
+                    'invoice_unit_price' => 1825.50,
                     'days_ago_po' => 6,
                     'etd_offset' => 4,
                 ],
                 [
                     'suffix' => '1004',
-                    'po_status' => PurchaseOrderStatus::OPEN,
-                    'shipment_status' => 'Shipped',
+                    'po_status' => DocumentTermCodes::PO_OPEN,
+                    'shipment_status' => DocumentTermCodes::SHIPMENT_SHIPPED,
                     'ordered_qty' => 180,
                     'received_qty' => 0,
                     'has_etd' => true,
                     'shipment_qty' => 180,
+                    'invoice_unit_price' => 1950.00,
                     'days_ago_po' => 8,
                     'etd_offset' => 2,
                 ],
                 [
                     'suffix' => '1005',
-                    'po_status' => PurchaseOrderStatus::LATE,
+                    'po_status' => DocumentTermCodes::PO_LATE,
                     'shipment_status' => null,
                     'ordered_qty' => 90,
                     'received_qty' => 0,
                     'has_etd' => true,
                     'shipment_qty' => 0,
+                    'invoice_unit_price' => null,
                     'days_ago_po' => 10,
                     'etd_offset' => -2,
                 ],
                 [
                     'suffix' => '1006',
-                    'po_status' => PurchaseOrderStatus::LATE,
-                    'shipment_status' => 'Partial Received',
+                    'po_status' => DocumentTermCodes::PO_LATE,
+                    'shipment_status' => DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED,
                     'ordered_qty' => 160,
                     'received_qty' => 70,
                     'has_etd' => true,
                     'shipment_qty' => 120,
+                    'invoice_unit_price' => 2100.75,
                     'days_ago_po' => 11,
                     'etd_offset' => -3,
                     'receipt_days_ago' => 1,
                 ],
                 [
                     'suffix' => '1007',
-                    'po_status' => PurchaseOrderStatus::CLOSED,
-                    'shipment_status' => 'Received',
+                    'po_status' => DocumentTermCodes::PO_CLOSED,
+                    'shipment_status' => DocumentTermCodes::SHIPMENT_RECEIVED,
                     'ordered_qty' => 110,
                     'received_qty' => 110,
                     'has_etd' => true,
                     'shipment_qty' => 110,
+                    'invoice_unit_price' => 1675.00,
                     'days_ago_po' => 14,
                     'etd_offset' => -5,
                     'receipt_days_ago' => 2,
                 ],
                 [
                     'suffix' => '1008',
-                    'po_status' => PurchaseOrderStatus::CANCELLED,
+                    'po_status' => DocumentTermCodes::PO_CANCELLED,
                     'shipment_status' => null,
                     'ordered_qty' => 130,
                     'received_qty' => 0,
                     'has_etd' => false,
                     'shipment_qty' => 0,
+                    'invoice_unit_price' => null,
                     'days_ago_po' => 7,
                     'etd_offset' => null,
                 ],
@@ -136,19 +143,19 @@ class ShipmentSampleSeeder extends Seeder
                         ? now()->addDays($sample['etd_offset'] + 3)->toDateString()
                         : null,
                     'notes' => 'Demo data ' . $sample['suffix'],
-                    'cancel_reason' => $sample['po_status'] === PurchaseOrderStatus::CANCELLED ? 'Demo cancelled PO' : null,
+                    'cancel_reason' => $sample['po_status'] === DocumentTermCodes::PO_CANCELLED ? 'Demo cancelled PO' : null,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
 
                 $itemStatus = match ($sample['po_status']) {
-                    PurchaseOrderStatus::CANCELLED => PurchaseOrderItemStatus::CANCELLED,
-                    PurchaseOrderStatus::CLOSED => PurchaseOrderItemStatus::CLOSED,
+                    DocumentTermCodes::PO_CANCELLED => DocumentTermCodes::ITEM_CANCELLED,
+                    DocumentTermCodes::PO_CLOSED => DocumentTermCodes::ITEM_CLOSED,
                     default => $receivedQty > 0
-                        ? ($outstandingQty > 0 ? PurchaseOrderItemStatus::PARTIAL : PurchaseOrderItemStatus::CLOSED)
+                        ? ($outstandingQty > 0 ? DocumentTermCodes::ITEM_PARTIAL : DocumentTermCodes::ITEM_CLOSED)
                         : ($sample['has_etd']
-                            ? ($sample['etd_offset'] < 0 ? PurchaseOrderItemStatus::LATE : PurchaseOrderItemStatus::CONFIRMED)
-                            : PurchaseOrderItemStatus::WAITING),
+                            ? ($sample['etd_offset'] < 0 ? DocumentTermCodes::ITEM_LATE : DocumentTermCodes::ITEM_CONFIRMED)
+                            : DocumentTermCodes::ITEM_WAITING),
                 };
 
                 $poItemId = DB::table('purchase_order_items')->insertGetId([
@@ -158,13 +165,14 @@ class ShipmentSampleSeeder extends Seeder
                     'received_qty' => $receivedQty,
                     'outstanding_qty' => $outstandingQty,
                     'item_status' => $itemStatus,
+                    'unit_price' => 1500 + ($index * 125),
                     'eta_date' => $sample['has_etd'] && $sample['etd_offset'] !== null
                         ? now()->addDays($sample['etd_offset'] + 3)->toDateString()
                         : null,
                     'etd_date' => $sample['has_etd'] && $sample['etd_offset'] !== null
                         ? now()->addDays($sample['etd_offset'])->toDateString()
                         : null,
-                    'cancel_reason' => $itemStatus === PurchaseOrderItemStatus::CANCELLED ? 'Demo cancelled item' : null,
+                    'cancel_reason' => $itemStatus === DocumentTermCodes::ITEM_CANCELLED ? 'Demo cancelled item' : null,
                     'remarks' => 'Demo line ' . $sample['suffix'],
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -182,15 +190,17 @@ class ShipmentSampleSeeder extends Seeder
                 ]);
 
                 if (! empty($sample['shipment_status']) && (float) $sample['shipment_qty'] > 0) {
+                    $invoiceNumber = 'INV-DEMO-' . $sample['suffix'];
+
                     $shipmentId = DB::table('shipments')->insertGetId([
                         'purchase_order_id' => $poId,
                         'supplier_id' => $supplierId,
                         'shipment_number' => 'SHP-DEMO-' . $sample['suffix'],
                         'shipment_date' => now()->subDays(max(1, $sample['days_ago_po'] - 1))->toDateString(),
-                        'eta_date' => $sample['has_etd'] && $sample['etd_offset'] !== null
-                            ? now()->addDays($sample['etd_offset'] + 5)->toDateString()
-                            : null,
                         'delivery_note_number' => 'SJ-DEMO-' . $sample['suffix'],
+                        'invoice_number' => $invoiceNumber,
+                        'invoice_date' => now()->subDays(max(1, $sample['days_ago_po'] - 1))->toDateString(),
+                        'invoice_currency' => 'IDR',
                         'supplier_remark' => 'Demo shipment ' . $sample['suffix'],
                         'status' => $sample['shipment_status'],
                         'created_at' => $now,
@@ -202,6 +212,10 @@ class ShipmentSampleSeeder extends Seeder
                         'purchase_order_item_id' => $poItemId,
                         'shipped_qty' => (float) $sample['shipment_qty'],
                         'received_qty' => $receivedQty,
+                        'invoice_unit_price' => $sample['invoice_unit_price'],
+                        'invoice_line_total' => $sample['invoice_unit_price'] !== null
+                            ? round(((float) $sample['shipment_qty']) * ((float) $sample['invoice_unit_price']), 2)
+                            : null,
                         'note' => 'Demo shipment item ' . $sample['suffix'],
                         'created_at' => $now,
                         'updated_at' => $now,
@@ -216,7 +230,7 @@ class ShipmentSampleSeeder extends Seeder
                             'warehouse_id' => $warehouseId,
                             'document_number' => 'SJ-DEMO-' . $sample['suffix'],
                             'remark' => 'Demo receiving ' . $sample['suffix'],
-                            'status' => 'Posted',
+                            'status' => DocumentTermCodes::GR_POSTED,
                             'created_at' => $now,
                             'updated_at' => $now,
                         ]);

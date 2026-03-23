@@ -147,7 +147,7 @@ class DocumentTermSeeder extends Seeder
                 'sort_order' => 50,
             ],
 
-            // Goods receipt status
+            // GR status
             [
                 'group_key' => DocumentTermCodes::GROUP_GOODS_RECEIPT_STATUS,
                 'code' => DocumentTermCodes::GR_POSTED,

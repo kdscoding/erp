@@ -50,7 +50,7 @@ class MasterDataSeeder extends Seeder
                     'supplier_name' => $supplier['name'],
                     'address' => 'Kawasan Industri ' . $supplier['city'] . ' Blok ' . chr(65 + $index),
                     'phone' => '021-77' . str_pad((string) ($index + 1), 4, '0', STR_PAD_LEFT),
-                    'email' => 'sales' . ($index + 1) . '@' . str_replace(' ', '', strtolower($supplier['name'])) . '.co.id',
+                    'email' => 'sales' . ($index + 1) . '@demo-supplier.co.id',
                     'contact_person' => 'PIC ' . ($index + 1),
                     'status' => true,
                     'updated_at' => $now,

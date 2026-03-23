@@ -1,8 +1,10 @@
 @extends('layouts.erp')
 @php($title = 'Shipment Tracking')
 @php($header = 'Shipment Tracking')
+
 @section('content')
     @php($focusedShipmentId = (int) request('focus'))
+
     <style>
         .history-shell {
             display: grid;
@@ -88,7 +90,7 @@
 
         .history-filter {
             display: grid;
-            grid-template-columns: 1fr auto auto;
+            grid-template-columns: 1fr 1fr auto auto;
             gap: .75rem;
             padding: 1rem;
             align-items: end;
@@ -123,6 +125,11 @@
             flex-wrap: wrap;
         }
 
+        .money-note {
+            font-size: 11px;
+            color: #6c757d;
+        }
+
         @media (max-width: 991.98px) {
             .history-stat-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -130,15 +137,16 @@
         }
 
         @media (max-width: 767.98px) {
+
             .history-stat-grid,
             .history-filter {
                 grid-template-columns: 1fr;
             }
         }
     </style>
+
     @if (session('success'))
-        <div class="alert alert-success">
-            {{ session('success') }}</div>
+        <div class="alert alert-success">{{ session('success') }}</div>
     @endif
     @if (session('error'))
         <div class="alert alert-danger">{{ session('error') }}</div>
@@ -156,289 +164,393 @@
     @php($selectedItemIds = collect(request('selected_items', []))->map(fn($id) => (int) $id)->filter()->values()->all())
     @php($isHistoryView = request()->routeIs('shipments.history') || request('view') === 'history')
 
-    @if (! $isHistoryView)
-            <div class="card card-outline card-primary mb-3">
-                <div class="card-header">
-                    <h3 class="card-title">Pembuatan Draft Shipment</h3>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info mb-3">
-                        Mulai dari dokumen supplier, lalu pilih item yang benar-benar akan dikirim. Satu delivery note bisa
-                        berisi item dari beberapa PO selama supplier-nya sama.
-                    </div>
-                    @if ($selectedItems->isNotEmpty())
-                        <div class="alert alert-warning mb-3">
-                            Supplier sudah terkunci ke <strong>{{ $selectedItems->first()->supplier_name }}</strong>. Item
-                            dari supplier lain tidak akan ditampilkan selama builder draft ini masih aktif.
-                        </div>
-                    @endif
-                    <form method="GET" class="row g-2 align-items-end shipment-selection-form">
-                        <div class="col-md-3"><label class="form-label">Supplier</label><select name="supplier_id"
-                                class="form-control form-control-sm" {{ $selectedItems->isNotEmpty() ? 'disabled' : '' }}>
-                                <option value="">Semua Supplier</option>
-                                @foreach ($suppliers as $supplier)
-                                    <option value="{{ $supplier->id }}" @selected((int) request('supplier_id', $selectedSupplierId) == (int) $supplier->id)>
-                                        {{ $supplier->supplier_name }}</option>
-                                @endforeach
-                            </select>
-                            @if ($selectedItems->isNotEmpty())
-                                <input type="hidden" name="supplier_id" value="{{ $selectedSupplierId }}">
-                            @endif
-                        </div>
-                        <div class="col-md-8"><label class="form-label">Cari Item / PO / Supplier</label><input
-                                type="text" name="keyword" value="{{ request('keyword') }}"
-                                class="form-control form-control-sm"
-                                placeholder="Contoh: item code, nama item, PO, supplier"></div>
-                        <input type="hidden" name="view" value="draft">
-                        @foreach ($selectedItemIds as $selectedItemId)
-                            <input type="hidden" name="selected_items[]" value="{{ $selectedItemId }}">
-                        @endforeach
-                        @foreach ($draftQuantities as $itemId => $qty)
-                            <input type="hidden" name="shipped_qty[{{ $itemId }}]" value="{{ $qty }}">
-                        @endforeach
-                        <div class="col-md-1"><button class="btn btn-outline-primary btn-sm w-100">Cari</button></div>
-                    </form>
-                </div>
+    @if (!$isHistoryView)
+        <div class="card card-outline card-primary mb-3">
+            <div class="card-header">
+                <h3 class="card-title">Pembuatan Draft Shipment</h3>
             </div>
-
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h3 class="card-title">1. Pilih Item yang Akan Dikirim</h3>
+            <div class="card-body">
+                <div class="alert alert-info mb-3">
+                    Mulai dari dokumen supplier. Di tahap draft ini kamu bisa mencatat
+                    <strong>delivery note</strong>, <strong>invoice</strong>, dan <strong>harga invoice per item</strong>.
                 </div>
-                <div class="card-body table-responsive p-0">
-                    @if (!$hasSearch)
-                        <div class="p-3 text-muted">
-                            Kandidat item akan muncul setelah Anda mencari supplier atau keyword item/PO.
-                        </div>
-                    @else
-                        <div class="p-3 border-bottom bg-light">
-                            <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                                <div>
-                                    <div class="font-weight-bold">Kandidat Item</div>
-                                    <small class="text-muted">Centang item yang ingin dimasukkan ke draft shipment, lalu
-                                        lanjutkan dengan aksi di kanan.</small>
-                                </div>
-                                <button type="button" class="btn btn-primary btn-sm"
-                                    onclick="addCheckedCandidateItems()">Tambahkan ke Draft</button>
+
+                @if ($selectedItems->isNotEmpty())
+                    <div class="alert alert-warning mb-3">
+                        Supplier sudah terkunci ke <strong>{{ $selectedItems->first()->supplier_name }}</strong>.
+                        Item dari supplier lain tidak akan ditampilkan selama builder draft ini masih aktif.
+                    </div>
+                @endif
+
+                <form method="GET" class="row g-2 align-items-end shipment-selection-form">
+                    <div class="col-md-3">
+                        <label class="form-label">Supplier</label>
+                        <select name="supplier_id" class="form-control form-control-sm"
+                            {{ $selectedItems->isNotEmpty() ? 'disabled' : '' }}>
+                            <option value="">Semua Supplier</option>
+                            @foreach ($suppliers as $supplier)
+                                <option value="{{ $supplier->id }}" @selected((int) request('supplier_id', $selectedSupplierId) == (int) $supplier->id)>
+                                    {{ $supplier->supplier_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @if ($selectedItems->isNotEmpty())
+                            <input type="hidden" name="supplier_id" value="{{ $selectedSupplierId }}">
+                        @endif
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="form-label">Cari Item / PO / Supplier</label>
+                        <input type="text" name="keyword" value="{{ request('keyword') }}"
+                            class="form-control form-control-sm" placeholder="Contoh: item code, nama item, PO, supplier">
+                    </div>
+
+                    <input type="hidden" name="view" value="draft">
+
+                    @foreach ($selectedItemIds as $selectedItemId)
+                        <input type="hidden" name="selected_items[]" value="{{ $selectedItemId }}">
+                    @endforeach
+
+                    @foreach ($draftQuantities as $itemId => $qty)
+                        <input type="hidden" name="shipped_qty[{{ $itemId }}]" value="{{ $qty }}">
+                    @endforeach
+
+                    @foreach ($draftInvoicePrices as $itemId => $price)
+                        <input type="hidden" name="invoice_unit_price[{{ $itemId }}]" value="{{ $price }}">
+                    @endforeach
+
+                    <div class="col-md-1">
+                        <button class="btn btn-outline-primary btn-sm w-100">Cari</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <h3 class="card-title">1. Pilih Item yang Akan Dikirim</h3>
+            </div>
+            <div class="card-body table-responsive p-0">
+                @if (!$hasSearch)
+                    <div class="p-3 text-muted">
+                        Kandidat item akan muncul setelah Anda mencari supplier atau keyword item/PO.
+                    </div>
+                @else
+                    <div class="p-3 border-bottom bg-light">
+                        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                            <div>
+                                <div class="font-weight-bold">Kandidat Item</div>
+                                <small class="text-muted">Centang item yang ingin dimasukkan ke draft shipment.</small>
                             </div>
+                            <button type="button" class="btn btn-primary btn-sm"
+                                onclick="addCheckedCandidateItems()">Tambahkan ke Draft</button>
                         </div>
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th><input type="checkbox" onchange="toggleCandidateCheckboxes(this.checked)"></th>
-                                    <th>Supplier</th>
-                                    <th>PO</th>
-                                    <th>Item</th>
-                                    <th>Outstanding PO</th>
-                                    <th>Sudah Dialokasikan</th>
-                                    <th>Sisa Bisa Dikirim</th>
-                                    <th>ETD</th>
+                    </div>
+
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" onchange="toggleCandidateCheckboxes(this.checked)"></th>
+                                <th>Supplier</th>
+                                <th>PO</th>
+                                <th>Item</th>
+                                <th>Harga PO</th>
+                                <th>Outstanding PO</th>
+                                <th>Sudah Dialokasikan</th>
+                                <th>Sisa Bisa Dikirim</th>
+                                <th>ETD</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($candidateItems as $candidate)
+                                @php($isAllocatable = (float) $candidate->available_to_ship_qty > 0)
+                                <tr
+                                    class="{{ in_array((int) $candidate->purchase_order_item_id, $selectedItemIds, true) ? 'table-primary' : (!$isAllocatable ? 'table-light' : '') }}">
+                                    <td>
+                                        <input type="checkbox" class="candidate-item-checkbox"
+                                            value="{{ $candidate->purchase_order_item_id }}"
+                                            {{ $isAllocatable ? '' : 'disabled' }}>
+                                    </td>
+                                    <td>{{ $candidate->supplier_name }}</td>
+                                    <td>
+                                        {{ $candidate->po_number }}<br>
+                                        <x-status-badge :status="$candidate->po_status" scope="po" />
+                                    </td>
+                                    <td><strong>{{ $candidate->item_code }}</strong><br>{{ $candidate->item_name }}</td>
+                                    <td>
+                                        {{ $candidate->unit_price !== null ? \App\Support\NumberFormatter::trim($candidate->unit_price) : '-' }}
+                                    </td>
+                                    <td>{{ \App\Support\NumberFormatter::trim($candidate->outstanding_qty) }}</td>
+                                    <td>{{ \App\Support\NumberFormatter::trim($candidate->open_shipment_qty) }}</td>
+                                    <td>
+                                        <span class="badge {{ $isAllocatable ? 'bg-warning text-dark' : 'bg-secondary' }}">
+                                            {{ \App\Support\NumberFormatter::trim(max(0, $candidate->available_to_ship_qty)) }}
+                                        </span>
+                                        @if (!$isAllocatable)
+                                            <br><small class="text-muted">Sudah teralokasi di shipment aktif</small>
+                                        @endif
+                                    </td>
+                                    <td>{{ $candidate->etd_date ? \Carbon\Carbon::parse($candidate->etd_date)->format('d-m-Y') : '-' }}
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($candidateItems as $candidate)
-                                    @php($isAllocatable = (float) $candidate->available_to_ship_qty > 0)
-                                    <tr
-                                        class="{{ in_array((int) $candidate->purchase_order_item_id, $selectedItemIds, true) ? 'table-primary' : (! $isAllocatable ? 'table-light' : '') }}">
-                                        <td>
-                                            <input type="checkbox" class="candidate-item-checkbox"
-                                                value="{{ $candidate->purchase_order_item_id }}" {{ $isAllocatable ? '' : 'disabled' }}>
-                                        </td>
-                                        <td>{{ $candidate->supplier_name }}</td>
-                                        <td>{{ $candidate->po_number }}<br><span
-                                                class="badge bg-light text-dark">{{ \App\Support\TermCatalog::label('po_status', $candidate->po_status, $candidate->po_status) }}</span></td>
-                                        <td><strong>{{ $candidate->item_code }}</strong><br>{{ $candidate->item_name }}
-                                        </td>
-                                        <td>{{ \App\Support\NumberFormatter::trim($candidate->outstanding_qty) }}</td>
-                                        <td>{{ \App\Support\NumberFormatter::trim($candidate->open_shipment_qty) }}</td>
-                                        <td>
-                                            <span
-                                                class="badge {{ $isAllocatable ? 'bg-warning text-dark' : 'bg-secondary' }}">{{ \App\Support\NumberFormatter::trim(max(0, $candidate->available_to_ship_qty)) }}</span>
-                                            @if (! $isAllocatable)
-                                                <br><small class="text-muted">Sudah teralokasi di shipment aktif</small>
-                                            @endif
-                                        </td>
-                                        <td>{{ $candidate->etd_date ? \Carbon\Carbon::parse($candidate->etd_date)->format('d-m-Y') : '-' }}
-                                        </td>
-                                    </tr>
-                                @empty
+                            @empty
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted">
+                                        Belum ada kandidat. Coba filter supplier atau cari berdasarkan item yang akan
+                                        datang.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+        </div>
+
+        <div class="card card-primary card-outline mb-3">
+            <div class="card-header">
+                <h3 class="card-title">2. Simpan Draft Shipment</h3>
+            </div>
+            <div class="card-body">
+                @if ($selectedItems->isNotEmpty())
+                    <div class="alert alert-success">
+                        {{ $selectedItems->count() }} item terpilih dari
+                        {{ $selectedItems->pluck('purchase_order_id')->unique()->count() }} PO.
+                        Supplier: <strong>{{ $selectedItems->first()->supplier_name }}</strong>
+                    </div>
+
+                    <div class="mb-3 p-3 border rounded bg-light">
+                        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                            <div>
+                                <div class="font-weight-bold">Item Dalam Draft</div>
+                                <small class="text-muted">Review item, qty kirim, dan harga invoice aktual per item.</small>
+                            </div>
+                            <button type="button" class="btn btn-outline-danger btn-sm"
+                                onclick="removeCheckedDraftItems()">Keluarkan Item Terpilih</button>
+                        </div>
+                    </div>
+                @else
+                    <div class="alert alert-warning">
+                        Pilih minimal satu item di tabel di atas. Draft shipment akan dibuat per dokumen supplier.
+                    </div>
+                @endif
+
+                <form method="POST" action="{{ route('shipments.store') }}" class="row g-2">
+                    @csrf
+
+                    <div class="col-md-4">
+                        <label class="form-label">Supplier</label>
+                        <input type="text" class="form-control form-control-sm"
+                            value="{{ optional($selectedItems->first())->supplier_name ?: '-' }}" disabled>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">No Delivery Note</label>
+                        <input type="text" name="delivery_note_number" value="{{ old('delivery_note_number') }}"
+                            class="form-control form-control-sm" placeholder="No surat jalan supplier" required>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Tanggal Dokumen</label>
+                        <input type="date" name="shipment_date"
+                            value="{{ old('shipment_date', now()->format('Y-m-d')) }}" class="form-control form-control-sm"
+                            required>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">No Invoice</label>
+                        <input type="text" name="invoice_number" value="{{ old('invoice_number') }}"
+                            class="form-control form-control-sm" placeholder="Nomor invoice supplier">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Tanggal Invoice</label>
+                        <input type="date" name="invoice_date" value="{{ old('invoice_date') }}"
+                            class="form-control form-control-sm">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Currency</label>
+                        <input type="text" name="invoice_currency" value="{{ old('invoice_currency', 'IDR') }}"
+                            class="form-control form-control-sm" maxlength="10" placeholder="IDR">
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="form-check mt-4">
+                            <input class="form-check-input" type="checkbox" value="1" name="po_reference_missing"
+                                id="po_reference_missing" @checked(old('po_reference_missing') === '1')>
+                            <label class="form-check-label" for="po_reference_missing">
+                                Nomor PO tidak ada di dokumen supplier
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Catatan</label>
+                        <input type="text" name="supplier_remark" value="{{ old('supplier_remark') }}"
+                            class="form-control form-control-sm" placeholder="Catatan internal / info supplier">
+                    </div>
+
+                    <div class="col-12">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle mb-0">
+                                <thead>
                                     <tr>
-                                        <td colspan="8" class="text-center text-muted">Belum ada kandidat. Coba filter
-                                            supplier atau cari berdasarkan item yang akan datang.</td>
+                                        <th><input type="checkbox" onchange="toggleDraftCheckboxes(this.checked)"></th>
+                                        <th>PO</th>
+                                        <th>Item</th>
+                                        <th>Harga PO</th>
+                                        <th>Sisa Bisa Dikirim</th>
+                                        <th>Qty di Draft Ini</th>
+                                        <th>Harga Invoice</th>
+                                        <th>Total Invoice</th>
+                                        <th>Aksi</th>
                                     </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    @endif
-                </div>
-            </div>
-
-            <div class="card card-primary card-outline mb-3">
-                <div class="card-header">
-                    <h3 class="card-title">2. Simpan Draft Shipment</h3>
-                </div>
-                <div class="card-body">
-                    @if ($selectedItems->isNotEmpty())
-                        <div class="alert alert-success">
-                            {{ $selectedItems->count() }} item terpilih dari
-                            {{ $selectedItems->pluck('purchase_order_id')->unique()->count() }} PO.
-                            Supplier: <strong>{{ $selectedItems->first()->supplier_name }}</strong>
-                        </div>
-                        <div class="mb-3 p-3 border rounded bg-light">
-                            <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                                <div>
-                                    <div class="font-weight-bold">Item Dalam Draft</div>
-                                    <small class="text-muted">Tinjau kembali item yang sudah dipilih. Gunakan aksi berikut
-                                        jika ada item yang perlu dikeluarkan dari draft.</small>
-                                </div>
-                                <button type="button" class="btn btn-outline-danger btn-sm"
-                                    onclick="removeCheckedDraftItems()">Keluarkan Item Terpilih</button>
-                            </div>
-                        </div>
-                    @else
-                        <div class="alert alert-warning">
-                            Pilih minimal satu item di tabel di atas. Draft shipment akan dibuat per dokumen supplier, bukan
-                            per PO.
-                        </div>
-                    @endif
-                    <form method="POST" action="{{ route('shipments.store') }}" class="row g-2">@csrf
-                        <div class="col-md-4">
-                            <label class="form-label">Supplier</label>
-                            <input type="text" class="form-control form-control-sm"
-                                value="{{ optional($selectedItems->first())->supplier_name ?: '-' }}" disabled>
-                        </div>
-                        <div class="col-md-3"><label class="form-label">No Delivery Note</label><input type="text"
-                                name="delivery_note_number" value="{{ old('delivery_note_number') }}"
-                                class="form-control form-control-sm" placeholder="No surat jalan supplier" required></div>
-                        <div class="col-md-4"><label class="form-label">Tanggal Dokumen</label><input type="date"
-                                name="shipment_date" value="{{ old('shipment_date', now()->format('Y-m-d')) }}"
-                                class="form-control form-control-sm" required></div>
-                        <div class="col-md-4">
-                            <div class="form-check mt-2">
-                                <input class="form-check-input" type="checkbox" value="1"
-                                    name="po_reference_missing" id="po_reference_missing" @checked(old('po_reference_missing') === '1')>
-                                <label class="form-check-label" for="po_reference_missing">Nomor PO tidak ada di dokumen
-                                    supplier</label>
-                            </div>
-                        </div>
-                        <div class="col-md-8"><input type="text" name="supplier_remark"
-                                value="{{ old('supplier_remark') }}" class="form-control form-control-sm"
-                                placeholder="Catatan internal, misalnya info supplier atau alasan pencocokan"></div>
-
-                        <div class="col-12">
-                            <div class="table-responsive">
-                                <table class="table table-sm table-bordered align-middle mb-0">
-                                    <thead>
+                                </thead>
+                                <tbody>
+                                    @forelse($selectedItems as $item)
+                                        @php($draftPrice = old('invoice_unit_price.' . $item->purchase_order_item_id, $draftInvoicePrices[$item->purchase_order_item_id] ?? ''))
                                         <tr>
-                                            <th><input type="checkbox" onchange="toggleDraftCheckboxes(this.checked)">
-                                            </th>
-                                            <th>PO</th>
-                                            <th>Item</th>
-                                            <th>Sisa Bisa Dikirim</th>
-                                            <th>Qty di Draft Ini</th>
-                                            <th>Aksi</th>
+                                            <td>
+                                                <input type="checkbox" class="draft-item-checkbox"
+                                                    value="{{ $item->purchase_order_item_id }}">
+                                            </td>
+                                            <td>{{ $item->po_number }}</td>
+                                            <td>
+                                                <strong>{{ $item->item_code }}</strong><br>
+                                                {{ $item->item_name }}
+                                            </td>
+                                            <td>
+                                                {{ $item->unit_price !== null ? \App\Support\NumberFormatter::trim($item->unit_price) : '-' }}
+                                            </td>
+                                            <td>{{ \App\Support\NumberFormatter::trim($item->available_to_ship_qty) }}</td>
+                                            <td>
+                                                <input type="hidden" name="selected_items[]"
+                                                    value="{{ $item->purchase_order_item_id }}">
+                                                <input type="number" step="0.01" min="0.01"
+                                                    max="{{ \App\Support\NumberFormatter::input($item->available_to_ship_qty) }}"
+                                                    name="shipped_qty[{{ $item->purchase_order_item_id }}]"
+                                                    value="{{ \App\Support\NumberFormatter::input(old('shipped_qty.' . $item->purchase_order_item_id, $draftQuantities[$item->purchase_order_item_id] ?? $item->available_to_ship_qty)) }}"
+                                                    class="form-control form-control-sm draft-qty-input"
+                                                    data-item-id="{{ $item->purchase_order_item_id }}" required>
+                                            </td>
+                                            <td>
+                                                <input type="number" step="0.0001" min="0"
+                                                    name="invoice_unit_price[{{ $item->purchase_order_item_id }}]"
+                                                    value="{{ $draftPrice }}"
+                                                    class="form-control form-control-sm draft-price-input"
+                                                    data-item-id="{{ $item->purchase_order_item_id }}"
+                                                    placeholder="Opsional">
+                                                <div class="money-note">Kosongkan bila belum ada harga invoice.</div>
+                                            </td>
+                                            <td>
+                                                <input type="text"
+                                                    class="form-control form-control-sm field-readonly draft-line-total"
+                                                    data-item-id="{{ $item->purchase_order_item_id }}" value="-"
+                                                    readonly>
+                                            </td>
+                                            <td class="text-nowrap">
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                    onclick="removeDraftItem('{{ $item->purchase_order_item_id }}')">
+                                                    Batal Pilih
+                                                </button>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($selectedItems as $item)
-                                            <tr>
-                                                <td><input type="checkbox" class="draft-item-checkbox"
-                                                        value="{{ $item->purchase_order_item_id }}"></td>
-                                                <td>{{ $item->po_number }}</td>
-                                                <td><strong>{{ $item->item_code }}</strong><br>{{ $item->item_name }}</td>
-                                                <td>{{ \App\Support\NumberFormatter::trim($item->available_to_ship_qty) }}</td>
-                                                <td>
-                                                    <input type="hidden" name="selected_items[]"
-                                                        value="{{ $item->purchase_order_item_id }}">
-                                                    <input type="number" step="0.01" min="0.01"
-                                                        max="{{ \App\Support\NumberFormatter::input($item->available_to_ship_qty) }}"
-                                                        name="shipped_qty[{{ $item->purchase_order_item_id }}]"
-                                                        value="{{ \App\Support\NumberFormatter::input(old('shipped_qty.' . $item->purchase_order_item_id, $draftQuantities[$item->purchase_order_item_id] ?? $item->available_to_ship_qty)) }}"
-                                                        class="form-control form-control-sm" required>
-                                                </td>
-                                                <td class="text-nowrap">
-                                                    <button type="button" class="btn btn-sm btn-outline-danger"
-                                                        onclick="removeDraftItem('{{ $item->purchase_order_item_id }}')">Batal
-                                                        Pilih</button>
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="6" class="text-center text-muted">Belum ada item terpilih.
-                                                </td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
+                                    @empty
+                                        <tr>
+                                            <td colspan="9" class="text-center text-muted">Belum ada item terpilih.
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="col-12 d-flex justify-content-end">
-                            <button class="btn btn-primary btn-sm"
-                                {{ $selectedItems->isEmpty() ? 'disabled' : '' }}>Simpan Draft Shipment</button>
-                        </div>
-                    </form>
-                </div>
+                    </div>
+
+                    <div class="col-12 d-flex justify-content-end">
+                        <button class="btn btn-primary btn-sm" {{ $selectedItems->isEmpty() ? 'disabled' : '' }}>
+                            Simpan Draft Shipment
+                        </button>
+                    </div>
+                </form>
             </div>
+        </div>
     @else
-            @php($historyRows = $rows->getCollection())
-            <div class="history-shell">
-                <section class="history-hero">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-lg-5">
-                            <div class="history-hero-title">Riwayat shipment dibuat lebih ringkas dan cepat dipindai.</div>
-                            <p class="history-hero-copy">Lihat status dokumen supplier, jumlah PO terkait, dan lanjut ke aksi yang relevan.</p>
-                        </div>
-                        <div class="col-lg-7">
-                            <div class="history-stat-grid">
-                                <div class="history-stat">
-                                    <div class="history-stat-label">Draft</div>
-                                    <div class="history-stat-value">{{ $historyRows->where('status', 'Draft')->count() }}</div>
+        @php($historyRows = $rows->getCollection())
+        <div class="history-shell">
+            <section class="history-hero">
+                <div class="row g-3 align-items-end">
+                    <div class="col-lg-5">
+                        <div class="history-hero-title">Riwayat shipment dibuat lebih ringkas dan cepat dipindai.</div>
+                        <p class="history-hero-copy">Lihat delivery note, invoice supplier, dan progres dokumen shipment.
+                        </p>
+                    </div>
+                    <div class="col-lg-7">
+                        <div class="history-stat-grid">
+                            <div class="history-stat">
+                                <div class="history-stat-label">Draft</div>
+                                <div class="history-stat-value">
+                                    {{ $historyRows->where('status', \App\Support\DocumentTermCodes::SHIPMENT_DRAFT)->count() }}
                                 </div>
-                                <div class="history-stat">
-                                    <div class="history-stat-label">Shipped</div>
-                                    <div class="history-stat-value">{{ $historyRows->where('status', 'Shipped')->count() }}</div>
+                            </div>
+                            <div class="history-stat">
+                                <div class="history-stat-label">Shipped</div>
+                                <div class="history-stat-value">
+                                    {{ $historyRows->where('status', \App\Support\DocumentTermCodes::SHIPMENT_SHIPPED)->count() }}
                                 </div>
-                                <div class="history-stat">
-                                    <div class="history-stat-label">Partial</div>
-                                    <div class="history-stat-value">{{ $historyRows->where('status', 'Partial Received')->count() }}</div>
+                            </div>
+                            <div class="history-stat">
+                                <div class="history-stat-label">Partial</div>
+                                <div class="history-stat-value">
+                                    {{ $historyRows->where('status', \App\Support\DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED)->count() }}
                                 </div>
-                                <div class="history-stat">
-                                    <div class="history-stat-label">Received</div>
-                                    <div class="history-stat-value">{{ $historyRows->where('status', 'Received')->count() }}</div>
+                            </div>
+                            <div class="history-stat">
+                                <div class="history-stat-label">Received</div>
+                                <div class="history-stat-value">
+                                    {{ $historyRows->where('status', \App\Support\DocumentTermCodes::SHIPMENT_RECEIVED)->count() }}
                                 </div>
                             </div>
                         </div>
                     </div>
-                </section>
+                </div>
+            </section>
 
-                <section class="history-surface">
-                    <div class="surface-head">
-                        <div>
-                            <h3 class="surface-title">Filter Riwayat Shipment</h3>
-                            <div class="surface-subtitle">Cari berdasarkan delivery note supplier.</div>
-                        </div>
+            <section class="history-surface">
+                <div class="surface-head">
+                    <div>
+                        <h3 class="surface-title">Filter Riwayat Shipment</h3>
+                        <div class="surface-subtitle">Cari berdasarkan delivery note atau nomor invoice.</div>
                     </div>
-                    <form method="GET" class="history-filter">
-                        <div>
-                            <label class="form-label">Cari Delivery Note</label>
-                            <input type="text" name="delivery_note_number" value="{{ request('delivery_note_number') }}"
-                                class="form-control form-control-sm" placeholder="No surat jalan supplier">
-                        </div>
-                        <input type="hidden" name="view" value="history">
-                        <div><button class="btn btn-primary btn-sm w-100">Cari Riwayat</button></div>
-                        <div><a href="{{ route('shipments.history') }}" class="btn btn-light btn-sm w-100">Reset</a></div>
-                    </form>
-                </section>
+                </div>
 
-                <section class="history-surface">
-                    <div class="surface-head">
-                        <div>
-                            <h3 class="surface-title">Daftar Riwayat Shipment</h3>
-                            <div class="surface-subtitle">Dokumen shipment dari draft sampai selesai.</div>
-                        </div>
+                <form method="GET" class="history-filter">
+                    <div>
+                        <label class="form-label">Cari Delivery Note</label>
+                        <input type="text" name="delivery_note_number" value="{{ request('delivery_note_number') }}"
+                            class="form-control form-control-sm" placeholder="No surat jalan supplier">
                     </div>
-                    <div class="history-table-wrap table-responsive">
-                        <table class="table table-hover history-table">
+                    <div>
+                        <label class="form-label">Cari Invoice</label>
+                        <input type="text" name="invoice_number" value="{{ request('invoice_number') }}"
+                            class="form-control form-control-sm" placeholder="No invoice supplier">
+                    </div>
+                    <input type="hidden" name="view" value="history">
+                    <div><button class="btn btn-primary btn-sm w-100">Cari Riwayat</button></div>
+                    <div><a href="{{ route('shipments.history') }}" class="btn btn-light btn-sm w-100">Reset</a></div>
+                </form>
+            </section>
+
+            <section class="history-surface">
+                <div class="surface-head">
+                    <div>
+                        <h3 class="surface-title">Daftar Riwayat Shipment</h3>
+                        <div class="surface-subtitle">Dokumen shipment dari draft sampai selesai.</div>
+                    </div>
+                </div>
+
+                <div class="history-table-wrap table-responsive">
+                    <table class="table table-hover history-table">
                         <thead>
                             <tr>
                                 <th>No Shipment</th>
@@ -447,6 +559,7 @@
                                 <th>Line Item</th>
                                 <th>Status</th>
                                 <th>Delivery Note</th>
+                                <th>Invoice</th>
                                 <th>Tanggal Dokumen</th>
                                 <th>Catatan</th>
                                 <th>Aksi</th>
@@ -462,48 +575,71 @@
                                         @endif
                                     </td>
                                     <td>{{ $r->supplier_name }}</td>
-                                    <td>{{ $r->po_numbers ?: '-' }}<br><span class="shipment-meta">{{ $r->po_count }} PO</span></td>
+                                    <td>{{ $r->po_numbers ?: '-' }}<br><span class="shipment-meta">{{ $r->po_count }}
+                                            PO</span></td>
                                     <td>{{ $r->line_count }}</td>
-                                    <td><span
-                                            class="badge {{ $r->status === 'Draft' ? 'bg-secondary' : ($r->status === 'Shipped' ? 'bg-primary' : ($r->status === 'Partial Received' ? 'bg-warning text-dark' : ($r->status === 'Cancelled' ? 'bg-danger' : 'bg-success'))) }}">{{ \App\Support\TermCatalog::label('shipment_status', $r->status, $r->status) }}</span>
+                                    <td>
+                                        <x-status-badge :status="$r->status" scope="shipment" />
                                     </td>
                                     <td>{{ $r->delivery_note_number ?: '-' }}</td>
+                                    <td>
+                                        {{ $r->invoice_number ?: '-' }}
+                                        @if ($r->invoice_date)
+                                            <br><span
+                                                class="shipment-meta">{{ \Carbon\Carbon::parse($r->invoice_date)->format('d-m-Y') }}</span>
+                                        @endif
+                                    </td>
                                     <td>{{ \Carbon\Carbon::parse($r->shipment_date)->format('d-m-Y') }}</td>
                                     <td>{{ $r->supplier_remark ?: '-' }}</td>
                                     <td>
-                                        @if ($r->status === 'Draft')
+                                        @if ($r->status === \App\Support\DocumentTermCodes::SHIPMENT_DRAFT)
                                             <div class="action-stack">
-                                                <a href="{{ route('shipments.show', $r->id) }}" class="btn btn-sm btn-light">Lihat</a>
-                                                <a href="{{ route('shipments.edit', $r->id) }}" class="btn btn-sm btn-outline-secondary">Edit Draft</a>
+                                                <a href="{{ route('shipments.show', $r->id) }}"
+                                                    class="btn btn-sm btn-light">Lihat</a>
+                                                <a href="{{ route('shipments.edit', $r->id) }}"
+                                                    class="btn btn-sm btn-outline-secondary">Edit Draft</a>
                                                 <form method="POST"
-                                                    action="{{ route('shipments.mark-shipped', $r->id) }}">@csrf
-                                                    @method('PATCH')<button class="btn btn-sm btn-outline-primary">Tandai
-                                                        Sudah Berangkat</button></form>
+                                                    action="{{ route('shipments.mark-shipped', $r->id) }}">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button class="btn btn-sm btn-outline-primary">Tandai Sudah
+                                                        Berangkat</button>
+                                                </form>
                                                 <form method="POST"
-                                                    action="{{ route('shipments.cancel-draft', $r->id) }}">@csrf
-                                                    @method('PATCH')<button class="btn btn-sm btn-outline-danger"
+                                                    action="{{ route('shipments.cancel-draft', $r->id) }}">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button class="btn btn-sm btn-outline-danger"
                                                         onclick="return confirm('Batalkan draft shipment ini?')">Batalkan
-                                                        Draft</button></form>
+                                                        Draft</button>
+                                                </form>
                                             </div>
-                                        @elseif (in_array($r->status, ['Shipped', 'Partial Received'], true))
+                                        @elseif (in_array(
+                                                $r->status,
+                                                [\App\Support\DocumentTermCodes::SHIPMENT_SHIPPED, \App\Support\DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED],
+                                                true))
                                             <div class="action-stack">
-                                                <a href="{{ route('shipments.show', $r->id) }}" class="btn btn-sm btn-light">Lihat</a>
+                                                <a href="{{ route('shipments.show', $r->id) }}"
+                                                    class="btn btn-sm btn-light">Lihat</a>
                                                 <a href="{{ route('receiving.process', ['supplier_id' => $r->supplier_id, 'shipment_id' => $r->id, 'document_number' => $r->delivery_note_number]) }}"
                                                     class="btn btn-sm btn-outline-primary">Lanjut ke Receiving</a>
                                             </div>
                                         @else
-                                            <a href="{{ route('shipments.show', $r->id) }}" class="btn btn-sm btn-light">Lihat</a>
+                                            <a href="{{ route('shipments.show', $r->id) }}"
+                                                class="btn btn-sm btn-light">Lihat</a>
                                         @endif
                                     </td>
                                 </tr>
                             @endforeach
                         </tbody>
-                        </table>
-                    </div>
-                </section>
-            </div>
-            <div class="mt-2">{{ $rows->links() }}</div>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <div class="mt-2">{{ $rows->links() }}</div>
     @endif
+
     <script>
         const draftStorageKey = 'shipment-draft-state-{{ auth()->id() ?? 'guest' }}';
 
@@ -517,8 +653,15 @@
             document.querySelectorAll('form[method="POST"] input[name^="shipped_qty["]').forEach((input) => {
                 quantities[input.name] = input.value;
             });
-
             return quantities;
+        };
+
+        const getDraftInvoicePrices = () => {
+            const prices = {};
+            document.querySelectorAll('form[method="POST"] input[name^="invoice_unit_price["]').forEach((input) => {
+                prices[input.name] = input.value;
+            });
+            return prices;
         };
 
         const getSelectedItems = () => {
@@ -526,18 +669,17 @@
             document.querySelectorAll('form[method="POST"] input[name="selected_items[]"]').forEach((input) => {
                 selectedItems.push(input.value);
             });
-
             return selectedItems;
         };
 
         const persistDraftState = () => {
             const draftState = {
                 supplier_id: document.querySelector('input[name="supplier_id"][type="hidden"]')?.value ||
-                    document.querySelector('select[name="supplier_id"]')?.value ||
-                    '',
+                    document.querySelector('select[name="supplier_id"]')?.value || '',
                 keyword: document.querySelector('input[name="keyword"]')?.value || '',
                 selected_items: getSelectedItems(),
                 quantities: getDraftQuantities(),
+                invoice_prices: getDraftInvoicePrices(),
             };
 
             localStorage.setItem(draftStorageKey, JSON.stringify(draftState));
@@ -545,14 +687,18 @@
 
         const restoreDraftState = () => {
             const rawState = localStorage.getItem(draftStorageKey);
-            if (!rawState) {
-                return;
-            }
+            if (!rawState) return;
 
             try {
                 const state = JSON.parse(rawState);
 
                 Object.entries(state.quantities || {}).forEach(([name, value]) => {
+                    document.querySelectorAll(`input[name="${name.replace(/"/g, '\\"')}"]`).forEach((input) => {
+                        input.value = value;
+                    });
+                });
+
+                Object.entries(state.invoice_prices || {}).forEach(([name, value]) => {
                     document.querySelectorAll(`input[name="${name.replace(/"/g, '\\"')}"]`).forEach((input) => {
                         input.value = value;
                     });
@@ -567,7 +713,8 @@
             }
         };
 
-        const submitDraftSelectionState = (selectedItemsOverride = null, quantitiesOverride = null) => {
+        const submitDraftSelectionState = (selectedItemsOverride = null, quantitiesOverride = null, invoicePricesOverride =
+            null) => {
             let savedState = {};
             try {
                 const rawState = localStorage.getItem(draftStorageKey);
@@ -575,8 +722,10 @@
             } catch (error) {
                 localStorage.removeItem(draftStorageKey);
             }
+
             const selectedItems = selectedItemsOverride ?? getSelectedItems();
             const quantities = quantitiesOverride ?? getDraftQuantities();
+            const invoicePrices = invoicePricesOverride ?? getDraftInvoicePrices();
 
             const form = document.createElement('form');
             form.method = 'GET';
@@ -594,17 +743,11 @@
 
             const supplierId = document.querySelector('input[name="supplier_id"][type="hidden"]')?.value ||
                 document.querySelector('select[name="supplier_id"]')?.value ||
-                savedState.supplier_id ||
-                '';
+                savedState.supplier_id || '';
             const keyword = document.querySelector('input[name="keyword"]')?.value || savedState.keyword || '';
 
-            if (supplierId) {
-                appendHidden('supplier_id', supplierId);
-            }
-
-            if (keyword) {
-                appendHidden('keyword', keyword);
-            }
+            if (supplierId) appendHidden('supplier_id', supplierId);
+            if (keyword) appendHidden('keyword', keyword);
 
             if (selectedItems.length === 0) {
                 appendHidden('clear_selection', '1');
@@ -612,6 +755,7 @@
 
             selectedItems.forEach((itemId) => appendHidden('selected_items[]', itemId));
             Object.entries(quantities).forEach(([name, value]) => appendHidden(name, value));
+            Object.entries(invoicePrices).forEach(([name, value]) => appendHidden(name, value));
 
             document.body.appendChild(form);
             form.submit();
@@ -619,9 +763,7 @@
 
         const rehydrateDraftSelection = () => {
             const rawState = localStorage.getItem(draftStorageKey);
-            if (!rawState) {
-                return;
-            }
+            if (!rawState) return;
 
             const hasSelectedDraftRows = getSelectedItems().length > 0;
             if (hasSelectedDraftRows) {
@@ -636,22 +778,29 @@
 
             try {
                 const state = JSON.parse(rawState);
-                if (!Array.isArray(state.selected_items) || state.selected_items.length === 0) {
-                    return;
-                }
+                if (!Array.isArray(state.selected_items) || state.selected_items.length === 0) return;
 
                 sessionStorage.setItem('shipment-draft-rehydrated', '1');
-                submitDraftSelectionState(state.selected_items, state.quantities || {});
+                submitDraftSelectionState(state.selected_items, state.quantities || {}, state.invoice_prices || {});
             } catch (error) {
                 sessionStorage.removeItem('shipment-draft-rehydrated');
                 localStorage.removeItem(draftStorageKey);
             }
         };
 
-        const syncDraftQuantities = (form) => {
+        const syncDraftInputs = (form) => {
             form.querySelectorAll('input[name^="shipped_qty["]').forEach((input) => input.remove());
+            form.querySelectorAll('input[name^="invoice_unit_price["]').forEach((input) => input.remove());
 
             Object.entries(getDraftQuantities()).forEach(([name, value]) => {
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = name;
+                hidden.value = value;
+                form.appendChild(hidden);
+            });
+
+            Object.entries(getDraftInvoicePrices()).forEach(([name, value]) => {
                 const hidden = document.createElement('input');
                 hidden.type = 'hidden';
                 hidden.name = name;
@@ -662,17 +811,53 @@
             persistDraftState();
         };
 
+        const formatNumber = (value) => {
+            const parsed = parseFloat(value || 0);
+            if (Number.isNaN(parsed)) return '-';
+            return new Intl.NumberFormat('id-ID', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(parsed);
+        };
+
+        const recalcDraftLineTotals = () => {
+            document.querySelectorAll('.draft-line-total').forEach((totalInput) => {
+                const itemId = totalInput.dataset.itemId;
+                const qtyInput = document.querySelector(`.draft-qty-input[data-item-id="${itemId}"]`);
+                const priceInput = document.querySelector(`.draft-price-input[data-item-id="${itemId}"]`);
+
+                const qty = parseFloat(qtyInput?.value || 0);
+                const price = parseFloat(priceInput?.value || 0);
+
+                if (!priceInput || priceInput.value === '' || Number.isNaN(price)) {
+                    totalInput.value = '-';
+                    return;
+                }
+
+                const total = qty * price;
+                totalInput.value = formatNumber(total);
+            });
+        };
+
         restoreDraftState();
         rehydrateDraftSelection();
+        recalcDraftLineTotals();
 
-        document.querySelectorAll('form[method="POST"] input[name^="shipped_qty["], input[name="keyword"]').forEach((
-            input) => {
-                input.addEventListener('input', persistDraftState);
-                input.addEventListener('change', persistDraftState);
+        document.querySelectorAll(
+            'form[method="POST"] input[name^="shipped_qty["], form[method="POST"] input[name^="invoice_unit_price["], input[name="keyword"]'
+            ).forEach((input) => {
+            input.addEventListener('input', () => {
+                persistDraftState();
+                recalcDraftLineTotals();
             });
+            input.addEventListener('change', () => {
+                persistDraftState();
+                recalcDraftLineTotals();
+            });
+        });
 
         document.querySelectorAll('.shipment-selection-form').forEach((form) => {
-            form.addEventListener('submit', () => syncDraftQuantities(form));
+            form.addEventListener('submit', () => syncDraftInputs(form));
         });
 
         window.removeDraftItem = (itemId) => {
@@ -684,7 +869,12 @@
             const nextQuantities = {
                 ...getDraftQuantities()
             };
+            const nextInvoicePrices = {
+                ...getDraftInvoicePrices()
+            };
+
             delete nextQuantities[`shipped_qty[${normalizedItemId}]`];
+            delete nextInvoicePrices[`invoice_unit_price[${normalizedItemId}]`];
 
             let draftState = {};
             try {
@@ -695,9 +885,10 @@
 
             draftState.selected_items = nextSelectedItems;
             draftState.quantities = nextQuantities;
+            draftState.invoice_prices = nextInvoicePrices;
             localStorage.setItem(draftStorageKey, JSON.stringify(draftState));
 
-            submitDraftSelectionState(nextSelectedItems, nextQuantities);
+            submitDraftSelectionState(nextSelectedItems, nextQuantities, nextInvoicePrices);
         };
 
         window.toggleCandidateCheckboxes = (checked) => {
@@ -717,13 +908,14 @@
 
             const checkedItems = Array.from(document.querySelectorAll('.candidate-item-checkbox:checked')).map((
                 checkbox) => checkbox.value);
-            if (checkedItems.length === 0) {
-                return;
-            }
+            if (checkedItems.length === 0) return;
 
             const nextSelectedItems = Array.from(new Set([...getSelectedItems(), ...checkedItems]));
             const nextQuantities = {
                 ...getDraftQuantities()
+            };
+            const nextInvoicePrices = {
+                ...getDraftInvoicePrices()
             };
 
             let draftState = {};
@@ -735,9 +927,10 @@
 
             draftState.selected_items = nextSelectedItems;
             draftState.quantities = nextQuantities;
+            draftState.invoice_prices = nextInvoicePrices;
             localStorage.setItem(draftStorageKey, JSON.stringify(draftState));
 
-            submitDraftSelectionState(nextSelectedItems, nextQuantities);
+            submitDraftSelectionState(nextSelectedItems, nextQuantities, nextInvoicePrices);
         };
 
         window.removeCheckedDraftItems = () => {
@@ -745,9 +938,7 @@
 
             const checkedItems = Array.from(document.querySelectorAll('.draft-item-checkbox:checked')).map((checkbox) =>
                 checkbox.value);
-            if (checkedItems.length === 0) {
-                return;
-            }
+            if (checkedItems.length === 0) return;
 
             const checkedSet = new Set(checkedItems.map(String));
             const nextSelectedItems = getSelectedItems().filter((selectedItemId) => !checkedSet.has(String(
@@ -755,9 +946,13 @@
             const nextQuantities = {
                 ...getDraftQuantities()
             };
+            const nextInvoicePrices = {
+                ...getDraftInvoicePrices()
+            };
 
             checkedItems.forEach((itemId) => {
                 delete nextQuantities[`shipped_qty[${itemId}]`];
+                delete nextInvoicePrices[`invoice_unit_price[${itemId}]`];
             });
 
             let draftState = {};
@@ -769,15 +964,19 @@
 
             draftState.selected_items = nextSelectedItems;
             draftState.quantities = nextQuantities;
+            draftState.invoice_prices = nextInvoicePrices;
             localStorage.setItem(draftStorageKey, JSON.stringify(draftState));
 
-            submitDraftSelectionState(nextSelectedItems, nextQuantities);
+            submitDraftSelectionState(nextSelectedItems, nextQuantities, nextInvoicePrices);
         };
 
         document.querySelectorAll(
-            'form[action="{{ route('shipments.store') }}"], form[action="{{ route('shipments.process') }}"]').forEach((
-            form) => {
-            form.addEventListener('submit', persistDraftState);
-        });
+            'form[action="{{ route('shipments.store') }}"], form[action="{{ route('shipments.process') }}"]').forEach(
+            (form) => {
+                form.addEventListener('submit', () => {
+                    persistDraftState();
+                    recalcDraftLineTotals();
+                });
+            });
     </script>
 @endsection
