@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\ErpFlow;
+use App\Support\PurchaseOrderStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -11,7 +12,10 @@ use Illuminate\View\View;
 
 class ShipmentController extends Controller
 {
-    private const SHIPPABLE_PO_STATUSES = ['PO Issued', 'Open', 'Late'];
+    private const SHIPPABLE_PO_STATUSES = [
+        PurchaseOrderStatus::OPEN,
+        PurchaseOrderStatus::LATE,
+    ];
 
     public function index(Request $request): View
     {
@@ -22,13 +26,13 @@ class ShipmentController extends Controller
 
         if ($request->has('shipped_qty')) {
             $request->session()->put('shipment_shipped_qty', collect($request->input('shipped_qty', []))
-                ->mapWithKeys(fn ($qty, $itemId) => [(int) $itemId => (float) $qty])
+                ->mapWithKeys(fn($qty, $itemId) => [(int) $itemId => (float) $qty])
                 ->all());
         }
 
         if ($request->has('selected_items')) {
             $request->session()->put('shipment_selected_items', collect($request->input('selected_items', []))
-                ->map(fn ($id) => (int) $id)
+                ->map(fn($id) => (int) $id)
                 ->filter()
                 ->unique()
                 ->values()
@@ -38,9 +42,10 @@ class ShipmentController extends Controller
         $selectedItemIds = collect($request->has('selected_items')
             ? $request->input('selected_items', [])
             : $request->session()->get('shipment_selected_items', []))
-            ->map(fn ($id) => (int) $id)
+            ->map(fn($id) => (int) $id)
             ->filter()
             ->values();
+
         $hasSearch = $request->filled('supplier_id') || $request->filled('keyword') || $selectedItemIds->isNotEmpty();
 
         $rows = DB::table('shipments as sh')
@@ -57,7 +62,7 @@ class ShipmentController extends Controller
                 DB::raw('COUNT(DISTINCT po.id) as po_count'),
                 DB::raw("GROUP_CONCAT(DISTINCT po.po_number ORDER BY po.po_number SEPARATOR ', ') as po_numbers")
             )
-            ->when($request->filled('delivery_note_number'), fn ($q) => $q->where('sh.delivery_note_number', 'like', '%'.$request->string('delivery_note_number').'%'))
+            ->when($request->filled('delivery_note_number'), fn($q) => $q->where('sh.delivery_note_number', 'like', '%' . $request->string('delivery_note_number') . '%'))
             ->groupBy('sh.id', 'sh.purchase_order_id', 'sh.supplier_id', 'sh.shipment_number', 'sh.shipment_date', 'sh.delivery_note_number', 'sh.supplier_remark', 'sh.status', 'sh.created_by', 'sh.created_at', 'sh.updated_at', 's.supplier_name', 'anchor_s.supplier_name')
             ->orderByDesc('sh.id')
             ->paginate(20);
@@ -65,19 +70,21 @@ class ShipmentController extends Controller
         $selectedItems = $selectedItemIds->isNotEmpty()
             ? $this->candidateItemsBaseQuery()->whereIn('poi.id', $selectedItemIds)->get()
             : collect();
+
         $selectedSupplierId = $selectedItems->isNotEmpty() ? (int) $selectedItems->first()->supplier_id : null;
+
         $draftQuantities = collect($request->session()->get('shipment_shipped_qty', []))
-            ->mapWithKeys(fn ($qty, $itemId) => [(int) $itemId => (float) $qty]);
+            ->mapWithKeys(fn($qty, $itemId) => [(int) $itemId => (float) $qty]);
 
         $candidateItems = $hasSearch
             ? $this->candidateItemsQuery($request)
-                ->when($selectedSupplierId, fn ($query) => $query->where('po.supplier_id', $selectedSupplierId))
-                ->when($selectedItemIds->isNotEmpty(), fn ($query) => $query->whereNotIn('poi.id', $selectedItemIds))
-                ->orderBy('s.supplier_name')
-                ->orderBy('po.po_number')
-                ->orderBy('i.item_code')
-                ->limit(100)
-                ->get()
+            ->when($selectedSupplierId, fn($query) => $query->where('po.supplier_id', $selectedSupplierId))
+            ->when($selectedItemIds->isNotEmpty(), fn($query) => $query->whereNotIn('poi.id', $selectedItemIds))
+            ->orderBy('s.supplier_name')
+            ->orderBy('po.po_number')
+            ->orderBy('i.item_code')
+            ->limit(100)
+            ->get()
             : collect();
 
         $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name']);
@@ -121,7 +128,7 @@ class ShipmentController extends Controller
             'shipped_qty' => 'required|array',
         ], ['required' => ':attribute wajib diisi.']);
 
-        $selectedIds = collect($v['selected_items'])->map(fn ($id) => (int) $id)->unique()->values();
+        $selectedIds = collect($v['selected_items'])->map(fn($id) => (int) $id)->unique()->values();
         $userId = optional($request->user())->id;
         $remark = trim(implode(' | ', array_filter([
             ! empty($v['po_reference_missing']) ? 'Dokumen supplier tidak mencantumkan nomor PO.' : null,
@@ -160,7 +167,7 @@ class ShipmentController extends Controller
                 if ($duplicateShipment) {
                     $statusLabel = $duplicateShipment->status === 'Draft'
                         ? 'masih berupa Draft'
-                        : 'sudah diproses dengan status '.$duplicateShipment->status;
+                        : 'sudah diproses dengan status ' . $duplicateShipment->status;
 
                     throw ValidationException::withMessages([
                         'delivery_note_number' => "Delivery note {$deliveryNote} untuk supplier ini sudah digunakan pada shipment {$duplicateShipment->shipment_number} dan {$statusLabel}.",
@@ -178,7 +185,7 @@ class ShipmentController extends Controller
 
                     if ($qty > (float) $item->available_to_ship_qty) {
                         throw ValidationException::withMessages([
-                            'shipped_qty.'.$item->purchase_order_item_id => "Qty kirim untuk {$item->item_code} melebihi sisa qty yang masih bisa dialokasikan.",
+                            'shipped_qty.' . $item->purchase_order_item_id => "Qty kirim untuk {$item->item_code} melebihi sisa qty yang masih bisa dialokasikan.",
                         ]);
                     }
 
@@ -203,7 +210,7 @@ class ShipmentController extends Controller
                     'updated_at' => now(),
                 ]);
 
-                $lineRows = collect($linePayloads)->map(fn ($line) => [
+                $lineRows = collect($linePayloads)->map(fn($line) => [
                     'shipment_id' => $shipmentId,
                     'purchase_order_item_id' => $line['purchase_order_item_id'],
                     'shipped_qty' => $line['shipped_qty'],
@@ -266,7 +273,7 @@ class ShipmentController extends Controller
                     ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
                     ->where('si.shipment_id', $shipment->id)
                     ->pluck('poi.purchase_order_id')
-                    ->map(fn ($poId) => (int) $poId)
+                    ->map(fn($poId) => (int) $poId)
                     ->unique()
                     ->values();
 
@@ -339,7 +346,7 @@ class ShipmentController extends Controller
 
             $currentLines = $this->shipmentLineQuery((int) $shipment->id)->lockForUpdate()->get()->keyBy('shipment_item_id');
             $keptLines = collect($v['shipment_items'])
-                ->filter(fn ($line) => ($line['keep'] ?? null) === '1')
+                ->filter(fn($line) => ($line['keep'] ?? null) === '1')
                 ->values();
 
             if ($keptLines->isEmpty()) {
@@ -371,7 +378,7 @@ class ShipmentController extends Controller
                 'updated_at' => now(),
             ]);
 
-            $keptIds = $keptLines->pluck('id')->map(fn ($lineId) => (int) $lineId)->all();
+            $keptIds = $keptLines->pluck('id')->map(fn($lineId) => (int) $lineId)->all();
             DB::table('shipment_items')
                 ->where('shipment_id', $shipment->id)
                 ->whereNotIn('id', $keptIds)
@@ -412,9 +419,9 @@ class ShipmentController extends Controller
     private function candidateItemsQuery(Request $request)
     {
         return $this->candidateItemsBaseQuery()
-            ->when($request->filled('supplier_id'), fn ($q) => $q->where('po.supplier_id', $request->integer('supplier_id')))
+            ->when($request->filled('supplier_id'), fn($q) => $q->where('po.supplier_id', $request->integer('supplier_id')))
             ->when($request->filled('keyword'), function ($q) use ($request) {
-                $keyword = '%'.$request->string('keyword').'%';
+                $keyword = '%' . $request->string('keyword') . '%';
                 $q->where(function ($inner) use ($keyword) {
                     $inner->where('po.po_number', 'like', $keyword)
                         ->orWhere('i.item_code', 'like', $keyword)

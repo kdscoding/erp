@@ -129,6 +129,7 @@
         }
 
         @media (max-width: 767.98px) {
+
             .po-stat-grid,
             .filter-grid {
                 grid-template-columns: 1fr;
@@ -139,21 +140,18 @@
     @php($openCount = $rows->getCollection()->where('status', 'Open')->count())
     @php($lateCount = $rows->getCollection()->where('status', 'Late')->count())
     @php($closedCount = $rows->getCollection()->where('status', 'Closed')->count())
-    @php($releasedCount = $rows->getCollection()->where('status', 'PO Issued')->count())
+    @php($cancelledCount = $rows->getCollection()->where('status', 'Cancelled')->count())
 
     <div class="po-shell">
         <section class="po-hero">
             <div class="row g-3 align-items-end">
                 <div class="col-lg-5">
                     <div class="po-hero-title">Daftar PO yang lebih cepat dipindai dan lebih mudah difilter.</div>
-                    <p class="po-hero-copy">Gunakan filter di bawah untuk fokus ke supplier atau status PO yang sedang berjalan.</p>
+                    <p class="po-hero-copy">Gunakan filter di bawah untuk fokus ke supplier atau status PO yang sedang
+                        berjalan.</p>
                 </div>
                 <div class="col-lg-7">
                     <div class="po-stat-grid">
-                        <div class="po-stat">
-                            <div class="po-stat-label">Released</div>
-                            <div class="po-stat-value">{{ $releasedCount }}</div>
-                        </div>
                         <div class="po-stat">
                             <div class="po-stat-label">Open</div>
                             <div class="po-stat-value">{{ $openCount }}</div>
@@ -165,6 +163,10 @@
                         <div class="po-stat">
                             <div class="po-stat-label">Closed</div>
                             <div class="po-stat-value">{{ $closedCount }}</div>
+                        </div>
+                        <div class="po-stat">
+                            <div class="po-stat-label">Cancelled</div>
+                            <div class="po-stat-value">{{ $cancelledCount }}</div>
                         </div>
                     </div>
                 </div>
@@ -185,7 +187,8 @@
                     <select name="supplier_id" class="form-control form-control-sm">
                         <option value="">Semua Supplier</option>
                         @foreach ($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}" @selected(request('supplier_id') == $supplier->id)>{{ $supplier->supplier_name }}</option>
+                            <option value="{{ $supplier->id }}" @selected(request('supplier_id') == $supplier->id)>{{ $supplier->supplier_name }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
@@ -193,7 +196,7 @@
                     <label class="form-label">Status</label>
                     <select name="status" class="form-control form-control-sm">
                         <option value="">Semua Status</option>
-                        @foreach (\App\Support\TermCatalog::options('po_status', ['PO Issued', 'Open', 'Late', 'Closed', 'Cancelled']) as $status => $label)
+                        @foreach (\App\Support\TermCatalog::options('po_status', ['Open', 'Late', 'Closed', 'Cancelled']) as $status => $label)
                             <option value="{{ $status }}" @selected(request('status') === $status)>{{ $label }}</option>
                         @endforeach
                     </select>
@@ -231,12 +234,11 @@
                                 <td>{{ \Carbon\Carbon::parse($r->po_date)->format('d-m-Y') }}</td>
                                 <td>{{ $r->supplier_name }}</td>
                                 <td>
-                                    <span class="badge {{ in_array($r->status, ['Closed']) ? 'bg-success' : (in_array($r->status, ['Cancelled', 'Late']) ? 'bg-danger' : 'bg-warning text-dark') }}">
-                                        {{ \App\Support\TermCatalog::label('po_status', $r->status, $r->status) }}
-                                    </span>
+                                    <x-status-badge :status="$r->status" scope="po" />
                                 </td>
                                 <td class="text-end">
-                                    <a href="{{ route('po.show', $r->id) }}" class="btn btn-sm btn-outline-primary">Detail</a>
+                                    <a href="{{ route('po.show', $r->id) }}"
+                                        class="btn btn-sm btn-outline-primary">Detail</a>
                                 </td>
                             </tr>
                         @empty
