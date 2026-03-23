@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Support\DocumentTermCodes;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -12,29 +13,167 @@ class DocumentTermSeeder extends Seeder
         $now = now();
 
         $terms = [
-            ['group_key' => 'po_status', 'code' => 'PO Issued', 'label' => 'Released New PO', 'sort_order' => 10],
-            ['group_key' => 'po_status', 'code' => 'Open', 'label' => 'Open / In Progress', 'sort_order' => 20],
-            ['group_key' => 'po_status', 'code' => 'Late', 'label' => 'Late / Need Follow Up', 'sort_order' => 30],
-            ['group_key' => 'po_status', 'code' => 'Closed', 'label' => 'Completed', 'sort_order' => 40],
-            ['group_key' => 'po_status', 'code' => 'Cancelled', 'label' => 'Cancelled', 'sort_order' => 50],
+            // PO status
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_STATUS,
+                'code' => DocumentTermCodes::PO_ISSUED,
+                'label' => 'PO Issued / Waiting Progress',
+                'badge_class' => 'bg-secondary',
+                'badge_text' => 'text-white',
+                'sort_order' => 10,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_STATUS,
+                'code' => DocumentTermCodes::PO_OPEN,
+                'label' => 'Open / In Progress',
+                'badge_class' => 'bg-warning',
+                'badge_text' => 'text-dark',
+                'sort_order' => 20,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_STATUS,
+                'code' => DocumentTermCodes::PO_LATE,
+                'label' => 'Late / Need Follow Up',
+                'badge_class' => 'bg-danger',
+                'badge_text' => 'text-white',
+                'sort_order' => 30,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_STATUS,
+                'code' => DocumentTermCodes::PO_CLOSED,
+                'label' => 'Completed',
+                'badge_class' => 'bg-success',
+                'badge_text' => 'text-white',
+                'sort_order' => 40,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_STATUS,
+                'code' => DocumentTermCodes::PO_CANCELLED,
+                'label' => 'Cancelled',
+                'badge_class' => 'bg-danger',
+                'badge_text' => 'text-white',
+                'sort_order' => 50,
+            ],
 
-            ['group_key' => 'po_item_status', 'code' => 'Waiting', 'label' => 'Waiting Supplier Confirmation', 'sort_order' => 10],
-            ['group_key' => 'po_item_status', 'code' => 'Confirmed', 'label' => 'ETD Confirmed', 'sort_order' => 20],
-            ['group_key' => 'po_item_status', 'code' => 'Late', 'label' => 'ETD Overdue', 'sort_order' => 30],
-            ['group_key' => 'po_item_status', 'code' => 'Partial', 'label' => 'Partially Received', 'sort_order' => 40],
-            ['group_key' => 'po_item_status', 'code' => 'Closed', 'label' => 'Completed', 'sort_order' => 50],
-            ['group_key' => 'po_item_status', 'code' => 'Cancelled', 'label' => 'Cancelled', 'sort_order' => 60],
+            // PO item status
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_ITEM_STATUS,
+                'code' => DocumentTermCodes::ITEM_WAITING,
+                'label' => 'Waiting Supplier Confirmation',
+                'badge_class' => 'bg-secondary',
+                'badge_text' => 'text-white',
+                'sort_order' => 10,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_ITEM_STATUS,
+                'code' => DocumentTermCodes::ITEM_CONFIRMED,
+                'label' => 'ETD Confirmed',
+                'badge_class' => 'bg-warning',
+                'badge_text' => 'text-dark',
+                'sort_order' => 20,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_ITEM_STATUS,
+                'code' => DocumentTermCodes::ITEM_LATE,
+                'label' => 'ETD Overdue',
+                'badge_class' => 'bg-danger',
+                'badge_text' => 'text-white',
+                'sort_order' => 30,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_ITEM_STATUS,
+                'code' => DocumentTermCodes::ITEM_PARTIAL,
+                'label' => 'Partially Received',
+                'badge_class' => 'bg-primary',
+                'badge_text' => 'text-white',
+                'sort_order' => 40,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_ITEM_STATUS,
+                'code' => DocumentTermCodes::ITEM_CLOSED,
+                'label' => 'Completed',
+                'badge_class' => 'bg-success',
+                'badge_text' => 'text-white',
+                'sort_order' => 50,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_ITEM_STATUS,
+                'code' => DocumentTermCodes::ITEM_CANCELLED,
+                'label' => 'Cancelled',
+                'badge_class' => 'bg-danger',
+                'badge_text' => 'text-white',
+                'sort_order' => 60,
+            ],
 
-            ['group_key' => 'shipment_status', 'code' => 'Draft', 'label' => 'Draft', 'sort_order' => 10],
-            ['group_key' => 'shipment_status', 'code' => 'Shipped', 'label' => 'Sent / In Transit', 'sort_order' => 20],
-            ['group_key' => 'shipment_status', 'code' => 'Partial Received', 'label' => 'Partially Received', 'sort_order' => 30],
-            ['group_key' => 'shipment_status', 'code' => 'Received', 'label' => 'Completed', 'sort_order' => 40],
-            ['group_key' => 'shipment_status', 'code' => 'Cancelled', 'label' => 'Cancelled', 'sort_order' => 50],
+            // Shipment status
+            [
+                'group_key' => DocumentTermCodes::GROUP_SHIPMENT_STATUS,
+                'code' => DocumentTermCodes::SHIPMENT_DRAFT,
+                'label' => 'Draft',
+                'badge_class' => 'bg-secondary',
+                'badge_text' => 'text-white',
+                'sort_order' => 10,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_SHIPMENT_STATUS,
+                'code' => DocumentTermCodes::SHIPMENT_SHIPPED,
+                'label' => 'Sent / In Transit',
+                'badge_class' => 'bg-info',
+                'badge_text' => 'text-white',
+                'sort_order' => 20,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_SHIPMENT_STATUS,
+                'code' => DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED,
+                'label' => 'Partially Received',
+                'badge_class' => 'bg-primary',
+                'badge_text' => 'text-white',
+                'sort_order' => 30,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_SHIPMENT_STATUS,
+                'code' => DocumentTermCodes::SHIPMENT_RECEIVED,
+                'label' => 'Completed',
+                'badge_class' => 'bg-success',
+                'badge_text' => 'text-white',
+                'sort_order' => 40,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_SHIPMENT_STATUS,
+                'code' => DocumentTermCodes::SHIPMENT_CANCELLED,
+                'label' => 'Cancelled',
+                'badge_class' => 'bg-danger',
+                'badge_text' => 'text-white',
+                'sort_order' => 50,
+            ],
 
-            ['group_key' => 'goods_receipt_status', 'code' => 'Posted', 'label' => 'Posted', 'sort_order' => 10],
-            ['group_key' => 'goods_receipt_status', 'code' => 'Cancelled', 'label' => 'Cancelled', 'sort_order' => 20],
+            // Goods receipt status
+            [
+                'group_key' => DocumentTermCodes::GROUP_GOODS_RECEIPT_STATUS,
+                'code' => DocumentTermCodes::GR_POSTED,
+                'label' => 'Posted',
+                'badge_class' => 'bg-info',
+                'badge_text' => 'text-white',
+                'sort_order' => 10,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_GOODS_RECEIPT_STATUS,
+                'code' => DocumentTermCodes::GR_CANCELLED,
+                'label' => 'Cancelled',
+                'badge_class' => 'bg-danger',
+                'badge_text' => 'text-white',
+                'sort_order' => 20,
+            ],
 
-            ['group_key' => 'po_history_note', 'code' => 'released_new_po', 'label' => 'Released new PO', 'sort_order' => 10],
+            // Notes
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_HISTORY_NOTE,
+                'code' => DocumentTermCodes::NOTE_RELEASED_NEW_PO,
+                'label' => 'Released new PO',
+                'badge_class' => null,
+                'badge_text' => null,
+                'sort_order' => 10,
+            ],
         ];
 
         foreach ($terms as $term) {
@@ -42,6 +181,8 @@ class DocumentTermSeeder extends Seeder
                 ['group_key' => $term['group_key'], 'code' => $term['code']],
                 [
                     'label' => $term['label'],
+                    'badge_class' => $term['badge_class'],
+                    'badge_text' => $term['badge_text'],
                     'description' => $term['description'] ?? null,
                     'is_active' => true,
                     'sort_order' => $term['sort_order'],
@@ -50,13 +191,5 @@ class DocumentTermSeeder extends Seeder
                 ]
             );
         }
-
-        DB::table('document_terms')
-            ->where('group_key', 'po_status')
-            ->whereNotIn('code', ['PO Issued', 'Open', 'Late', 'Closed', 'Cancelled'])
-            ->update([
-                'is_active' => false,
-                'updated_at' => $now,
-            ]);
     }
 }

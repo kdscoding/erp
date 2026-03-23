@@ -11,9 +11,6 @@ class PurchaseOrderItemStatus
   public const CANCELLED = 'Cancelled';
   public const LATE = 'Late';
 
-  /**
-   * @return array<int, string>
-   */
   public static function all(): array
   {
     return [

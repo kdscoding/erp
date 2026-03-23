@@ -1,26 +1,22 @@
 @props([
     'status' => '',
-    'scope' => 'po', // po | item
+    'scope' => 'po', // po | item | shipment | gr
 ])
 
 @php
     $status = trim((string) $status);
 
-    $class = match ($status) {
-        'Closed' => 'bg-success',
-        'Open' => 'bg-warning text-dark',
-        'Confirmed' => 'bg-warning text-dark',
-        'Waiting' => 'bg-secondary',
-        'Partial' => 'bg-primary',
-        'Late' => 'bg-danger',
-        'Cancelled' => 'bg-danger',
-        default => 'bg-secondary',
+    $group = match ($scope) {
+        'item' => \App\Support\DocumentTermCodes::GROUP_PO_ITEM_STATUS,
+        'shipment' => \App\Support\DocumentTermCodes::GROUP_SHIPMENT_STATUS,
+        'gr' => \App\Support\DocumentTermCodes::GROUP_GOODS_RECEIPT_STATUS,
+        default => \App\Support\DocumentTermCodes::GROUP_PO_STATUS,
     };
 
-    $group = $scope === 'item' ? 'po_item_status' : 'po_status';
-    $label = \App\Support\TermCatalog::label($group, $status, $status !== '' ? $status : '-');
+    $classes = \App\Support\DocumentTermStatus::badgeClasses($group, $status, 'bg-secondary text-white');
+    $label = \App\Support\DocumentTermStatus::label($group, $status, $status !== '' ? $status : '-');
 @endphp
 
-<span {{ $attributes->merge(['class' => 'badge ' . $class]) }}>
+<span {{ $attributes->merge(['class' => 'badge ' . $classes]) }}>
     {{ $label }}
 </span>

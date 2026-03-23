@@ -13,8 +13,9 @@ use Illuminate\View\View;
 class ShipmentController extends Controller
 {
     private const SHIPPABLE_PO_STATUSES = [
-        PurchaseOrderStatus::OPEN,
-        PurchaseOrderStatus::LATE,
+        \App\Support\PurchaseOrderStatus::PO_ISSUED,
+        \App\Support\PurchaseOrderStatus::OPEN,
+        \App\Support\PurchaseOrderStatus::LATE,
     ];
 
     public function index(Request $request): View

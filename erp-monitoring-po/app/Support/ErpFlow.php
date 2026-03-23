@@ -67,52 +67,59 @@ class ErpFlow
         $summary = DB::table('purchase_order_items')
             ->where('purchase_order_id', $poId)
             ->selectRaw('COUNT(*) total_items')
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') = '" . PurchaseOrderItemStatus::CANCELLED . "' THEN 1 ELSE 0 END) cancelled_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . PurchaseOrderItemStatus::CANCELLED . "' THEN 1 ELSE 0 END) active_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . PurchaseOrderItemStatus::CANCELLED . "' AND outstanding_qty > 0 AND received_qty = 0 AND etd_date IS NULL THEN 1 ELSE 0 END) waiting_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . PurchaseOrderItemStatus::CANCELLED . "' AND outstanding_qty > 0 AND received_qty = 0 AND etd_date IS NOT NULL AND DATE(etd_date) >= {$currentDateSql} THEN 1 ELSE 0 END) confirmed_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . PurchaseOrderItemStatus::CANCELLED . "' AND outstanding_qty > 0 AND received_qty = 0 AND etd_date IS NOT NULL AND DATE(etd_date) < {$currentDateSql} THEN 1 ELSE 0 END) late_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . PurchaseOrderItemStatus::CANCELLED . "' AND received_qty > 0 AND outstanding_qty > 0 THEN 1 ELSE 0 END) partial_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . PurchaseOrderItemStatus::CANCELLED . "' AND outstanding_qty <= 0 THEN 1 ELSE 0 END) closed_items")
+            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') = '" . DocumentTermCodes::ITEM_CANCELLED . "' THEN 1 ELSE 0 END) cancelled_items")
+            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "' THEN 1 ELSE 0 END) active_items")
+            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "' AND received_qty = 0 AND outstanding_qty > 0 AND etd_date IS NULL THEN 1 ELSE 0 END) pure_waiting_items")
+            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "' AND received_qty = 0 AND outstanding_qty > 0 AND etd_date IS NOT NULL THEN 1 ELSE 0 END) items_with_etd")
+            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "' AND received_qty = 0 AND outstanding_qty > 0 AND etd_date IS NOT NULL AND DATE(etd_date) < {$currentDateSql} THEN 1 ELSE 0 END) overdue_items")
+            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "' AND received_qty > 0 AND outstanding_qty > 0 THEN 1 ELSE 0 END) partial_items")
+            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "' AND outstanding_qty <= 0 THEN 1 ELSE 0 END) closed_items")
             ->first();
 
         $allocationSummary = DB::table('purchase_order_items as poi')
             ->leftJoin('shipment_items as si', 'si.purchase_order_item_id', '=', 'poi.id')
             ->leftJoin('shipments as sh', function ($join) {
                 $join->on('sh.id', '=', 'si.shipment_id')
-                    ->where('sh.status', '!=', 'Cancelled');
+                    ->where('sh.status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED);
             })
             ->where('poi.purchase_order_id', $poId)
-            ->whereRaw("COALESCE(poi.item_status, '') != '" . PurchaseOrderItemStatus::CANCELLED . "'")
+            ->whereRaw("COALESCE(poi.item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "'")
             ->selectRaw('COUNT(DISTINCT CASE WHEN sh.id IS NOT NULL THEN poi.id END) as allocated_items')
             ->first();
 
         $oldStatus = DB::table('purchase_orders')->where('id', $poId)->value('status');
         $nextEtaDate = self::resolvePoEtaDate($poId);
 
-        $newStatus = PurchaseOrderStatus::OPEN;
+        $totalItems = (int) ($summary->total_items ?? 0);
+        $cancelledItems = (int) ($summary->cancelled_items ?? 0);
+        $activeItems = (int) ($summary->active_items ?? 0);
+        $pureWaitingItems = (int) ($summary->pure_waiting_items ?? 0);
+        $itemsWithEtd = (int) ($summary->items_with_etd ?? 0);
+        $overdueItems = (int) ($summary->overdue_items ?? 0);
+        $partialItems = (int) ($summary->partial_items ?? 0);
+        $closedItems = (int) ($summary->closed_items ?? 0);
+        $allocatedItems = (int) ($allocationSummary->allocated_items ?? 0);
 
-        if ((int) ($summary->total_items ?? 0) > 0 && (int) ($summary->cancelled_items ?? 0) === (int) ($summary->total_items ?? 0)) {
-            $newStatus = PurchaseOrderStatus::CANCELLED;
-        } elseif ((int) ($summary->active_items ?? 0) > 0 && (int) ($summary->closed_items ?? 0) === (int) ($summary->active_items ?? 0)) {
-            $newStatus = PurchaseOrderStatus::CLOSED;
-        } elseif ((int) ($summary->late_items ?? 0) > 0) {
-            $newStatus = PurchaseOrderStatus::LATE;
+        $newStatus = DocumentTermCodes::PO_ISSUED;
+
+        if ($totalItems > 0 && $cancelledItems === $totalItems) {
+            $newStatus = DocumentTermCodes::PO_CANCELLED;
+        } elseif ($activeItems > 0 && $closedItems === $activeItems) {
+            $newStatus = DocumentTermCodes::PO_CLOSED;
+        } elseif ($overdueItems > 0) {
+            $newStatus = DocumentTermCodes::PO_LATE;
         } elseif (
-            (int) ($summary->active_items ?? 0) > 0 &&
+            $activeItems > 0 &&
             (
-                (int) ($summary->confirmed_items ?? 0) > 0 ||
-                (int) ($summary->partial_items ?? 0) > 0 ||
-                (int) ($summary->closed_items ?? 0) > 0 ||
-                (int) ($allocationSummary->allocated_items ?? 0) > 0
+                $itemsWithEtd > 0 ||
+                $allocatedItems > 0 ||
+                $partialItems > 0 ||
+                $closedItems > 0
             )
         ) {
-            $newStatus = PurchaseOrderStatus::OPEN;
-        } elseif (
-            (int) ($summary->active_items ?? 0) > 0 &&
-            (int) ($summary->waiting_items ?? 0) > 0
-        ) {
-            $newStatus = PurchaseOrderStatus::OPEN;
+            $newStatus = DocumentTermCodes::PO_OPEN;
+        } elseif ($activeItems > 0 && $pureWaitingItems === $activeItems) {
+            $newStatus = DocumentTermCodes::PO_ISSUED;
         }
 
         if ($oldStatus !== $newStatus) {
@@ -123,7 +130,13 @@ class ErpFlow
                 'updated_by' => $userId,
             ]);
 
-            self::pushPoStatus($poId, $oldStatus, $newStatus, $userId, 'Status auto-update berdasarkan outstanding item.');
+            self::pushPoStatus(
+                $poId,
+                $oldStatus,
+                $newStatus,
+                $userId,
+                'Status auto-update berdasarkan model monitoring header PO.'
+            );
         } else {
             DB::table('purchase_orders')->where('id', $poId)->update([
                 'eta_date' => $nextEtaDate,
@@ -139,7 +152,7 @@ class ErpFlow
     {
         return DB::table('purchase_order_items')
             ->where('purchase_order_id', $poId)
-            ->whereRaw("COALESCE(item_status, '') != '" . PurchaseOrderItemStatus::CANCELLED . "'")
+            ->whereRaw("COALESCE(item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "'")
             ->where('outstanding_qty', '>', 0)
             ->selectRaw('MIN(COALESCE(eta_date, etd_date)) as next_eta_date')
             ->value('next_eta_date');

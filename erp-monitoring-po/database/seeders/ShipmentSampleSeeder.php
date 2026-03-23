@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Support\PurchaseOrderItemStatus;
+use App\Support\PurchaseOrderStatus;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -9,8 +11,8 @@ class ShipmentSampleSeeder extends Seeder
 {
     public function run(): void
     {
-        $suppliers = DB::table('suppliers')->orderBy('id')->limit(10)->pluck('id')->all();
-        $items = DB::table('items')->orderBy('id')->limit(20)->pluck('id')->all();
+        $suppliers = DB::table('suppliers')->orderBy('id')->limit(6)->pluck('id')->all();
+        $items = DB::table('items')->orderBy('id')->limit(12)->pluck('id')->all();
         $warehouseId = DB::table('warehouses')->value('id');
         $plantId = DB::table('plants')->value('id');
         $now = now();
@@ -23,16 +25,96 @@ class ShipmentSampleSeeder extends Seeder
             $this->cleanupExistingDemoData();
 
             $samples = [
-                ['suffix' => '0001', 'shipment_status' => 'Draft', 'po_status' => 'Open', 'ordered_qty' => 120, 'shipped_qty' => 120, 'received_qty' => 0, 'po_date_offset' => 18, 'shipment_date_offset' => 2, 'etd_offset' => 7],
-                ['suffix' => '0002', 'shipment_status' => 'Draft', 'po_status' => 'Open', 'ordered_qty' => 85, 'shipped_qty' => 60, 'received_qty' => 0, 'po_date_offset' => 17, 'shipment_date_offset' => 1, 'etd_offset' => 5],
-                ['suffix' => '0003', 'shipment_status' => 'Draft', 'po_status' => 'PO Issued', 'ordered_qty' => 150, 'shipped_qty' => 90, 'received_qty' => 0, 'po_date_offset' => 15, 'shipment_date_offset' => 0, 'etd_offset' => 10],
-                ['suffix' => '0004', 'shipment_status' => 'Shipped', 'po_status' => 'Open', 'ordered_qty' => 200, 'shipped_qty' => 200, 'received_qty' => 0, 'po_date_offset' => 13, 'shipment_date_offset' => 3, 'etd_offset' => 2],
-                ['suffix' => '0005', 'shipment_status' => 'Shipped', 'po_status' => 'Late', 'ordered_qty' => 140, 'shipped_qty' => 80, 'received_qty' => 0, 'po_date_offset' => 12, 'shipment_date_offset' => 2, 'etd_offset' => -1],
-                ['suffix' => '0006', 'shipment_status' => 'Partial Received', 'po_status' => 'Late', 'ordered_qty' => 160, 'shipped_qty' => 160, 'received_qty' => 70, 'po_date_offset' => 10, 'shipment_date_offset' => 5, 'receipt_date_offset' => 3, 'etd_offset' => -2],
-                ['suffix' => '0007', 'shipment_status' => 'Partial Received', 'po_status' => 'Late', 'ordered_qty' => 110, 'shipped_qty' => 90, 'received_qty' => 45, 'po_date_offset' => 9, 'shipment_date_offset' => 4, 'receipt_date_offset' => 1, 'etd_offset' => -1],
-                ['suffix' => '0008', 'shipment_status' => 'Received', 'po_status' => 'Closed', 'ordered_qty' => 95, 'shipped_qty' => 95, 'received_qty' => 95, 'po_date_offset' => 8, 'shipment_date_offset' => 6, 'receipt_date_offset' => 2, 'etd_offset' => -3],
-                ['suffix' => '0009', 'shipment_status' => 'Received', 'po_status' => 'Closed', 'ordered_qty' => 175, 'shipped_qty' => 175, 'received_qty' => 175, 'po_date_offset' => 7, 'shipment_date_offset' => 5, 'receipt_date_offset' => 1, 'etd_offset' => -4],
-                ['suffix' => '0010', 'shipment_status' => 'Received', 'po_status' => 'Closed', 'ordered_qty' => 130, 'shipped_qty' => 100, 'received_qty' => 100, 'po_date_offset' => 6, 'shipment_date_offset' => 4, 'receipt_date_offset' => 0, 'etd_offset' => -2],
+                [
+                    'suffix' => '1001',
+                    'po_status' => PurchaseOrderStatus::PO_ISSUED,
+                    'shipment_status' => null,
+                    'ordered_qty' => 120,
+                    'received_qty' => 0,
+                    'has_etd' => false,
+                    'shipment_qty' => 0,
+                    'days_ago_po' => 3,
+                    'etd_offset' => null,
+                ],
+                [
+                    'suffix' => '1002',
+                    'po_status' => PurchaseOrderStatus::OPEN,
+                    'shipment_status' => null,
+                    'ordered_qty' => 150,
+                    'received_qty' => 0,
+                    'has_etd' => true,
+                    'shipment_qty' => 0,
+                    'days_ago_po' => 5,
+                    'etd_offset' => 5,
+                ],
+                [
+                    'suffix' => '1003',
+                    'po_status' => PurchaseOrderStatus::OPEN,
+                    'shipment_status' => 'Draft',
+                    'ordered_qty' => 100,
+                    'received_qty' => 0,
+                    'has_etd' => true,
+                    'shipment_qty' => 60,
+                    'days_ago_po' => 6,
+                    'etd_offset' => 4,
+                ],
+                [
+                    'suffix' => '1004',
+                    'po_status' => PurchaseOrderStatus::OPEN,
+                    'shipment_status' => 'Shipped',
+                    'ordered_qty' => 180,
+                    'received_qty' => 0,
+                    'has_etd' => true,
+                    'shipment_qty' => 180,
+                    'days_ago_po' => 8,
+                    'etd_offset' => 2,
+                ],
+                [
+                    'suffix' => '1005',
+                    'po_status' => PurchaseOrderStatus::LATE,
+                    'shipment_status' => null,
+                    'ordered_qty' => 90,
+                    'received_qty' => 0,
+                    'has_etd' => true,
+                    'shipment_qty' => 0,
+                    'days_ago_po' => 10,
+                    'etd_offset' => -2,
+                ],
+                [
+                    'suffix' => '1006',
+                    'po_status' => PurchaseOrderStatus::LATE,
+                    'shipment_status' => 'Partial Received',
+                    'ordered_qty' => 160,
+                    'received_qty' => 70,
+                    'has_etd' => true,
+                    'shipment_qty' => 120,
+                    'days_ago_po' => 11,
+                    'etd_offset' => -3,
+                    'receipt_days_ago' => 1,
+                ],
+                [
+                    'suffix' => '1007',
+                    'po_status' => PurchaseOrderStatus::CLOSED,
+                    'shipment_status' => 'Received',
+                    'ordered_qty' => 110,
+                    'received_qty' => 110,
+                    'has_etd' => true,
+                    'shipment_qty' => 110,
+                    'days_ago_po' => 14,
+                    'etd_offset' => -5,
+                    'receipt_days_ago' => 2,
+                ],
+                [
+                    'suffix' => '1008',
+                    'po_status' => PurchaseOrderStatus::CANCELLED,
+                    'shipment_status' => null,
+                    'ordered_qty' => 130,
+                    'received_qty' => 0,
+                    'has_etd' => false,
+                    'shipment_qty' => 0,
+                    'days_ago_po' => 7,
+                    'etd_offset' => null,
+                ],
             ];
 
             foreach ($samples as $index => $sample) {
@@ -40,92 +122,119 @@ class ShipmentSampleSeeder extends Seeder
                 $itemId = $items[$index % count($items)];
                 $orderedQty = (float) $sample['ordered_qty'];
                 $receivedQty = (float) $sample['received_qty'];
-                $remainingQty = max(0, $orderedQty - $receivedQty);
+                $outstandingQty = max(0, $orderedQty - $receivedQty);
 
                 $poId = DB::table('purchase_orders')->insertGetId([
-                    'po_number' => 'PO-SHP-DEMO-'.$sample['suffix'],
-                    'po_date' => now()->subDays($sample['po_date_offset'])->toDateString(),
+                    'po_number' => 'PO-DEMO-' . $sample['suffix'],
+                    'po_date' => now()->subDays($sample['days_ago_po'])->toDateString(),
                     'supplier_id' => $supplierId,
                     'plant_id' => $plantId,
                     'warehouse_id' => $warehouseId,
                     'currency' => 'IDR',
                     'status' => $sample['po_status'],
-                    'eta_date' => now()->addDays($sample['etd_offset'] + 5)->toDateString(),
-                    'notes' => 'Sample shipment demo '.$sample['suffix'],
+                    'eta_date' => $sample['has_etd'] && $sample['etd_offset'] !== null
+                        ? now()->addDays($sample['etd_offset'] + 3)->toDateString()
+                        : null,
+                    'notes' => 'Demo data ' . $sample['suffix'],
+                    'cancel_reason' => $sample['po_status'] === PurchaseOrderStatus::CANCELLED ? 'Demo cancelled PO' : null,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
+
+                $itemStatus = match ($sample['po_status']) {
+                    PurchaseOrderStatus::CANCELLED => PurchaseOrderItemStatus::CANCELLED,
+                    PurchaseOrderStatus::CLOSED => PurchaseOrderItemStatus::CLOSED,
+                    default => $receivedQty > 0
+                        ? ($outstandingQty > 0 ? PurchaseOrderItemStatus::PARTIAL : PurchaseOrderItemStatus::CLOSED)
+                        : ($sample['has_etd']
+                            ? ($sample['etd_offset'] < 0 ? PurchaseOrderItemStatus::LATE : PurchaseOrderItemStatus::CONFIRMED)
+                            : PurchaseOrderItemStatus::WAITING),
+                };
 
                 $poItemId = DB::table('purchase_order_items')->insertGetId([
                     'purchase_order_id' => $poId,
                     'item_id' => $itemId,
                     'ordered_qty' => $orderedQty,
                     'received_qty' => $receivedQty,
-                    'outstanding_qty' => $remainingQty,
-                    'item_status' => $receivedQty <= 0
-                        ? match ($sample['po_status']) {
-                            'PO Issued' => 'Waiting',
-                            'Late' => 'Late',
-                            default => 'Confirmed',
-                        }
-                        : ($remainingQty > 0 ? 'Partial' : 'Closed'),
-                    'eta_date' => now()->addDays($sample['etd_offset'] + 5)->toDateString(),
-                    'etd_date' => now()->addDays($sample['etd_offset'])->toDateString(),
-                    'remarks' => 'Line sample '.$sample['suffix'],
+                    'outstanding_qty' => $outstandingQty,
+                    'item_status' => $itemStatus,
+                    'eta_date' => $sample['has_etd'] && $sample['etd_offset'] !== null
+                        ? now()->addDays($sample['etd_offset'] + 3)->toDateString()
+                        : null,
+                    'etd_date' => $sample['has_etd'] && $sample['etd_offset'] !== null
+                        ? now()->addDays($sample['etd_offset'])->toDateString()
+                        : null,
+                    'cancel_reason' => $itemStatus === PurchaseOrderItemStatus::CANCELLED ? 'Demo cancelled item' : null,
+                    'remarks' => 'Demo line ' . $sample['suffix'],
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
 
-                $shipmentId = DB::table('shipments')->insertGetId([
+                DB::table('po_status_histories')->insert([
                     'purchase_order_id' => $poId,
-                    'supplier_id' => $supplierId,
-                    'shipment_number' => 'SHP-DEMO-'.$sample['suffix'],
-                    'shipment_date' => now()->subDays($sample['shipment_date_offset'])->toDateString(),
-                    'eta_date' => now()->addDays($sample['etd_offset'] + 7)->toDateString(),
-                    'delivery_note_number' => 'SJ-DEMO-'.$sample['suffix'],
-                    'supplier_remark' => 'Contoh shipment status '.$sample['shipment_status'],
-                    'status' => $sample['shipment_status'],
+                    'from_status' => null,
+                    'to_status' => $sample['po_status'],
+                    'changed_by' => null,
+                    'changed_at' => $now,
+                    'note' => 'Seeded demo data',
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
 
-                $shipmentItemId = DB::table('shipment_items')->insertGetId([
-                    'shipment_id' => $shipmentId,
-                    'purchase_order_item_id' => $poItemId,
-                    'shipped_qty' => (float) $sample['shipped_qty'],
-                    'received_qty' => $receivedQty,
-                    'note' => 'Shipment item sample '.$sample['suffix'],
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
-
-                if ($receivedQty > 0) {
-                    $grId = DB::table('goods_receipts')->insertGetId([
-                        'gr_number' => 'GR-SHP-DEMO-'.$sample['suffix'],
-                        'receipt_date' => now()->subDays($sample['receipt_date_offset'])->toDateString(),
+                if (! empty($sample['shipment_status']) && (float) $sample['shipment_qty'] > 0) {
+                    $shipmentId = DB::table('shipments')->insertGetId([
                         'purchase_order_id' => $poId,
-                        'shipment_id' => $shipmentId,
-                        'warehouse_id' => $warehouseId,
-                        'document_number' => 'SJ-DEMO-'.$sample['suffix'],
-                        'remark' => 'Receiving sample shipment '.$sample['suffix'],
-                        'status' => 'Posted',
+                        'supplier_id' => $supplierId,
+                        'shipment_number' => 'SHP-DEMO-' . $sample['suffix'],
+                        'shipment_date' => now()->subDays(max(1, $sample['days_ago_po'] - 1))->toDateString(),
+                        'eta_date' => $sample['has_etd'] && $sample['etd_offset'] !== null
+                            ? now()->addDays($sample['etd_offset'] + 5)->toDateString()
+                            : null,
+                        'delivery_note_number' => 'SJ-DEMO-' . $sample['suffix'],
+                        'supplier_remark' => 'Demo shipment ' . $sample['suffix'],
+                        'status' => $sample['shipment_status'],
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]);
 
-                    DB::table('goods_receipt_items')->insert([
-                        'goods_receipt_id' => $grId,
-                        'shipment_item_id' => $shipmentItemId,
+                    $shipmentItemId = DB::table('shipment_items')->insertGetId([
+                        'shipment_id' => $shipmentId,
                         'purchase_order_item_id' => $poItemId,
-                        'item_id' => $itemId,
+                        'shipped_qty' => (float) $sample['shipment_qty'],
                         'received_qty' => $receivedQty,
-                        'qty_variance' => (float) $sample['shipped_qty'] - $receivedQty,
-                        'accepted_qty' => $receivedQty,
-                        'rejected_qty' => 0,
-                        'remark' => 'Receiving sample shipment '.$sample['suffix'],
+                        'note' => 'Demo shipment item ' . $sample['suffix'],
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]);
+
+                    if ($receivedQty > 0) {
+                        $grId = DB::table('goods_receipts')->insertGetId([
+                            'gr_number' => 'GR-DEMO-' . $sample['suffix'],
+                            'receipt_date' => now()->subDays($sample['receipt_days_ago'] ?? 1)->toDateString(),
+                            'purchase_order_id' => $poId,
+                            'shipment_id' => $shipmentId,
+                            'warehouse_id' => $warehouseId,
+                            'document_number' => 'SJ-DEMO-' . $sample['suffix'],
+                            'remark' => 'Demo receiving ' . $sample['suffix'],
+                            'status' => 'Posted',
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ]);
+
+                        DB::table('goods_receipt_items')->insert([
+                            'goods_receipt_id' => $grId,
+                            'shipment_item_id' => $shipmentItemId,
+                            'purchase_order_item_id' => $poItemId,
+                            'item_id' => $itemId,
+                            'received_qty' => $receivedQty,
+                            'qty_variance' => (float) $sample['shipment_qty'] - $receivedQty,
+                            'accepted_qty' => $receivedQty,
+                            'rejected_qty' => 0,
+                            'remark' => 'Demo receiving ' . $sample['suffix'],
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ]);
+                    }
                 }
             }
         });
@@ -138,12 +247,12 @@ class ShipmentSampleSeeder extends Seeder
             ->pluck('id');
 
         $poIds = DB::table('purchase_orders')
-            ->where('po_number', 'like', 'PO-SHP-DEMO-%')
+            ->where('po_number', 'like', 'PO-DEMO-%')
             ->pluck('id');
 
         $goodsReceiptIds = DB::table('goods_receipts')
             ->where(function ($query) use ($shipmentIds, $poIds) {
-                $query->where('gr_number', 'like', 'GR-SHP-DEMO-%');
+                $query->where('gr_number', 'like', 'GR-DEMO-%');
 
                 if ($shipmentIds->isNotEmpty()) {
                     $query->orWhereIn('shipment_id', $shipmentIds);
@@ -157,10 +266,7 @@ class ShipmentSampleSeeder extends Seeder
 
         if ($goodsReceiptIds->isNotEmpty()) {
             DB::table('goods_receipt_items')->whereIn('goods_receipt_id', $goodsReceiptIds)->delete();
-            DB::table('attachments')
-                ->where('module', 'goods_receipts')
-                ->whereIn('record_id', $goodsReceiptIds)
-                ->delete();
+            DB::table('attachments')->where('module', 'goods_receipts')->whereIn('record_id', $goodsReceiptIds)->delete();
             DB::table('goods_receipts')->whereIn('id', $goodsReceiptIds)->delete();
         }
 

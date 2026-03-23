@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\PurchaseOrder\CreatePurchaseOrder;
-use App\Support\PurchaseOrderItemStatus;
-use App\Support\PurchaseOrderStatus;
-use App\Support\ErpFlow;
+use App\Actions\CreatePurchaseOrder;
+use App\Support\DocumentTermCodes;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -59,23 +57,26 @@ class PurchaseOrderController extends Controller
             ->leftJoin('units as u', 'u.id', '=', 'i.unit_id')
             ->select('poi.*', 'i.item_code', 'i.item_name', 'u.unit_name')
             ->selectRaw("CASE
-                WHEN poi.item_status = '" . PurchaseOrderItemStatus::CANCELLED . "' THEN '" . PurchaseOrderItemStatus::CANCELLED . "'
-                WHEN poi.outstanding_qty <= 0 THEN '" . PurchaseOrderItemStatus::CLOSED . "'
-                WHEN poi.received_qty > 0 THEN '" . PurchaseOrderItemStatus::PARTIAL . "'
-                WHEN poi.etd_date IS NULL THEN '" . PurchaseOrderItemStatus::WAITING . "'
-                WHEN DATE(poi.etd_date) < {$currentDateSql} THEN '" . PurchaseOrderItemStatus::LATE . "'
-                ELSE '" . PurchaseOrderItemStatus::CONFIRMED . "'
+                WHEN poi.item_status = '" . DocumentTermCodes::ITEM_CANCELLED . "' THEN '" . DocumentTermCodes::ITEM_CANCELLED . "'
+                WHEN poi.outstanding_qty <= 0 THEN '" . DocumentTermCodes::ITEM_CLOSED . "'
+                WHEN poi.received_qty > 0 THEN '" . DocumentTermCodes::ITEM_PARTIAL . "'
+                WHEN poi.etd_date IS NULL THEN '" . DocumentTermCodes::ITEM_WAITING . "'
+                WHEN DATE(poi.etd_date) < {$currentDateSql} THEN '" . DocumentTermCodes::ITEM_LATE . "'
+                ELSE '" . DocumentTermCodes::ITEM_CONFIRMED . "'
             END as monitoring_status")
             ->where('poi.purchase_order_id', $id)
             ->orderBy('poi.id')
             ->get();
 
-        $poIsFinal = in_array($po->status, [PurchaseOrderStatus::CLOSED, PurchaseOrderStatus::CANCELLED], true);
+        $poIsFinal = in_array($po->status, [
+            DocumentTermCodes::PO_CLOSED,
+            DocumentTermCodes::PO_CANCELLED,
+        ], true);
 
         $items = $items->map(function ($item) use ($poIsFinal) {
             $itemIsFinal = in_array($item->monitoring_status, [
-                PurchaseOrderItemStatus::CLOSED,
-                PurchaseOrderItemStatus::CANCELLED,
+                DocumentTermCodes::ITEM_CLOSED,
+                DocumentTermCodes::ITEM_CANCELLED,
             ], true);
 
             $item->can_update_etd = ! $poIsFinal && ! $itemIsFinal;
@@ -87,12 +88,12 @@ class PurchaseOrderController extends Controller
 
         $itemSummary = [
             'total' => $items->count(),
-            'waiting' => $items->where('monitoring_status', PurchaseOrderItemStatus::WAITING)->count(),
-            'confirmed' => $items->where('monitoring_status', PurchaseOrderItemStatus::CONFIRMED)->count(),
-            'late' => $items->where('monitoring_status', PurchaseOrderItemStatus::LATE)->count(),
-            'partial' => $items->where('monitoring_status', PurchaseOrderItemStatus::PARTIAL)->count(),
-            'closed' => $items->where('monitoring_status', PurchaseOrderItemStatus::CLOSED)->count(),
-            'cancelled' => $items->where('monitoring_status', PurchaseOrderItemStatus::CANCELLED)->count(),
+            'waiting' => $items->where('monitoring_status', DocumentTermCodes::ITEM_WAITING)->count(),
+            'confirmed' => $items->where('monitoring_status', DocumentTermCodes::ITEM_CONFIRMED)->count(),
+            'late' => $items->where('monitoring_status', DocumentTermCodes::ITEM_LATE)->count(),
+            'partial' => $items->where('monitoring_status', DocumentTermCodes::ITEM_PARTIAL)->count(),
+            'closed' => $items->where('monitoring_status', DocumentTermCodes::ITEM_CLOSED)->count(),
+            'cancelled' => $items->where('monitoring_status', DocumentTermCodes::ITEM_CANCELLED)->count(),
         ];
 
         $itemSummary['active'] = $itemSummary['total'] - $itemSummary['cancelled'];
@@ -103,7 +104,7 @@ class PurchaseOrderController extends Controller
             $itemSummary['confirmed'] > 0 && ($itemSummary['waiting'] > 0 || $itemSummary['late'] > 0) => 'Konfirmasi supplier masih campuran',
             $itemSummary['late'] > 0 => 'Ada item overdue ETD',
             $itemSummary['confirmed'] > 0 => 'Seluruh item aktif sudah terkonfirmasi',
-            $itemSummary['waiting'] === $itemSummary['active'] => 'Menunggu konfirmasi supplier',
+            $itemSummary['waiting'] === $itemSummary['active'] => 'Semua item aktif masih waiting',
             $itemSummary['closed'] === $itemSummary['active'] => 'Semua item selesai',
             default => 'Perlu review manual',
         };
@@ -149,7 +150,7 @@ class PurchaseOrderController extends Controller
 
         return redirect()
             ->route('po.index')
-            ->with('success', 'PO berhasil dibuat dengan status ' . PurchaseOrderStatus::OPEN . '.');
+            ->with('success', 'PO berhasil dibuat dengan status ' . DocumentTermCodes::PO_ISSUED . '.');
     }
 
     public function updateItemSchedule(Request $request, string $itemId): RedirectResponse
@@ -167,12 +168,12 @@ class PurchaseOrderController extends Controller
         }
 
         $newStatus = $item->outstanding_qty <= 0
-            ? PurchaseOrderItemStatus::CLOSED
-            : ((($item->received_qty > 0))
-                ? PurchaseOrderItemStatus::PARTIAL
+            ? DocumentTermCodes::ITEM_CLOSED
+            : (($item->received_qty > 0)
+                ? DocumentTermCodes::ITEM_PARTIAL
                 : (($v['etd_date'] ?? null)
-                    ? PurchaseOrderItemStatus::CONFIRMED
-                    : PurchaseOrderItemStatus::WAITING));
+                    ? DocumentTermCodes::ITEM_CONFIRMED
+                    : DocumentTermCodes::ITEM_WAITING));
 
         DB::table('purchase_order_items')->where('id', $itemId)->update([
             'etd_date' => $v['etd_date'] ?? null,
@@ -181,9 +182,9 @@ class PurchaseOrderController extends Controller
             'updated_at' => now(),
         ]);
 
-        ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
+        \App\Support\ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
 
-        ErpFlow::audit(
+        \App\Support\ErpFlow::audit(
             'purchase_order_items',
             (int) $itemId,
             'item_schedule_update',
@@ -214,27 +215,26 @@ class PurchaseOrderController extends Controller
             }
 
             DB::table('purchase_order_items')->where('id', $itemId)->update([
-                'item_status' => PurchaseOrderItemStatus::CANCELLED,
+                'item_status' => DocumentTermCodes::ITEM_CANCELLED,
                 'cancel_reason' => $validated['cancel_reason'],
                 'outstanding_qty' => 0,
                 'updated_at' => now(),
             ]);
 
-            ErpFlow::audit(
+            \App\Support\ErpFlow::audit(
                 'purchase_order_items',
                 (int) $itemId,
                 'item_cancelled',
                 ['item_status' => $item->item_status, 'cancel_reason' => $item->cancel_reason],
-                ['item_status' => PurchaseOrderItemStatus::CANCELLED, 'cancel_reason' => $validated['cancel_reason']],
+                ['item_status' => DocumentTermCodes::ITEM_CANCELLED, 'cancel_reason' => $validated['cancel_reason']],
                 optional($request->user())->id,
                 $request->ip()
             );
 
-            ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
+            \App\Support\ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
-
             return back()->with('error', $e->getMessage());
         }
 
@@ -259,27 +259,26 @@ class PurchaseOrderController extends Controller
             }
 
             DB::table('purchase_order_items')->where('id', $itemId)->update([
-                'item_status' => PurchaseOrderItemStatus::CANCELLED,
-                'cancel_reason' => $validated['cancel_reason'],
+                'item_status' => DocumentTermCodes::ITEM_CANCELLED,
+                'cancel_reason' => '[FORCE CLOSE] ' . $validated['cancel_reason'],
                 'outstanding_qty' => 0,
                 'updated_at' => now(),
             ]);
 
-            ErpFlow::audit(
+            \App\Support\ErpFlow::audit(
                 'purchase_order_items',
                 (int) $itemId,
                 'item_force_close',
                 ['item_status' => $item->item_status, 'cancel_reason' => $item->cancel_reason],
-                ['item_status' => PurchaseOrderItemStatus::CANCELLED, 'cancel_reason' => $validated['cancel_reason']],
+                ['item_status' => DocumentTermCodes::ITEM_CANCELLED, 'cancel_reason' => '[FORCE CLOSE] ' . $validated['cancel_reason']],
                 optional($request->user())->id,
                 $request->ip()
             );
 
-            ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
+            \App\Support\ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
-
             return back()->with('error', $e->getMessage());
         }
 
@@ -304,7 +303,7 @@ class PurchaseOrderController extends Controller
             }
 
             DB::table('purchase_orders')->where('id', $id)->update([
-                'status' => PurchaseOrderStatus::CANCELLED,
+                'status' => DocumentTermCodes::PO_CANCELLED,
                 'eta_date' => null,
                 'cancel_reason' => $validated['cancel_reason'],
                 'updated_at' => now(),
@@ -313,20 +312,20 @@ class PurchaseOrderController extends Controller
 
             DB::table('purchase_order_items')
                 ->where('purchase_order_id', $id)
-                ->where('item_status', '!=', PurchaseOrderItemStatus::CLOSED)
+                ->where('item_status', '!=', DocumentTermCodes::ITEM_CLOSED)
                 ->update([
-                    'item_status' => PurchaseOrderItemStatus::CANCELLED,
+                    'item_status' => DocumentTermCodes::ITEM_CANCELLED,
                     'cancel_reason' => $validated['cancel_reason'],
                     'outstanding_qty' => 0,
                     'updated_at' => now(),
                 ]);
 
-            ErpFlow::pushPoStatus((int) $id, (string) $po->status, PurchaseOrderStatus::CANCELLED, $userId, $validated['cancel_reason']);
-            ErpFlow::audit('purchase_orders', (int) $id, 'po_cancelled', ['status' => $po->status], ['status' => PurchaseOrderStatus::CANCELLED, 'cancel_reason' => $validated['cancel_reason']], $userId, $request->ip());
+            \App\Support\ErpFlow::pushPoStatus((int) $id, (string) $po->status, DocumentTermCodes::PO_CANCELLED, $userId, $validated['cancel_reason']);
+            \App\Support\ErpFlow::audit('purchase_orders', (int) $id, 'po_cancelled', ['status' => $po->status], ['status' => DocumentTermCodes::PO_CANCELLED, 'cancel_reason' => $validated['cancel_reason']], $userId, $request->ip());
+
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
-
             return back()->with('error', $e->getMessage());
         }
 
@@ -335,47 +334,26 @@ class PurchaseOrderController extends Controller
 
     private function canCancelPo(object $po): bool
     {
-        return ! in_array($po->status, [
-            PurchaseOrderStatus::CLOSED,
-            PurchaseOrderStatus::CANCELLED,
-        ], true);
+        return ! in_array($po->status, [DocumentTermCodes::PO_CLOSED, DocumentTermCodes::PO_CANCELLED], true);
     }
 
     private function canUpdateItemSchedule(object $item, ?string $poStatus): bool
     {
-        return ! in_array($poStatus, [
-            PurchaseOrderStatus::CLOSED,
-            PurchaseOrderStatus::CANCELLED,
-        ], true)
-            && ! in_array($item->item_status, [
-                PurchaseOrderItemStatus::CLOSED,
-                PurchaseOrderItemStatus::CANCELLED,
-            ], true);
+        return ! in_array($poStatus, [DocumentTermCodes::PO_CLOSED, DocumentTermCodes::PO_CANCELLED], true)
+            && ! in_array($item->item_status, [DocumentTermCodes::ITEM_CLOSED, DocumentTermCodes::ITEM_CANCELLED], true);
     }
 
     private function canCancelItem(object $item, ?string $poStatus): bool
     {
-        return ! in_array($poStatus, [
-            PurchaseOrderStatus::CLOSED,
-            PurchaseOrderStatus::CANCELLED,
-        ], true)
-            && ! in_array($item->item_status, [
-                PurchaseOrderItemStatus::CLOSED,
-                PurchaseOrderItemStatus::CANCELLED,
-            ], true)
+        return ! in_array($poStatus, [DocumentTermCodes::PO_CLOSED, DocumentTermCodes::PO_CANCELLED], true)
+            && ! in_array($item->item_status, [DocumentTermCodes::ITEM_CLOSED, DocumentTermCodes::ITEM_CANCELLED], true)
             && (float) $item->received_qty <= 0;
     }
 
     private function canForceCloseItem(object $item, ?string $poStatus): bool
     {
-        return ! in_array($poStatus, [
-            PurchaseOrderStatus::CLOSED,
-            PurchaseOrderStatus::CANCELLED,
-        ], true)
-            && ! in_array($item->item_status, [
-                PurchaseOrderItemStatus::CLOSED,
-                PurchaseOrderItemStatus::CANCELLED,
-            ], true)
+        return ! in_array($poStatus, [DocumentTermCodes::PO_CLOSED, DocumentTermCodes::PO_CANCELLED], true)
+            && ! in_array($item->item_status, [DocumentTermCodes::ITEM_CLOSED, DocumentTermCodes::ITEM_CANCELLED], true)
             && (float) $item->outstanding_qty > 0;
     }
 

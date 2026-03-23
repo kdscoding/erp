@@ -1,7 +1,9 @@
 @extends('layouts.erp')
 
-@php($title = 'Buat PO')
-@php($header = 'Create Purchase Order (Manual)')
+@php
+    $title = 'Buat PO';
+    $header = 'Create Purchase Order (Manual)';
+@endphp
 
 @section('content')
     @if (session('error'))
@@ -242,9 +244,10 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label class="doc-label">Status</label>
+                        <label class="doc-label">Status Awal</label>
                         <input type="text" class="form-control form-control-sm field-readonly"
-                            value="PO Issued (Direct Entry)" readonly>
+                            value="{{ \App\Support\DocumentTermStatus::poStatusLabel(\App\Support\DocumentTermCodes::PO_ISSUED) }}"
+                            readonly>
                     </div>
                 </div>
             </div>
@@ -349,8 +352,8 @@
                 const itemName = rowData.item_name ?? '';
                 const unitName = rowData.unit_name ?? '';
                 const qty = rowData.ordered_qty ?? 1;
-                const price = rowData.price ?? '';
-                const subtotal = parseNumber(qty) * parseNumber(price);
+                const unitPrice = rowData.unit_price ?? '';
+                const subtotal = parseNumber(qty) * parseNumber(unitPrice);
 
                 return `
                     <tr>
@@ -361,6 +364,7 @@
                         </td>
                         <td>
                             <input type="text" class="form-control form-control-sm item-name-display field-readonly" value="${escapeHtml(itemName)}" readonly>
+                            <input type="hidden" class="item-remarks-input" name="items[${idx}][remarks]" value="${escapeHtml(rowData.remarks ?? '')}">
                         </td>
                         <td>
                             <input type="text" class="form-control form-control-sm item-unit field-readonly" value="${escapeHtml(unitName)}" readonly>
@@ -371,7 +375,7 @@
                         </td>
                         <td>
                             <input type="number" step="0.01" min="0" class="form-control form-control-sm price-input"
-                                name="items[${idx}][price]" value="${escapeHtml(price)}">
+                                name="items[${idx}][unit_price]" value="${escapeHtml(unitPrice)}">
                         </td>
                         <td>
                             <input type="text" class="form-control form-control-sm subtotal-display field-readonly"
@@ -393,7 +397,8 @@
                     tr.querySelector('.item-id-input').setAttribute('name', `items[${idx}][item_id]`);
                     tr.querySelector('.item-code-input').setAttribute('name', `items[${idx}][item_code]`);
                     tr.querySelector('.qty-input').setAttribute('name', `items[${idx}][ordered_qty]`);
-                    tr.querySelector('.price-input').setAttribute('name', `items[${idx}][price]`);
+                    tr.querySelector('.price-input').setAttribute('name', `items[${idx}][unit_price]`);
+                    tr.querySelector('.item-remarks-input').setAttribute('name', `items[${idx}][remarks]`);
                 });
             }
 
@@ -529,7 +534,8 @@
                     item_name: '',
                     unit_name: '',
                     ordered_qty: 1,
-                    price: ''
+                    unit_price: '',
+                    remarks: ''
                 });
             });
 

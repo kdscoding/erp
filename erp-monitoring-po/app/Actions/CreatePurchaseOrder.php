@@ -1,28 +1,14 @@
 <?php
 
-namespace App\Actions\PurchaseOrder;
+namespace App\Actions;
 
+use App\Support\DocumentTermCodes;
 use App\Support\ErpFlow;
-use App\Support\PurchaseOrderItemStatus;
-use App\Support\PurchaseOrderStatus;
 use App\Support\TermCatalog;
 use Illuminate\Support\Facades\DB;
 
 class CreatePurchaseOrder
 {
-  /**
-   * @param array{
-   *   po_number?: string|null,
-   *   po_date: string,
-   *   supplier_id: int,
-   *   items: array<int, array{
-   *     item_id: int,
-   *     ordered_qty: int|float|string,
-   *     unit_price?: int|float|string|null,
-   *     remarks?: string|null
-   *   }>
-   * } $validated
-   */
   public function handle(array $validated, ?int $userId = null, ?string $ip = null, ?string $notes = null): int
   {
     return DB::transaction(function () use ($validated, $userId, $ip, $notes) {
@@ -33,7 +19,7 @@ class CreatePurchaseOrder
         'po_number'   => $poNumber,
         'po_date'     => $validated['po_date'],
         'supplier_id' => $validated['supplier_id'],
-        'status'      => PurchaseOrderStatus::OPEN,
+        'status'      => DocumentTermCodes::PO_ISSUED,
         'notes'       => $notes,
         'created_by'  => $userId,
         'updated_by'  => $userId,
@@ -48,7 +34,7 @@ class CreatePurchaseOrder
           'ordered_qty'       => $row['ordered_qty'],
           'received_qty'      => 0,
           'outstanding_qty'   => $row['ordered_qty'],
-          'item_status'       => PurchaseOrderItemStatus::WAITING,
+          'item_status'       => DocumentTermCodes::ITEM_WAITING,
           'unit_price'        => $row['unit_price'] ?? null,
           'remarks'           => $row['remarks'] ?? null,
           'created_at'        => now(),
@@ -67,9 +53,13 @@ class CreatePurchaseOrder
       ErpFlow::pushPoStatus(
         (int) $poId,
         null,
-        PurchaseOrderStatus::OPEN,
+        DocumentTermCodes::PO_ISSUED,
         $userId,
-        TermCatalog::label('po_history_note', 'released_new_po', 'Released new PO')
+        TermCatalog::label(
+          DocumentTermCodes::GROUP_PO_HISTORY_NOTE,
+          DocumentTermCodes::NOTE_RELEASED_NEW_PO,
+          'Released new PO'
+        )
       );
 
       ErpFlow::audit(
@@ -78,7 +68,7 @@ class CreatePurchaseOrder
         'create',
         null,
         [
-          'status'      => PurchaseOrderStatus::OPEN,
+          'status'      => DocumentTermCodes::PO_ISSUED,
           'po_number'   => $poNumber,
           'po_date'     => $validated['po_date'],
           'supplier_id' => $validated['supplier_id'],
