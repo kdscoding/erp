@@ -4,26 +4,155 @@
 
 @section('content')
     @php($focusedShipmentId = (int) request('focus'))
+    @php($selectedItemIds = collect(request('selected_items', []))->map(fn($id) => (int) $id)->filter()->values()->all())
+    @php($isHistoryView = request()->routeIs('shipments.history') || request('view') === 'history')
 
     <style>
+        .ui-card {
+            border: 1px solid rgba(111, 150, 40, .14);
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 14px 28px rgba(111, 150, 40, .05);
+        }
+
+        .ui-card .card-header {
+            background: linear-gradient(135deg, rgba(245, 249, 221, .95), rgba(255, 255, 255, .98));
+            border-bottom: 1px solid rgba(111, 150, 40, .12);
+            padding: 1rem 1rem .85rem;
+        }
+
+        .ui-card .card-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #314216;
+            margin: 0;
+        }
+
+        .ui-card .card-body {
+            padding: 1rem;
+        }
+
+        .section-note {
+            font-size: .82rem;
+            color: #74805f;
+            margin-top: .2rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 1rem .9rem;
+        }
+
+        .span-12 {
+            grid-column: span 12;
+        }
+
+        .span-8 {
+            grid-column: span 8;
+        }
+
+        .span-6 {
+            grid-column: span 6;
+        }
+
+        .span-4 {
+            grid-column: span 4;
+        }
+
+        .span-3 {
+            grid-column: span 3;
+        }
+
+        .span-2 {
+            grid-column: span 2;
+        }
+
+        .field-label {
+            display: block;
+            font-size: .76rem;
+            font-weight: 700;
+            letter-spacing: .02em;
+            color: #52603d;
+            margin-bottom: .35rem;
+        }
+
+        .form-control-sm,
+        .form-select-sm {
+            min-height: 38px;
+            border-radius: 10px;
+        }
+
+        .field-help {
+            font-size: .72rem;
+            color: #7d866f;
+            margin-top: .3rem;
+            line-height: 1.3;
+        }
+
+        .soft-box {
+            border: 1px solid #e7eadf;
+            background: #fafcf5;
+            border-radius: 14px;
+            padding: .85rem .9rem;
+        }
+
+        .soft-box-title {
+            font-size: .74rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: #7d866f;
+            margin-bottom: .2rem;
+        }
+
+        .soft-box-value {
+            font-size: .95rem;
+            font-weight: 700;
+            color: #2f3c1b;
+        }
+
+        .builder-table th {
+            font-size: .7rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        .builder-table td {
+            vertical-align: middle;
+        }
+
+        .sticky-submit {
+            position: sticky;
+            bottom: 0;
+            z-index: 5;
+            background: rgba(255, 255, 255, .96);
+            border-top: 1px solid #e9ecef;
+            padding-top: .8rem;
+            margin-top: 1rem;
+            backdrop-filter: blur(6px);
+        }
+
+        .compact-note {
+            font-size: .72rem;
+            color: #7b8174;
+            line-height: 1.3;
+        }
+
         .history-shell {
             display: grid;
             gap: 1rem;
         }
 
-        .history-hero,
-        .history-surface {
+        .history-hero {
             border: 1px solid rgba(111, 150, 40, .12);
             border-radius: 18px;
-            background: rgba(255, 255, 255, .94);
-            box-shadow: 0 14px 32px rgba(111, 150, 40, .05);
-        }
-
-        .history-hero {
-            padding: 1rem 1.1rem;
             background:
                 radial-gradient(circle at top right, rgba(241, 217, 59, .24), transparent 30%),
                 linear-gradient(135deg, rgba(255, 255, 255, .96), rgba(245, 249, 221, .96));
+            box-shadow: 0 14px 32px rgba(111, 150, 40, .05);
+            padding: 1rem 1.1rem;
         }
 
         .history-hero-title {
@@ -67,27 +196,6 @@
             line-height: 1;
         }
 
-        .surface-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: .75rem;
-            flex-wrap: wrap;
-            padding: 1rem 1rem 0;
-        }
-
-        .surface-title {
-            margin: 0;
-            font-size: .96rem;
-            font-weight: 800;
-            color: #314216;
-        }
-
-        .surface-subtitle {
-            font-size: .8rem;
-            color: #7a8660;
-        }
-
         .history-filter {
             display: grid;
             grid-template-columns: 1fr 1fr auto auto;
@@ -107,6 +215,7 @@
         .history-table thead th {
             font-size: .69rem;
             letter-spacing: .08em;
+            white-space: nowrap;
         }
 
         .shipment-number {
@@ -125,21 +234,27 @@
             flex-wrap: wrap;
         }
 
-        .money-note {
-            font-size: 11px;
-            color: #6c757d;
-        }
-
         @media (max-width: 991.98px) {
+
+            .span-8,
+            .span-6,
+            .span-4,
+            .span-3,
+            .span-2 {
+                grid-column: span 12;
+            }
+
             .history-stat-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .history-filter {
+                grid-template-columns: 1fr;
             }
         }
 
         @media (max-width: 767.98px) {
-
-            .history-stat-grid,
-            .history-filter {
+            .history-stat-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -161,48 +276,51 @@
         </div>
     @endif
 
-    @php($selectedItemIds = collect(request('selected_items', []))->map(fn($id) => (int) $id)->filter()->values()->all())
-    @php($isHistoryView = request()->routeIs('shipments.history') || request('view') === 'history')
-
     @if (!$isHistoryView)
-        <div class="card card-outline card-primary mb-3">
+        <div class="card ui-card mb-3">
             <div class="card-header">
                 <h3 class="card-title">Pembuatan Draft Shipment</h3>
+                <div class="section-note">Dokumen supplier dicatat di tahap ini: delivery note, invoice, qty kirim, dan harga
+                    invoice aktual.</div>
             </div>
             <div class="card-body">
-                <div class="alert alert-info mb-3">
-                    Mulai dari dokumen supplier. Di tahap draft ini kamu bisa mencatat
-                    <strong>delivery note</strong>, <strong>invoice</strong>, dan <strong>harga invoice per item</strong>.
-                </div>
-
                 @if ($selectedItems->isNotEmpty())
                     <div class="alert alert-warning mb-3">
-                        Supplier sudah terkunci ke <strong>{{ $selectedItems->first()->supplier_name }}</strong>.
-                        Item dari supplier lain tidak akan ditampilkan selama builder draft ini masih aktif.
+                        Supplier terkunci ke <strong>{{ $selectedItems->first()->supplier_name }}</strong> agar satu draft
+                        shipment tetap konsisten dalam satu supplier.
                     </div>
                 @endif
 
-                <form method="GET" class="row g-2 align-items-end shipment-selection-form">
-                    <div class="col-md-3">
-                        <label class="form-label">Supplier</label>
-                        <select name="supplier_id" class="form-control form-control-sm"
-                            {{ $selectedItems->isNotEmpty() ? 'disabled' : '' }}>
-                            <option value="">Semua Supplier</option>
-                            @foreach ($suppliers as $supplier)
-                                <option value="{{ $supplier->id }}" @selected((int) request('supplier_id', $selectedSupplierId) == (int) $supplier->id)>
-                                    {{ $supplier->supplier_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @if ($selectedItems->isNotEmpty())
-                            <input type="hidden" name="supplier_id" value="{{ $selectedSupplierId }}">
-                        @endif
-                    </div>
+                <form method="GET" class="shipment-selection-form">
+                    <div class="form-grid">
+                        <div class="span-3">
+                            <label class="field-label">Supplier</label>
+                            <select name="supplier_id" class="form-control form-control-sm"
+                                {{ $selectedItems->isNotEmpty() ? 'disabled' : '' }}>
+                                <option value="">Semua Supplier</option>
+                                @foreach ($suppliers as $supplier)
+                                    <option value="{{ $supplier->id }}" @selected((int) request('supplier_id', $selectedSupplierId) == (int) $supplier->id)>
+                                        {{ $supplier->supplier_name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @if ($selectedItems->isNotEmpty())
+                                <input type="hidden" name="supplier_id" value="{{ $selectedSupplierId }}">
+                            @endif
+                        </div>
 
-                    <div class="col-md-8">
-                        <label class="form-label">Cari Item / PO / Supplier</label>
-                        <input type="text" name="keyword" value="{{ request('keyword') }}"
-                            class="form-control form-control-sm" placeholder="Contoh: item code, nama item, PO, supplier">
+                        <div class="span-8">
+                            <label class="field-label">Cari Item / PO / Supplier</label>
+                            <input type="text" name="keyword" value="{{ request('keyword') }}"
+                                class="form-control form-control-sm"
+                                placeholder="Contoh: item code, nama item, nomor PO, nama supplier">
+                            <div class="field-help">Gunakan pencarian ini untuk mempersempit kandidat item sebelum
+                                dimasukkan ke draft.</div>
+                        </div>
+
+                        <div class="span-1 d-flex align-items-end">
+                            <button class="btn btn-outline-primary btn-sm w-100">Cari</button>
+                        </div>
                     </div>
 
                     <input type="hidden" name="view" value="draft">
@@ -218,36 +336,28 @@
                     @foreach ($draftInvoicePrices as $itemId => $price)
                         <input type="hidden" name="invoice_unit_price[{{ $itemId }}]" value="{{ $price }}">
                     @endforeach
-
-                    <div class="col-md-1">
-                        <button class="btn btn-outline-primary btn-sm w-100">Cari</button>
-                    </div>
                 </form>
             </div>
         </div>
 
-        <div class="card mb-3">
-            <div class="card-header">
-                <h3 class="card-title">1. Pilih Item yang Akan Dikirim</h3>
+        <div class="card ui-card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div>
+                    <h3 class="card-title">1. Pilih Item yang Akan Dikirim</h3>
+                    <div class="section-note">Centang item yang akan masuk ke dokumen shipment draft.</div>
+                </div>
+                @if ($hasSearch)
+                    <button type="button" class="btn btn-primary btn-sm" onclick="addCheckedCandidateItems()">Tambahkan ke
+                        Draft</button>
+                @endif
             </div>
             <div class="card-body table-responsive p-0">
                 @if (!$hasSearch)
                     <div class="p-3 text-muted">
-                        Kandidat item akan muncul setelah Anda mencari supplier atau keyword item/PO.
+                        Kandidat item akan muncul setelah kamu memilih supplier atau melakukan pencarian.
                     </div>
                 @else
-                    <div class="p-3 border-bottom bg-light">
-                        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                            <div>
-                                <div class="font-weight-bold">Kandidat Item</div>
-                                <small class="text-muted">Centang item yang ingin dimasukkan ke draft shipment.</small>
-                            </div>
-                            <button type="button" class="btn btn-primary btn-sm"
-                                onclick="addCheckedCandidateItems()">Tambahkan ke Draft</button>
-                        </div>
-                    </div>
-
-                    <table class="table table-hover mb-0">
+                    <table class="table table-hover mb-0 builder-table">
                         <thead>
                             <tr>
                                 <th><input type="checkbox" onchange="toggleCandidateCheckboxes(this.checked)"></th>
@@ -256,7 +366,7 @@
                                 <th>Item</th>
                                 <th>Harga PO</th>
                                 <th>Outstanding PO</th>
-                                <th>Sudah Dialokasikan</th>
+                                <th>Dialokasikan</th>
                                 <th>Sisa Bisa Dikirim</th>
                                 <th>ETD</th>
                             </tr>
@@ -276,9 +386,11 @@
                                         {{ $candidate->po_number }}<br>
                                         <x-status-badge :status="$candidate->po_status" scope="po" />
                                     </td>
-                                    <td><strong>{{ $candidate->item_code }}</strong><br>{{ $candidate->item_name }}</td>
                                     <td>
-                                        {{ $candidate->unit_price !== null ? \App\Support\NumberFormatter::trim($candidate->unit_price) : '-' }}
+                                        <strong>{{ $candidate->item_code }}</strong><br>
+                                        {{ $candidate->item_name }}
+                                    </td>
+                                    <td>{{ $candidate->unit_price !== null ? \App\Support\NumberFormatter::trim($candidate->unit_price) : '-' }}
                                     </td>
                                     <td>{{ \App\Support\NumberFormatter::trim($candidate->outstanding_qty) }}</td>
                                     <td>{{ \App\Support\NumberFormatter::trim($candidate->open_shipment_qty) }}</td>
@@ -287,7 +399,7 @@
                                             {{ \App\Support\NumberFormatter::trim(max(0, $candidate->available_to_ship_qty)) }}
                                         </span>
                                         @if (!$isAllocatable)
-                                            <br><small class="text-muted">Sudah teralokasi di shipment aktif</small>
+                                            <div class="compact-note mt-1">Sudah teralokasi di shipment aktif.</div>
                                         @endif
                                     </td>
                                     <td>{{ $candidate->etd_date ? \Carbon\Carbon::parse($candidate->etd_date)->format('d-m-Y') : '-' }}
@@ -296,8 +408,7 @@
                             @empty
                                 <tr>
                                     <td colspan="9" class="text-center text-muted">
-                                        Belum ada kandidat. Coba filter supplier atau cari berdasarkan item yang akan
-                                        datang.
+                                        Belum ada kandidat. Coba ubah filter atau kata kunci pencarian.
                                     </td>
                                 </tr>
                             @endforelse
@@ -307,167 +418,181 @@
             </div>
         </div>
 
-        <div class="card card-primary card-outline mb-3">
+        <div class="card ui-card mb-3">
             <div class="card-header">
-                <h3 class="card-title">2. Simpan Draft Shipment</h3>
+                <h3 class="card-title">2. Review Draft Shipment</h3>
+                <div class="section-note">Isi dokumen supplier dan periksa qty serta harga invoice tiap item.</div>
             </div>
             <div class="card-body">
                 @if ($selectedItems->isNotEmpty())
-                    <div class="alert alert-success">
-                        {{ $selectedItems->count() }} item terpilih dari
-                        {{ $selectedItems->pluck('purchase_order_id')->unique()->count() }} PO.
-                        Supplier: <strong>{{ $selectedItems->first()->supplier_name }}</strong>
-                    </div>
-
-                    <div class="mb-3 p-3 border rounded bg-light">
-                        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                            <div>
-                                <div class="font-weight-bold">Item Dalam Draft</div>
-                                <small class="text-muted">Review item, qty kirim, dan harga invoice aktual per item.</small>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <div class="soft-box">
+                                <div class="soft-box-title">Supplier</div>
+                                <div class="soft-box-value">{{ $selectedItems->first()->supplier_name }}</div>
                             </div>
-                            <button type="button" class="btn btn-outline-danger btn-sm"
-                                onclick="removeCheckedDraftItems()">Keluarkan Item Terpilih</button>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="soft-box">
+                                <div class="soft-box-title">Jumlah Item</div>
+                                <div class="soft-box-value">{{ $selectedItems->count() }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="soft-box">
+                                <div class="soft-box-title">PO Terkait</div>
+                                <div class="soft-box-value">
+                                    {{ $selectedItems->pluck('purchase_order_id')->unique()->count() }}</div>
+                            </div>
                         </div>
                     </div>
                 @else
                     <div class="alert alert-warning">
-                        Pilih minimal satu item di tabel di atas. Draft shipment akan dibuat per dokumen supplier.
+                        Pilih minimal satu item dari tabel kandidat sebelum membuat draft shipment.
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('shipments.store') }}" class="row g-2">
+                <form method="POST" action="{{ route('shipments.store') }}">
                     @csrf
 
-                    <div class="col-md-4">
-                        <label class="form-label">Supplier</label>
-                        <input type="text" class="form-control form-control-sm"
-                            value="{{ optional($selectedItems->first())->supplier_name ?: '-' }}" disabled>
-                    </div>
+                    <div class="form-grid mb-3">
+                        <div class="span-4">
+                            <label class="field-label">Supplier</label>
+                            <input type="text" class="form-control form-control-sm"
+                                value="{{ optional($selectedItems->first())->supplier_name ?: '-' }}" disabled>
+                        </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">No Delivery Note</label>
-                        <input type="text" name="delivery_note_number" value="{{ old('delivery_note_number') }}"
-                            class="form-control form-control-sm" placeholder="No surat jalan supplier" required>
-                    </div>
+                        <div class="span-3">
+                            <label class="field-label">No Delivery Note</label>
+                            <input type="text" name="delivery_note_number" value="{{ old('delivery_note_number') }}"
+                                class="form-control form-control-sm" placeholder="No surat jalan supplier" required>
+                        </div>
 
-                    <div class="col-md-2">
-                        <label class="form-label">Tanggal Dokumen</label>
-                        <input type="date" name="shipment_date"
-                            value="{{ old('shipment_date', now()->format('Y-m-d')) }}" class="form-control form-control-sm"
-                            required>
-                    </div>
+                        <div class="span-2">
+                            <label class="field-label">Tanggal Dokumen</label>
+                            <input type="date" name="shipment_date"
+                                value="{{ old('shipment_date', now()->format('Y-m-d')) }}"
+                                class="form-control form-control-sm" required>
+                        </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">No Invoice</label>
-                        <input type="text" name="invoice_number" value="{{ old('invoice_number') }}"
-                            class="form-control form-control-sm" placeholder="Nomor invoice supplier">
-                    </div>
+                        <div class="span-3">
+                            <label class="field-label">No Invoice</label>
+                            <input type="text" name="invoice_number" value="{{ old('invoice_number') }}"
+                                class="form-control form-control-sm" placeholder="Nomor invoice supplier">
+                        </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">Tanggal Invoice</label>
-                        <input type="date" name="invoice_date" value="{{ old('invoice_date') }}"
-                            class="form-control form-control-sm">
-                    </div>
+                        <div class="span-3">
+                            <label class="field-label">Tanggal Invoice</label>
+                            <input type="date" name="invoice_date" value="{{ old('invoice_date') }}"
+                                class="form-control form-control-sm">
+                        </div>
 
-                    <div class="col-md-2">
-                        <label class="form-label">Currency</label>
-                        <input type="text" name="invoice_currency" value="{{ old('invoice_currency', 'IDR') }}"
-                            class="form-control form-control-sm" maxlength="10" placeholder="IDR">
-                    </div>
+                        <div class="span-2">
+                            <label class="field-label">Currency</label>
+                            <input type="text" name="invoice_currency" value="{{ old('invoice_currency', 'IDR') }}"
+                                class="form-control form-control-sm" maxlength="10" placeholder="IDR">
+                        </div>
 
-                    <div class="col-md-3">
-                        <div class="form-check mt-4">
-                            <input class="form-check-input" type="checkbox" value="1" name="po_reference_missing"
-                                id="po_reference_missing" @checked(old('po_reference_missing') === '1')>
-                            <label class="form-check-label" for="po_reference_missing">
-                                Nomor PO tidak ada di dokumen supplier
-                            </label>
+                        <div class="span-3 d-flex align-items-end">
+                            <div class="form-check mb-1">
+                                <input class="form-check-input" type="checkbox" value="1"
+                                    name="po_reference_missing" id="po_reference_missing" @checked(old('po_reference_missing') === '1')>
+                                <label class="form-check-label" for="po_reference_missing">
+                                    Nomor PO tidak ada di dokumen supplier
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="span-4">
+                            <label class="field-label">Catatan</label>
+                            <input type="text" name="supplier_remark" value="{{ old('supplier_remark') }}"
+                                class="form-control form-control-sm"
+                                placeholder="Catatan internal atau info tambahan supplier">
                         </div>
                     </div>
 
-                    <div class="col-md-4">
-                        <label class="form-label">Catatan</label>
-                        <input type="text" name="supplier_remark" value="{{ old('supplier_remark') }}"
-                            class="form-control form-control-sm" placeholder="Catatan internal / info supplier">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                        <div class="compact-note">
+                            Harga invoice dicatat di draft shipment agar tidak perlu diinput ulang saat receiving.
+                        </div>
+                        @if ($selectedItems->isNotEmpty())
+                            <button type="button" class="btn btn-outline-danger btn-sm"
+                                onclick="removeCheckedDraftItems()">Keluarkan Item Terpilih</button>
+                        @endif
                     </div>
 
-                    <div class="col-12">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered align-middle mb-0">
-                                <thead>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered align-middle mb-0 builder-table">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" onchange="toggleDraftCheckboxes(this.checked)"></th>
+                                    <th>PO</th>
+                                    <th>Item</th>
+                                    <th>Harga PO</th>
+                                    <th>Sisa Bisa Dikirim</th>
+                                    <th>Qty Draft</th>
+                                    <th>Harga Invoice</th>
+                                    <th>Total Invoice</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($selectedItems as $item)
+                                    @php($draftPrice = old('invoice_unit_price.' . $item->purchase_order_item_id, $draftInvoicePrices[$item->purchase_order_item_id] ?? ''))
                                     <tr>
-                                        <th><input type="checkbox" onchange="toggleDraftCheckboxes(this.checked)"></th>
-                                        <th>PO</th>
-                                        <th>Item</th>
-                                        <th>Harga PO</th>
-                                        <th>Sisa Bisa Dikirim</th>
-                                        <th>Qty di Draft Ini</th>
-                                        <th>Harga Invoice</th>
-                                        <th>Total Invoice</th>
-                                        <th>Aksi</th>
+                                        <td>
+                                            <input type="checkbox" class="draft-item-checkbox"
+                                                value="{{ $item->purchase_order_item_id }}">
+                                        </td>
+                                        <td>{{ $item->po_number }}</td>
+                                        <td>
+                                            <strong>{{ $item->item_code }}</strong><br>
+                                            {{ $item->item_name }}
+                                        </td>
+                                        <td>{{ $item->unit_price !== null ? \App\Support\NumberFormatter::trim($item->unit_price) : '-' }}
+                                        </td>
+                                        <td>{{ \App\Support\NumberFormatter::trim($item->available_to_ship_qty) }}</td>
+                                        <td style="min-width: 140px;">
+                                            <input type="hidden" name="selected_items[]"
+                                                value="{{ $item->purchase_order_item_id }}">
+                                            <input type="number" step="0.01" min="0.01"
+                                                max="{{ \App\Support\NumberFormatter::input($item->available_to_ship_qty) }}"
+                                                name="shipped_qty[{{ $item->purchase_order_item_id }}]"
+                                                value="{{ \App\Support\NumberFormatter::input(old('shipped_qty.' . $item->purchase_order_item_id, $draftQuantities[$item->purchase_order_item_id] ?? $item->available_to_ship_qty)) }}"
+                                                class="form-control form-control-sm draft-qty-input"
+                                                data-item-id="{{ $item->purchase_order_item_id }}" required>
+                                        </td>
+                                        <td style="min-width: 160px;">
+                                            <input type="number" step="0.0001" min="0"
+                                                name="invoice_unit_price[{{ $item->purchase_order_item_id }}]"
+                                                value="{{ $draftPrice }}"
+                                                class="form-control form-control-sm draft-price-input"
+                                                data-item-id="{{ $item->purchase_order_item_id }}"
+                                                placeholder="Opsional">
+                                        </td>
+                                        <td style="min-width: 140px;">
+                                            <input type="text"
+                                                class="form-control form-control-sm bg-light draft-line-total"
+                                                data-item-id="{{ $item->purchase_order_item_id }}" value="-"
+                                                readonly>
+                                        </td>
+                                        <td class="text-nowrap">
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                onclick="removeDraftItem('{{ $item->purchase_order_item_id }}')">
+                                                Batal Pilih
+                                            </button>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($selectedItems as $item)
-                                        @php($draftPrice = old('invoice_unit_price.' . $item->purchase_order_item_id, $draftInvoicePrices[$item->purchase_order_item_id] ?? ''))
-                                        <tr>
-                                            <td>
-                                                <input type="checkbox" class="draft-item-checkbox"
-                                                    value="{{ $item->purchase_order_item_id }}">
-                                            </td>
-                                            <td>{{ $item->po_number }}</td>
-                                            <td>
-                                                <strong>{{ $item->item_code }}</strong><br>
-                                                {{ $item->item_name }}
-                                            </td>
-                                            <td>
-                                                {{ $item->unit_price !== null ? \App\Support\NumberFormatter::trim($item->unit_price) : '-' }}
-                                            </td>
-                                            <td>{{ \App\Support\NumberFormatter::trim($item->available_to_ship_qty) }}</td>
-                                            <td>
-                                                <input type="hidden" name="selected_items[]"
-                                                    value="{{ $item->purchase_order_item_id }}">
-                                                <input type="number" step="0.01" min="0.01"
-                                                    max="{{ \App\Support\NumberFormatter::input($item->available_to_ship_qty) }}"
-                                                    name="shipped_qty[{{ $item->purchase_order_item_id }}]"
-                                                    value="{{ \App\Support\NumberFormatter::input(old('shipped_qty.' . $item->purchase_order_item_id, $draftQuantities[$item->purchase_order_item_id] ?? $item->available_to_ship_qty)) }}"
-                                                    class="form-control form-control-sm draft-qty-input"
-                                                    data-item-id="{{ $item->purchase_order_item_id }}" required>
-                                            </td>
-                                            <td>
-                                                <input type="number" step="0.0001" min="0"
-                                                    name="invoice_unit_price[{{ $item->purchase_order_item_id }}]"
-                                                    value="{{ $draftPrice }}"
-                                                    class="form-control form-control-sm draft-price-input"
-                                                    data-item-id="{{ $item->purchase_order_item_id }}"
-                                                    placeholder="Opsional">
-                                                <div class="money-note">Kosongkan bila belum ada harga invoice.</div>
-                                            </td>
-                                            <td>
-                                                <input type="text"
-                                                    class="form-control form-control-sm field-readonly draft-line-total"
-                                                    data-item-id="{{ $item->purchase_order_item_id }}" value="-"
-                                                    readonly>
-                                            </td>
-                                            <td class="text-nowrap">
-                                                <button type="button" class="btn btn-sm btn-outline-danger"
-                                                    onclick="removeDraftItem('{{ $item->purchase_order_item_id }}')">
-                                                    Batal Pilih
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="9" class="text-center text-muted">Belum ada item terpilih.
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
+                                @empty
+                                    <tr>
+                                        <td colspan="9" class="text-center text-muted">Belum ada item terpilih.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
 
-                    <div class="col-12 d-flex justify-content-end">
+                    <div class="sticky-submit d-flex justify-content-end">
                         <button class="btn btn-primary btn-sm" {{ $selectedItems->isEmpty() ? 'disabled' : '' }}>
                             Simpan Draft Shipment
                         </button>
@@ -481,9 +606,9 @@
             <section class="history-hero">
                 <div class="row g-3 align-items-end">
                     <div class="col-lg-5">
-                        <div class="history-hero-title">Riwayat shipment dibuat lebih ringkas dan cepat dipindai.</div>
-                        <p class="history-hero-copy">Lihat delivery note, invoice supplier, dan progres dokumen shipment.
-                        </p>
+                        <div class="history-hero-title">Riwayat shipment lebih rapi dan mudah ditelusuri.</div>
+                        <p class="history-hero-copy">Delivery note, invoice supplier, dan progres shipment tampil dalam
+                            satu tempat.</p>
                     </div>
                     <div class="col-lg-7">
                         <div class="history-stat-grid">
@@ -516,22 +641,20 @@
                 </div>
             </section>
 
-            <section class="history-surface">
-                <div class="surface-head">
-                    <div>
-                        <h3 class="surface-title">Filter Riwayat Shipment</h3>
-                        <div class="surface-subtitle">Cari berdasarkan delivery note atau nomor invoice.</div>
-                    </div>
+            <section class="card ui-card">
+                <div class="card-header">
+                    <h3 class="card-title">Filter Riwayat Shipment</h3>
+                    <div class="section-note">Cari berdasarkan delivery note atau invoice supplier.</div>
                 </div>
 
                 <form method="GET" class="history-filter">
                     <div>
-                        <label class="form-label">Cari Delivery Note</label>
+                        <label class="field-label">Delivery Note</label>
                         <input type="text" name="delivery_note_number" value="{{ request('delivery_note_number') }}"
                             class="form-control form-control-sm" placeholder="No surat jalan supplier">
                     </div>
                     <div>
-                        <label class="form-label">Cari Invoice</label>
+                        <label class="field-label">Invoice</label>
                         <input type="text" name="invoice_number" value="{{ request('invoice_number') }}"
                             class="form-control form-control-sm" placeholder="No invoice supplier">
                     </div>
@@ -541,12 +664,10 @@
                 </form>
             </section>
 
-            <section class="history-surface">
-                <div class="surface-head">
-                    <div>
-                        <h3 class="surface-title">Daftar Riwayat Shipment</h3>
-                        <div class="surface-subtitle">Dokumen shipment dari draft sampai selesai.</div>
-                    </div>
+            <section class="card ui-card">
+                <div class="card-header">
+                    <h3 class="card-title">Daftar Riwayat Shipment</h3>
+                    <div class="section-note">Dokumen shipment dari draft sampai selesai.</div>
                 </div>
 
                 <div class="history-table-wrap table-responsive">
@@ -560,7 +681,7 @@
                                 <th>Status</th>
                                 <th>Delivery Note</th>
                                 <th>Invoice</th>
-                                <th>Tanggal Dokumen</th>
+                                <th>Tanggal</th>
                                 <th>Catatan</th>
                                 <th>Aksi</th>
                             </tr>
@@ -578,9 +699,7 @@
                                     <td>{{ $r->po_numbers ?: '-' }}<br><span class="shipment-meta">{{ $r->po_count }}
                                             PO</span></td>
                                     <td>{{ $r->line_count }}</td>
-                                    <td>
-                                        <x-status-badge :status="$r->status" scope="shipment" />
-                                    </td>
+                                    <td><x-status-badge :status="$r->status" scope="shipment" /></td>
                                     <td>{{ $r->delivery_note_number ?: '-' }}</td>
                                     <td>
                                         {{ $r->invoice_number ?: '-' }}
@@ -602,7 +721,7 @@
                                                     action="{{ route('shipments.mark-shipped', $r->id) }}">
                                                     @csrf
                                                     @method('PATCH')
-                                                    <button class="btn btn-sm btn-outline-primary">Tandai Sudah
+                                                    <button class="btn btn-sm btn-outline-primary">Tandai
                                                         Berangkat</button>
                                                 </form>
                                                 <form method="POST"
@@ -622,7 +741,7 @@
                                                 <a href="{{ route('shipments.show', $r->id) }}"
                                                     class="btn btn-sm btn-light">Lihat</a>
                                                 <a href="{{ route('receiving.process', ['supplier_id' => $r->supplier_id, 'shipment_id' => $r->id, 'document_number' => $r->delivery_note_number]) }}"
-                                                    class="btn btn-sm btn-outline-primary">Lanjut ke Receiving</a>
+                                                    class="btn btn-sm btn-outline-primary">Lanjut Receiving</a>
                                             </div>
                                         @else
                                             <a href="{{ route('shipments.show', $r->id) }}"

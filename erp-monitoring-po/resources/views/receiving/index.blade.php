@@ -4,28 +4,136 @@
 
 @section('content')
     <style>
-        .receiving-card-note {
-            font-size: 12px;
-            color: #6c757d;
+        .ui-card {
+            border: 1px solid rgba(111, 150, 40, .14);
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 14px 28px rgba(111, 150, 40, .05);
+        }
+
+        .ui-card .card-header {
+            background: linear-gradient(135deg, rgba(245, 249, 221, .95), rgba(255, 255, 255, .98));
+            border-bottom: 1px solid rgba(111, 150, 40, .12);
+            padding: 1rem 1rem .85rem;
+        }
+
+        .ui-card .card-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #314216;
+            margin: 0;
+        }
+
+        .ui-card .card-body {
+            padding: 1rem;
+        }
+
+        .section-note {
+            font-size: .82rem;
+            color: #74805f;
+            margin-top: .2rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 1rem .9rem;
+        }
+
+        .span-12 {
+            grid-column: span 12;
+        }
+
+        .span-6 {
+            grid-column: span 6;
+        }
+
+        .span-4 {
+            grid-column: span 4;
+        }
+
+        .span-3 {
+            grid-column: span 3;
+        }
+
+        .span-2 {
+            grid-column: span 2;
+        }
+
+        .field-label {
+            display: block;
+            font-size: .76rem;
+            font-weight: 700;
+            letter-spacing: .02em;
+            color: #52603d;
+            margin-bottom: .35rem;
+        }
+
+        .form-control-sm,
+        .form-select-sm {
+            min-height: 38px;
+            border-radius: 10px;
+        }
+
+        .field-help {
+            font-size: .72rem;
+            color: #7d866f;
+            margin-top: .3rem;
+            line-height: 1.3;
         }
 
         .invoice-box {
-            border: 1px solid #dee2e6;
-            border-radius: .5rem;
-            background: #f8f9fa;
-            padding: .75rem;
+            border: 1px solid #e7eadf;
+            border-radius: 14px;
+            background: #fafcf5;
+            padding: .9rem 1rem;
+            height: 100%;
         }
 
         .invoice-label {
-            font-size: 11px;
+            font-size: .72rem;
             text-transform: uppercase;
-            color: #6c757d;
-            margin-bottom: 2px;
+            letter-spacing: .08em;
+            color: #7d866f;
+            margin-bottom: .25rem;
         }
 
         .invoice-value {
-            font-weight: 600;
-            color: #212529;
+            font-size: .95rem;
+            font-weight: 700;
+            color: #2f3c1b;
+            word-break: break-word;
+        }
+
+        .builder-table th {
+            font-size: .7rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        .builder-table td {
+            vertical-align: middle;
+        }
+
+        .soft-alert {
+            border: 1px solid #e7eadf;
+            background: #fafcf5;
+            border-radius: 14px;
+            padding: .85rem 1rem;
+            font-size: .82rem;
+            color: #566246;
+        }
+
+        @media (max-width: 991.98px) {
+
+            .span-6,
+            .span-4,
+            .span-3,
+            .span-2 {
+                grid-column: span 12;
+            }
         }
     </style>
 
@@ -48,57 +156,62 @@
     @endif
 
     @if ($mode === 'process')
-        <div class="card card-outline card-primary mb-3">
+        <div class="card ui-card mb-3">
             <div class="card-header">
                 <h3 class="card-title">1. Cari Dokumen Shipment</h3>
+                <div class="section-note">Cari dokumen supplier yang siap diterima gudang.</div>
             </div>
             <div class="card-body">
-                <form method="GET" action="{{ route('receiving.process') }}" class="row g-2 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label">Supplier</label>
-                        <select name="supplier_id" class="form-select form-select-sm">
-                            <option value="">Semua Supplier</option>
-                            @foreach ($suppliers as $supplier)
-                                <option value="{{ $supplier->id }}" @selected(request('supplier_id') == $supplier->id)>
-                                    {{ $supplier->supplier_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                <form method="GET" action="{{ route('receiving.process') }}">
+                    <div class="form-grid">
+                        <div class="span-3">
+                            <label class="field-label">Supplier</label>
+                            <select name="supplier_id" class="form-control form-control-sm">
+                                <option value="">Semua Supplier</option>
+                                @foreach ($suppliers as $supplier)
+                                    <option value="{{ $supplier->id }}" @selected(request('supplier_id') == $supplier->id)>
+                                        {{ $supplier->supplier_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label">Delivery Note</label>
-                        <input type="text" name="document_number" value="{{ request('document_number') }}"
-                            class="form-control form-control-sm" placeholder="No surat jalan supplier">
-                    </div>
+                        <div class="span-3">
+                            <label class="field-label">Delivery Note</label>
+                            <input type="text" name="document_number" value="{{ request('document_number') }}"
+                                class="form-control form-control-sm" placeholder="No surat jalan supplier">
+                        </div>
 
-                    <div class="col-md-2">
-                        <label class="form-label">Invoice</label>
-                        <input type="text" name="keyword" value="{{ request('keyword') }}"
-                            class="form-control form-control-sm" placeholder="Shipment / PO / invoice">
-                    </div>
+                        <div class="span-4">
+                            <label class="field-label">Cari Shipment / PO / Invoice</label>
+                            <input type="text" name="keyword" value="{{ request('keyword') }}"
+                                class="form-control form-control-sm" placeholder="Shipment, PO, invoice, supplier">
+                        </div>
 
-                    <div class="col-md-2">
-                        <button class="btn btn-primary btn-sm w-100">Tampilkan Dokumen</button>
+                        <div class="span-2 d-flex align-items-end">
+                            <button class="btn btn-primary btn-sm w-100">Tampilkan Dokumen</button>
+                        </div>
                     </div>
                 </form>
             </div>
         </div>
 
-        <div class="card mb-3">
+        <div class="card ui-card mb-3">
             <div class="card-header">
                 <h3 class="card-title">2. Pilih Dokumen Yang Akan Diterima</h3>
+                <div class="section-note">Pilih satu dokumen shipment, lalu gudang tinggal isi qty yang benar-benar datang.
+                </div>
             </div>
             <div class="card-body table-responsive p-0">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover mb-0 builder-table">
                     <thead>
                         <tr>
                             <th>Shipment</th>
                             <th>Supplier</th>
                             <th>Delivery Note</th>
                             <th>Invoice</th>
-                            <th>Tanggal Dokumen</th>
+                            <th>Tanggal</th>
                             <th>PO</th>
-                            <th>Line Item</th>
+                            <th>Line</th>
                             <th>Sisa Kiriman</th>
                             <th>Aksi</th>
                         </tr>
@@ -120,7 +233,7 @@
                                 <td>
                                     <a href="{{ route('receiving.process', ['shipment_id' => $document->id, 'supplier_id' => request('supplier_id'), 'document_number' => request('document_number'), 'keyword' => request('keyword')]) }}"
                                         class="btn btn-sm btn-outline-primary">
-                                        Pilih Dokumen
+                                        Pilih
                                     </a>
                                 </td>
                             </tr>
@@ -135,19 +248,21 @@
             </div>
         </div>
 
-        <div class="card card-outline card-primary mb-3">
+        <div class="card ui-card mb-3">
             <div class="card-header">
                 <h3 class="card-title">3. Konfirmasi Receiving</h3>
+                <div class="section-note">Receiving hanya mencatat qty fisik yang datang. Harga invoice dibaca dari shipment
+                    draft.</div>
             </div>
             <div class="card-body">
                 @if ($selectedShipment)
-                    <div class="alert alert-info">
-                        Warehouse akan memproses dokumen <strong>{{ $selectedShipment->shipment_number }}</strong> dari
-                        supplier
-                        <strong>{{ $selectedShipment->supplier_name }}</strong>.
-                    </div>
-
                     <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <div class="invoice-box">
+                                <div class="invoice-label">Shipment</div>
+                                <div class="invoice-value">{{ $selectedShipment->shipment_number }}</div>
+                            </div>
+                        </div>
                         <div class="col-md-4">
                             <div class="invoice-box">
                                 <div class="invoice-label">Delivery Note</div>
@@ -160,16 +275,12 @@
                                 <div class="invoice-value">{{ $selectedShipment->invoice_number ?: '-' }}</div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="invoice-box">
-                                <div class="invoice-label">Tanggal Dokumen</div>
-                                <div class="invoice-value">
-                                    {{ \Carbon\Carbon::parse($selectedShipment->shipment_date)->format('d-m-Y') }}</div>
-                            </div>
-                        </div>
                     </div>
 
-                    <div class="d-flex justify-content-end mb-3">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <div class="soft-alert">
+                            Dokumen diproses untuk supplier <strong>{{ $selectedShipment->supplier_name }}</strong>.
+                        </div>
                         <a href="{{ route('receiving.process', ['clear_selection' => 1, 'supplier_id' => request('supplier_id'), 'document_number' => request('document_number'), 'keyword' => request('keyword')]) }}"
                             class="btn btn-sm btn-outline-secondary">
                             Batalkan Pilihan Dokumen
@@ -182,38 +293,34 @@
                         <input type="hidden" name="supplier_id" value="{{ request('supplier_id') }}">
                         <input type="hidden" name="search_document_number" value="{{ request('document_number') }}">
 
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-3">
-                                <label class="form-label">Tanggal Terima</label>
+                        <div class="form-grid mb-3">
+                            <div class="span-3">
+                                <label class="field-label">Tanggal Terima</label>
                                 <input type="date" name="receipt_date" class="form-control form-control-sm"
                                     value="{{ old('receipt_date', now()->format('Y-m-d')) }}" required>
                             </div>
 
-                            <div class="col-md-3">
-                                <label class="form-label">No Dokumen Receiving</label>
+                            <div class="span-3">
+                                <label class="field-label">No Dokumen Receiving</label>
                                 <input type="text" name="document_number" class="form-control form-control-sm"
                                     value="{{ old('document_number', $selectedShipment->delivery_note_number) }}" required>
                             </div>
 
-                            <div class="col-md-3">
-                                <label class="form-label">Lampiran</label>
+                            <div class="span-3">
+                                <label class="field-label">Lampiran</label>
                                 <input type="file" name="attachment" class="form-control form-control-sm"
                                     accept=".jpg,.jpeg,.png,.pdf">
                             </div>
 
-                            <div class="col-md-3">
-                                <label class="form-label">Catatan</label>
+                            <div class="span-3">
+                                <label class="field-label">Catatan</label>
                                 <input type="text" name="note" class="form-control form-control-sm"
                                     value="{{ old('note') }}" placeholder="Opsional">
                             </div>
                         </div>
 
-                        <div class="receiving-card-note mb-2">
-                            Harga invoice ditampilkan dari draft shipment dan tidak diinput ulang di receiving.
-                        </div>
-
                         <div class="table-responsive">
-                            <table class="table table-hover table-bordered mb-3">
+                            <table class="table table-hover table-bordered mb-0 builder-table">
                                 <thead>
                                     <tr>
                                         <th>PO</th>
@@ -243,10 +350,12 @@
                                             </td>
                                             <td>{{ \App\Support\NumberFormatter::trim($item->shipped_qty) }}</td>
                                             <td>{{ \App\Support\NumberFormatter::trim($item->shipment_received_qty) }}</td>
-                                            <td><span
-                                                    class="badge bg-warning text-dark">{{ \App\Support\NumberFormatter::trim($item->shipment_outstanding_qty) }}</span>
-                                            </td>
                                             <td>
+                                                <span class="badge bg-warning text-dark">
+                                                    {{ \App\Support\NumberFormatter::trim($item->shipment_outstanding_qty) }}
+                                                </span>
+                                            </td>
+                                            <td style="min-width: 150px;">
                                                 <input type="number" step="0.01" min="0"
                                                     max="{{ $item->shipment_outstanding_qty }}"
                                                     name="received_qty[{{ $item->shipment_item_id }}]"
@@ -259,14 +368,14 @@
                             </table>
                         </div>
 
-                        <div class="d-flex justify-content-end">
-                            <button class="btn btn-success btn-sm">Posting Receiving Dokumen Ini</button>
+                        <div class="d-flex justify-content-end mt-3">
+                            <button class="btn btn-success btn-sm">Posting Receiving</button>
                         </div>
                     </form>
                 @else
                     <div class="text-muted">
-                        Pilih dulu satu dokumen shipment di tabel atas. Setelah itu item akan muncul otomatis dan warehouse
-                        tinggal mengisi qty yang benar-benar diterima.
+                        Pilih dulu satu dokumen shipment di atas. Setelah itu item akan muncul dan form receiving menjadi
+                        aktif.
                     </div>
                 @endif
             </div>
@@ -274,24 +383,26 @@
     @endif
 
     @if ($mode === 'history')
-        <div class="card card-outline card-secondary mb-3">
+        <div class="card ui-card mb-3">
             <div class="card-header">
                 <h3 class="card-title">Filter Riwayat Goods Receipt</h3>
+                <div class="section-note">Pisahkan halaman proses dan riwayat agar user gudang tetap fokus.</div>
             </div>
             <div class="card-body">
-                <form method="GET" action="{{ route('receiving.history') }}" class="row g-2 align-items-end">
-                    <div class="col-md-4">
-                        <label class="form-label">No Dokumen Receiving</label>
-                        <input type="text" name="document_number" value="{{ request('document_number') }}"
-                            class="form-control form-control-sm" placeholder="Nomor dokumen GR">
-                    </div>
-                    <div class="col-md-2">
-                        <button class="btn btn-outline-secondary btn-sm w-100">Cari Riwayat</button>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="alert alert-light border mb-0">
-                            Riwayat GR dipisah dari halaman proses supaya user warehouse fokus ke dokumen aktif saat posting
-                            receiving.
+                <form method="GET" action="{{ route('receiving.history') }}">
+                    <div class="form-grid">
+                        <div class="span-4">
+                            <label class="field-label">No Dokumen Receiving</label>
+                            <input type="text" name="document_number" value="{{ request('document_number') }}"
+                                class="form-control form-control-sm" placeholder="Nomor dokumen GR">
+                        </div>
+                        <div class="span-2 d-flex align-items-end">
+                            <button class="btn btn-outline-secondary btn-sm w-100">Cari Riwayat</button>
+                        </div>
+                        <div class="span-6 d-flex align-items-end">
+                            <div class="soft-alert w-100 mb-0">
+                                Riwayat GR ditampilkan terpisah dari proses posting receiving aktif.
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -299,13 +410,13 @@
         </div>
     @endif
 
-    <div class="card">
+    <div class="card ui-card">
         <div class="card-header">
             <h3 class="card-title">{{ $mode === 'history' ? 'Daftar Riwayat Goods Receipt' : 'Riwayat Goods Receipt' }}
             </h3>
         </div>
         <div class="card-body table-responsive p-0">
-            <table class="table table-hover text-nowrap mb-0 {{ $mode === 'history' ? '' : 'data-table' }}">
+            <table class="table table-hover text-nowrap mb-0 {{ $mode === 'history' ? '' : 'data-table' }} builder-table">
                 <thead>
                     <tr>
                         <th>GR</th>
@@ -314,7 +425,7 @@
                         <th>Supplier</th>
                         <th>No Dok</th>
                         <th>Invoice</th>
-                        <th>Tgl</th>
+                        <th>Tanggal</th>
                         @if ($mode === 'history')
                             <th>Aksi</th>
                         @endif
