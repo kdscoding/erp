@@ -125,10 +125,10 @@
                 <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <h3 class="card-title mb-0">Item PO & Monitoring ETD</h3>
                     <span class="text-muted small">Status item otomatis: Waiting / Confirmed / Late / Partial / Closed /
-                        Cancelled</span>
+                        Cancelled. Tracking shipment dan GR tersedia per item.</span>
                 </div>
                 <div class="card-body table-responsive p-0">
-                    <table class="table table-hover mb-0 data-table" style="min-width: 1200px;">
+                    <table class="table table-hover mb-0 data-table" style="min-width: 1380px;">
                         <thead>
                             <tr>
                                 <th style="min-width: 120px;">Kode</th>
@@ -136,6 +136,7 @@
                                 <th style="min-width: 130px;">Ordered</th>
                                 <th style="min-width: 130px;">Received</th>
                                 <th style="min-width: 140px;">Outstanding</th>
+                                <th style="min-width: 340px;">Tracking Shipment / GR</th>
                                 <th style="min-width: 240px;">Status</th>
                                 <th style="min-width: 380px;">Aksi</th>
                             </tr>
@@ -152,6 +153,85 @@
                                     <td class="align-top">{{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }}
                                         {{ $item->unit_name }}</td>
                                     <td class="align-top">
+                                        @if ($item->tracking_rows->isEmpty())
+                                            <div class="small text-muted">Belum ada shipment / GR untuk item ini.</div>
+                                        @else
+                                            <details>
+                                                <summary class="small fw-semibold text-primary" style="cursor: pointer;">
+                                                    Buka histori pengiriman & GR
+                                                </summary>
+                                                <div class="mt-2 d-flex flex-column gap-2">
+                                                    @foreach ($item->tracking_rows as $tracking)
+                                                        <div class="border rounded p-2 bg-light">
+                                                            <div class="fw-semibold small">
+                                                                Shipment:
+                                                                {{ $tracking->shipment_number ?: 'Belum ada nomor shipment' }}
+                                                            </div>
+                                                            <div class="small text-muted">
+                                                                Tgl Shipment:
+                                                                {{ $tracking->shipment_date ? \Carbon\Carbon::parse($tracking->shipment_date)->format('d-m-Y') : '-' }}
+                                                                | DN:
+                                                                {{ $tracking->delivery_note_number ?: '-' }}
+                                                            </div>
+                                                            <div class="small text-muted">
+                                                                Qty Kirim:
+                                                                {{ \App\Support\NumberFormatter::trim($tracking->shipped_qty ?? 0) }}
+                                                                {{ $item->unit_name }}
+                                                                | Sudah di-GR:
+                                                                {{ \App\Support\NumberFormatter::trim($tracking->shipment_received_qty ?? 0) }}
+                                                                {{ $item->unit_name }}
+                                                            </div>
+                                                            <div class="mt-1">
+                                                                <x-status-badge :status="$tracking->shipment_status ?: 'Draft'" scope="shipment" />
+                                                            </div>
+
+                                                            @if ($tracking->gr_rows->isEmpty())
+                                                                <div class="small text-muted mt-2">Belum ada transaksi GR untuk shipment ini.</div>
+                                                            @else
+                                                                <div class="table-responsive mt-2">
+                                                                    <table class="table table-sm mb-0">
+                                                                        <thead>
+                                                                            <tr>
+                                                                                <th>Tgl GR</th>
+                                                                                <th>No GR</th>
+                                                                                <th>No Dokumen</th>
+                                                                                <th>Qty GR</th>
+                                                                                <th>Accepted</th>
+                                                                                <th>Rejected</th>
+                                                                                <th>Status</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            @foreach ($tracking->gr_rows as $gr)
+                                                                                <tr>
+                                                                                    <td>{{ $gr->receipt_date ? \Carbon\Carbon::parse($gr->receipt_date)->format('d-m-Y') : '-' }}</td>
+                                                                                    <td>
+                                                                                        @if ($gr->goods_receipt_id)
+                                                                                            <a href="{{ route('receiving.show', $gr->goods_receipt_id) }}">
+                                                                                                {{ $gr->gr_number ?: '-' }}
+                                                                                            </a>
+                                                                                        @else
+                                                                                            -
+                                                                                        @endif
+                                                                                    </td>
+                                                                                    <td>{{ $gr->gr_document_number ?: '-' }}</td>
+                                                                                    <td>{{ \App\Support\NumberFormatter::trim($gr->gr_received_qty ?? 0) }} {{ $item->unit_name }}</td>
+                                                                                    <td>{{ \App\Support\NumberFormatter::trim($gr->accepted_qty ?? 0) }} {{ $item->unit_name }}</td>
+                                                                                    <td>{{ \App\Support\NumberFormatter::trim($gr->rejected_qty ?? 0) }} {{ $item->unit_name }}</td>
+                                                                                    <td><x-status-badge :status="$gr->gr_status ?: 'Posted'" scope="gr" /></td>
+                                                                                </tr>
+                                                                            @endforeach
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </details>
+                                        @endif
+                                    </td>
+                                    <td class="align-top">
                                         <x-status-badge :status="$item->monitoring_status" scope="item" />
 
                                         @if ($item->cancel_reason)
@@ -164,6 +244,9 @@
                                         @elseif ($item->monitoring_status === 'Partial')
                                             <div class="small text-muted mt-1">Sudah diterima sebagian, outstanding masih
                                                 tersisa.</div>
+                                        @elseif ($item->monitoring_status === 'Closed')
+                                            <div class="small text-success mt-1">Item complete. Seluruh qty PO sudah
+                                                diterima.</div>
                                         @elseif ($item->monitoring_status === 'Late')
                                             <div class="small text-danger mt-1">ETD lewat, item belum selesai diterima.
                                             </div>

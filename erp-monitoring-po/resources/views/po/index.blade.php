@@ -11,19 +11,6 @@
     @php($cancelledCount = $rows->getCollection()->where('status', 'Cancelled')->count())
 
     <div class="page-shell">
-        <section class="page-head">
-            <div class="page-head-main">
-                <h2 class="page-section-title">PO Worklist</h2>
-                <p class="page-section-subtitle">Buka detail untuk melihat item, histori, dan aksi operasional per dokumen.</p>
-            </div>
-
-            <div class="page-actions">
-                <a href="{{ route('po.create') }}" class="btn btn-success btn-sm">
-                    <i class="fas fa-plus"></i> Create PO
-                </a>
-            </div>
-        </section>
-
         <section class="summary-chips">
             <div class="summary-chip">
                 <div class="summary-chip-label">Open</div>
@@ -47,7 +34,7 @@
             <div class="ui-surface-head">
                 <div>
                     <h3 class="ui-surface-title">Filter Purchase Orders</h3>
-                    <div class="ui-surface-subtitle">Saring daftar berdasarkan supplier dan status header.</div>
+                    <div class="ui-surface-subtitle">Cari purchase orders berdasarkan supplier dan status.</div>
                 </div>
             </div>
 
@@ -90,6 +77,12 @@
                     <h3 class="ui-surface-title">Daftar Purchase Order</h3>
                     <div class="ui-surface-subtitle">Fokus ke dokumen aktif tanpa hero besar atau panel dashboard tambahan.</div>
                 </div>
+                
+            <div class="page-actions">
+                <a href="{{ route('po.create') }}" class="btn btn-success btn-sm">
+                    <i class="fas fa-plus"></i> Create PO
+                </a>
+            </div>
             </div>
 
             <div class="table-wrap table-responsive">

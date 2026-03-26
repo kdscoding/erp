@@ -86,6 +86,80 @@ class PurchaseOrderController extends Controller
             return $item;
         });
 
+        $trackingRows = DB::table('purchase_order_items as poi')
+            ->leftJoin('shipment_items as si', 'si.purchase_order_item_id', '=', 'poi.id')
+            ->leftJoin('shipments as sh', 'sh.id', '=', 'si.shipment_id')
+            ->leftJoin('goods_receipt_items as gri', function ($join) {
+                $join->on('gri.purchase_order_item_id', '=', 'poi.id')
+                    ->on('gri.shipment_item_id', '=', 'si.id');
+            })
+            ->leftJoin('goods_receipts as gr', 'gr.id', '=', 'gri.goods_receipt_id')
+            ->where('poi.purchase_order_id', $id)
+            ->select(
+                'poi.id as purchase_order_item_id',
+                'si.id as shipment_item_id',
+                'si.shipped_qty',
+                'si.received_qty as shipment_received_qty',
+                'sh.id as shipment_id',
+                'sh.shipment_number',
+                'sh.shipment_date',
+                'sh.delivery_note_number',
+                'sh.status as shipment_status',
+                'gr.id as goods_receipt_id',
+                'gr.gr_number',
+                'gr.receipt_date',
+                'gr.document_number as gr_document_number',
+                'gr.status as gr_status',
+                'gri.received_qty as gr_received_qty',
+                'gri.accepted_qty',
+                'gri.rejected_qty'
+            )
+            ->orderBy('sh.shipment_date')
+            ->orderBy('sh.id')
+            ->orderBy('gr.receipt_date')
+            ->orderBy('gr.id')
+            ->get()
+            ->groupBy('purchase_order_item_id');
+
+        $items = $items->map(function ($item) use ($trackingRows) {
+            $rows = collect($trackingRows->get($item->id, []))
+                ->filter(fn($row) => $row->shipment_id || $row->goods_receipt_id)
+                ->values();
+
+            $item->tracking_rows = $rows
+                ->groupBy(fn($row) => $row->shipment_item_id ?: 'no-shipment')
+                ->map(function ($shipmentRows) {
+                    $base = $shipmentRows->first();
+
+                    return (object) [
+                        'shipment_id' => $base->shipment_id,
+                        'shipment_item_id' => $base->shipment_item_id,
+                        'shipment_number' => $base->shipment_number,
+                        'shipment_date' => $base->shipment_date,
+                        'delivery_note_number' => $base->delivery_note_number,
+                        'shipment_status' => $base->shipment_status,
+                        'shipped_qty' => $base->shipped_qty,
+                        'shipment_received_qty' => $base->shipment_received_qty,
+                        'gr_rows' => $shipmentRows
+                            ->filter(fn($row) => $row->goods_receipt_id)
+                            ->map(fn($row) => (object) [
+                                'goods_receipt_id' => $row->goods_receipt_id,
+                                'gr_number' => $row->gr_number,
+                                'receipt_date' => $row->receipt_date,
+                                'gr_document_number' => $row->gr_document_number,
+                                'gr_status' => $row->gr_status,
+                                'gr_received_qty' => $row->gr_received_qty,
+                                'accepted_qty' => $row->accepted_qty,
+                                'rejected_qty' => $row->rejected_qty,
+                            ])
+                            ->values(),
+                    ];
+                })
+                ->values();
+
+            return $item;
+        });
+
         $itemSummary = [
             'total' => $items->count(),
             'waiting' => $items->where('monitoring_status', DocumentTermCodes::ITEM_WAITING)->count(),

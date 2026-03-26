@@ -761,6 +761,115 @@ class PoReceivingFlowTest extends TestCase
         ]);
     }
 
+    public function test_po_detail_shows_item_tracking_per_shipment_and_goods_receipt(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-TRACK-01',
+            'po_date' => '2026-03-20',
+            'supplier_id' => $supplierId,
+            'status' => 'Open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemId,
+            'ordered_qty' => 100,
+            'received_qty' => 100,
+            'outstanding_qty' => 0,
+            'item_status' => 'Closed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $shipmentId = DB::table('shipments')->insertGetId([
+            'purchase_order_id' => $poId,
+            'supplier_id' => $supplierId,
+            'shipment_number' => 'SHP-TRACK-01',
+            'shipment_date' => '2026-03-21',
+            'delivery_note_number' => 'SJ-TRACK-01',
+            'status' => 'Received',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $shipmentItemId = DB::table('shipment_items')->insertGetId([
+            'shipment_id' => $shipmentId,
+            'purchase_order_item_id' => $poItemId,
+            'shipped_qty' => 100,
+            'received_qty' => 100,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $firstGrId = DB::table('goods_receipts')->insertGetId([
+            'gr_number' => 'GR-TRACK-01',
+            'receipt_date' => '2026-03-22',
+            'purchase_order_id' => $poId,
+            'shipment_id' => $shipmentId,
+            'document_number' => 'SJ-TRACK-01',
+            'status' => 'Posted',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('goods_receipt_items')->insert([
+            'goods_receipt_id' => $firstGrId,
+            'shipment_item_id' => $shipmentItemId,
+            'purchase_order_item_id' => $poItemId,
+            'item_id' => $itemId,
+            'received_qty' => 40,
+            'accepted_qty' => 40,
+            'rejected_qty' => 0,
+            'qty_variance' => 60,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $secondGrId = DB::table('goods_receipts')->insertGetId([
+            'gr_number' => 'GR-TRACK-02',
+            'receipt_date' => '2026-03-24',
+            'purchase_order_id' => $poId,
+            'shipment_id' => $shipmentId,
+            'document_number' => 'SJ-TRACK-01',
+            'status' => 'Posted',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('goods_receipt_items')->insert([
+            'goods_receipt_id' => $secondGrId,
+            'shipment_item_id' => $shipmentItemId,
+            'purchase_order_item_id' => $poItemId,
+            'item_id' => $itemId,
+            'received_qty' => 60,
+            'accepted_qty' => 60,
+            'rejected_qty' => 0,
+            'qty_variance' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get('/po/'.$poId)
+            ->assertOk()
+            ->assertSee('Tracking Shipment / GR')
+            ->assertSee('Buka histori pengiriman & GR', false)
+            ->assertSee('SHP-TRACK-01')
+            ->assertSee('SJ-TRACK-01')
+            ->assertSee('GR-TRACK-01')
+            ->assertSee('GR-TRACK-02')
+            ->assertSee('21-03-2026')
+            ->assertSee('22-03-2026')
+            ->assertSee('24-03-2026')
+            ->assertSeeText('Item complete. Seluruh qty PO sudah diterima.');
+    }
+
     public function test_edit_draft_shipment_blocks_qty_above_actual_available_limit(): void
     {
         $user = $this->makeUserWithRole('administrator');

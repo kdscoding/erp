@@ -16,26 +16,6 @@
     @php($archiveCollection = $archiveRowsData ? collect($archiveRowsData->items()) : collect())
 
     <div class="page-shell">
-        <section class="page-head">
-            <div class="page-head-main">
-                @if ($isBuilderView)
-                    <h2 class="page-section-title">Create Draft Shipment</h2>
-                    <p class="page-section-subtitle">Buat draft shipment dari kandidat item PO yang masih bisa dikirim.</p>
-                @elseif ($isArchiveView)
-                    <h2 class="page-section-title">Shipment Archive</h2>
-                    <p class="page-section-subtitle">Dokumen shipment yang sudah selesai diterima atau dibatalkan.</p>
-                @else
-                    <h2 class="page-section-title">Shipment Worklist</h2>
-                    <p class="page-section-subtitle">Fokus ke draft, shipped, dan partial received yang masih perlu ditindaklanjuti.</p>
-                @endif
-            </div>
-
-            <div class="page-actions">
-                <a href="{{ route('shipments.index') }}" class="btn btn-sm {{ $isWorklistView ? 'btn-primary' : 'btn-light' }}">Worklist</a>
-                <a href="{{ route('shipments.create') }}" class="btn btn-sm {{ $isBuilderView ? 'btn-warning' : 'btn-light' }}">Create Draft</a>
-                <a href="{{ route('shipments.history') }}" class="btn btn-sm {{ $isArchiveView ? 'btn-secondary' : 'btn-light' }}">Archive</a>
-            </div>
-        </section>
 
         @if ($isWorklistView)
             <section class="summary-chips">
@@ -421,7 +401,7 @@
         @if ($isArchiveView)
             <section class="summary-chips">
                 <div class="summary-chip">
-                    <div class="summary-chip-label">Received</div>
+                    <div class="summary-chip-label">Completed</div>
                     <div class="summary-chip-value">{{ $archiveCollection->where('status', \App\Support\DocumentTermCodes::SHIPMENT_RECEIVED)->count() }}</div>
                 </div>
                 <div class="summary-chip">
