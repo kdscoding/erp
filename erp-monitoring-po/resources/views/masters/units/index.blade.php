@@ -1,89 +1,106 @@
 @extends('layouts.erp')
-@php($title='Master Unit')
-@php($header='Master Unit of Measure')
+
+@php($title='Units')
+@php($header='Units')
+@php($headerSubtitle='Master unit of measure yang dipakai pada item dan transaksi operasional.')
+
 @section('content')
-<div class="row">
-    <div class="col-md-4">
-        <div class="card card-outline card-primary">
-            <div class="card-body">
-                <div class="text-muted text-uppercase small">Total Unit</div>
-                <div class="h3 mb-1">{{ $stats['total'] }}</div>
-                <div class="small text-muted">Seluruh satuan yang tersedia di sistem.</div>
+    <div class="page-shell">
+        <section class="page-head">
+            <div class="page-head-main">
+                <h2 class="page-section-title">Unit List</h2>
+                <p class="page-section-subtitle">Master data ringan dengan filter, form tambah, dan tabel utama.</p>
             </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card card-outline card-success">
-            <div class="card-body">
-                <div class="text-muted text-uppercase small">Dipakai di Item</div>
-                <div class="h3 mb-1">{{ $stats['used'] }}</div>
-                <div class="small text-muted">Unit yang sudah terhubung ke master barang.</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card card-outline card-secondary">
-            <div class="card-body">
-                <div class="text-muted text-uppercase small">Belum Dipakai</div>
-                <div class="h3 mb-1">{{ $stats['unused'] }}</div>
-                <div class="small text-muted">Masih tersedia dan belum dipakai item.</div>
-            </div>
-        </div>
-    </div>
-</div>
+        </section>
 
-<div class="card card-outline card-primary mb-3">
-    <div class="card-header"><h3 class="card-title">Filter Unit</h3></div>
-    <div class="card-body">
-        <form method="GET" class="row g-2 align-items-end">
-            <div class="col-md-6">
-                <label class="form-label">Cari</label>
-                <input class="form-control form-control-sm" name="q" value="{{ request('q') }}" placeholder="Kode atau nama unit">
+        <section class="ui-surface">
+            <div class="ui-surface-head">
+                <div>
+                    <h3 class="ui-surface-title">Filter Unit</h3>
+                    <div class="ui-surface-subtitle">Cari berdasarkan kode atau nama unit.</div>
+                </div>
             </div>
-            <div class="col-md-2"><button class="btn btn-primary btn-sm w-100">Terapkan</button></div>
-            <div class="col-md-2"><a href="{{ route('units.index') }}" class="btn btn-light btn-sm w-100">Reset Filter</a></div>
-        </form>
-    </div>
-</div>
 
-<div class="card card-primary card-outline mb-3">
-    <div class="card-header"><h3 class="card-title">Tambah Unit</h3></div>
-    <div class="card-body">
-        <form method="POST" action="{{ route('units.store') }}" class="row g-2">@csrf
-            <div class="col-md-3">
-                <label class="form-label">Kode Unit</label>
-                <input class="form-control form-control-sm" name="unit_code" placeholder="Mis. PCS" value="{{ old('unit_code') }}" required>
-            </div>
-            <div class="col-md-7">
-                <label class="form-label">Nama Unit</label>
-                <input class="form-control form-control-sm" name="unit_name" placeholder="Nama lengkap unit" value="{{ old('unit_name') }}" required>
-            </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <button class="btn btn-primary btn-sm w-100">Simpan Unit</button>
-            </div>
-        </form>
-    </div>
-</div>
+            <form method="GET" class="filter-grid">
+                <div class="span-6">
+                    <label class="field-label">Cari</label>
+                    <input class="form-control form-control-sm" name="q" value="{{ request('q') }}" placeholder="Kode atau nama unit">
+                </div>
+                <div class="span-2">
+                    <button class="btn btn-primary btn-sm w-100">Apply</button>
+                </div>
+                <div class="span-2">
+                    <a href="{{ route('units.index') }}" class="btn btn-light btn-sm w-100">Reset</a>
+                </div>
+            </form>
+        </section>
 
-<div class="card">
-    <div class="card-header"><h3 class="card-title">Daftar Unit</h3></div>
-    <div class="card-body table-responsive p-0">
-        <table class="table table-hover mb-0">
-            <thead><tr><th>Kode</th><th>Nama</th><th>Jumlah Item</th><th class="text-end">Aksi</th></tr></thead>
-            <tbody>
-                @forelse($rows as $row)
-                    <tr>
-                        <td class="font-weight-bold">{{ $row->unit_code }}</td>
-                        <td>{{ $row->unit_name }}</td>
-                        <td>{{ $row->item_count }}</td>
-                        <td class="text-end"><a href="{{ route('units.edit', $row->id) }}" class="btn btn-sm btn-outline-primary">Edit</a></td>
-                    </tr>
-                @empty
-                    <tr><td colspan="4" class="text-center text-muted">Belum ada unit.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
+        <section class="ui-surface">
+            <div class="ui-surface-head">
+                <div>
+                    <h3 class="ui-surface-title">Tambah Unit</h3>
+                    <div class="ui-surface-subtitle">Masukkan kode dan nama unit yang akan dipakai item master.</div>
+                </div>
+            </div>
+
+            <div class="ui-surface-body">
+                <form method="POST" action="{{ route('units.store') }}" class="filter-grid px-0 pt-0 pb-0">
+                    @csrf
+                    <div class="span-3">
+                        <label class="field-label">Kode Unit</label>
+                        <input class="form-control form-control-sm" name="unit_code" placeholder="Mis. PCS" value="{{ old('unit_code') }}" required>
+                    </div>
+                    <div class="span-7">
+                        <label class="field-label">Nama Unit</label>
+                        <input class="form-control form-control-sm" name="unit_name" placeholder="Nama lengkap unit" value="{{ old('unit_name') }}" required>
+                    </div>
+                    <div class="span-2 d-flex align-items-end">
+                        <button class="btn btn-primary btn-sm w-100">Simpan Unit</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section class="ui-surface">
+            <div class="ui-surface-head">
+                <div>
+                    <h3 class="ui-surface-title">Daftar Unit</h3>
+                    <div class="ui-surface-subtitle">Jumlah item yang memakai unit ditampilkan ringkas di tabel.</div>
+                </div>
+            </div>
+
+            <div class="table-wrap table-responsive">
+                <table class="table table-hover ui-table">
+                    <thead>
+                        <tr>
+                            <th>Kode</th>
+                            <th>Nama</th>
+                            <th>Jumlah Item</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($rows as $row)
+                            <tr>
+                                <td><div class="doc-number">{{ $row->unit_code }}</div></td>
+                                <td>{{ $row->unit_name }}</td>
+                                <td>{{ $row->item_count }}</td>
+                                <td class="text-end">
+                                    <div class="action-stack">
+                                        <a href="{{ route('units.edit', $row->id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Belum ada unit.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </div>
-</div>
-<div class="mt-2">{{ $rows->links() }}</div>
+
+    <div class="mt-2">{{ $rows->links() }}</div>
 @endsection

@@ -4,11 +4,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $title ?? 'Labeling internal Monitoring' }}</title>
+    <title>{{ $title ?? 'LEMON Internal Monitoring' }}</title>
+
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('lemon/apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('lemon/favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('lemon/favicon-16x16.png') }}">
     <link rel="shortcut icon" href="{{ asset('lemon/favicon.ico') }}">
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css">
@@ -31,8 +33,8 @@
         body {
             font-size: 12.5px;
             background:
-                radial-gradient(circle at top left, rgba(255, 225, 85, 0.14), transparent 22%),
-                radial-gradient(circle at top right, rgba(158, 203, 60, 0.12), transparent 20%),
+                radial-gradient(circle at top left, rgba(255, 225, 85, 0.10), transparent 22%),
+                radial-gradient(circle at top right, rgba(158, 203, 60, 0.08), transparent 20%),
                 var(--lemon-bg);
             color: var(--lemon-ink);
         }
@@ -43,6 +45,19 @@
 
         a:hover {
             color: #59781e;
+            text-decoration: none;
+        }
+
+        .content-wrapper {
+            background: transparent;
+        }
+
+        .content-header {
+            padding: .75rem .5rem .35rem;
+        }
+
+        .content {
+            padding-bottom: 1rem;
         }
 
         .main-header.navbar {
@@ -94,67 +109,246 @@
             color: #dceca7;
         }
 
-        .content-wrapper {
-            background: transparent;
+        .nav-sidebar .nav-link {
+            font-size: 12.5px;
+            padding: .42rem .65rem;
+            color: #e9f1ff !important;
         }
 
-        .content-header {
-            padding: .6rem .5rem .2rem;
-        }
-
-        .content-header h1 {
-            font-size: 17px;
+        .nav-sidebar .nav-link.active {
+            background: linear-gradient(90deg, #e4ef7b, #bfd730) !important;
+            color: #21300b !important;
             font-weight: 700;
+        }
+
+        .nav-sidebar .nav-link:hover {
+            background: rgba(232, 241, 138, .15) !important;
+        }
+
+        .nav-sidebar .nav-treeview>.nav-item>.nav-link {
+            padding-left: 2.15rem;
+            font-size: 12px;
+        }
+
+        .nav-sidebar .nav-treeview>.nav-item>.nav-link.active {
+            background: rgba(232, 241, 138, .92) !important;
+            color: #21300b !important;
+            font-weight: 700;
+        }
+
+        .nav-header {
+            font-size: 10px;
+            color: #dceca7 !important;
+            letter-spacing: .7px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .page-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .page-title-wrap {
+            min-width: 0;
+        }
+
+        .page-title {
+            font-size: 1.18rem;
+            font-weight: 800;
             color: var(--lemon-ink);
+            margin: 0;
+            line-height: 1.2;
         }
 
-        .bc-sub {
-            font-size: 11px;
+        .page-subtitle {
+            font-size: .84rem;
             color: #6f7e48;
+            margin-top: .2rem;
         }
 
-        .bc-ribbon {
+        .page-ribbon {
             background: #f9fbcf;
             border: 1px solid var(--lemon-line-strong);
             border-radius: 999px;
             padding: 4px 10px;
             font-size: 11px;
             color: var(--lemon-olive);
+            white-space: nowrap;
         }
 
+        .page-shell {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .page-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .page-head-main {
+            min-width: 0;
+        }
+
+        .page-section-title {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--lemon-ink);
+        }
+
+        .page-section-subtitle {
+            margin: .2rem 0 0;
+            font-size: .84rem;
+            color: #74805f;
+        }
+
+        .page-actions {
+            display: flex;
+            gap: .5rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .summary-chips {
+            display: flex;
+            gap: .75rem;
+            flex-wrap: wrap;
+        }
+
+        .summary-chip {
+            min-width: 130px;
+            padding: .78rem .92rem;
+            border-radius: 14px;
+            border: 1px solid rgba(111, 150, 40, .12);
+            background: rgba(255, 255, 255, .96);
+            box-shadow: 0 10px 20px rgba(111, 150, 40, .04);
+        }
+
+        .summary-chip-label {
+            font-size: .7rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: #7a8660;
+            margin-bottom: .2rem;
+        }
+
+        .summary-chip-value {
+            font-size: 1.12rem;
+            font-weight: 800;
+            color: #314216;
+            line-height: 1;
+        }
+
+        .ui-surface,
         .card {
             border: 1px solid var(--lemon-line);
-            box-shadow: 0 .4rem 1rem rgba(119, 136, 60, .06);
-            border-radius: 10px;
-            background: rgba(255, 255, 255, .92);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, .96);
+            box-shadow: 0 14px 28px rgba(111, 150, 40, .05);
+        }
+
+        .ui-surface-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: .75rem;
+            flex-wrap: wrap;
+            padding: 1rem 1rem 0;
+        }
+
+        .ui-surface-title,
+        .card-title {
+            margin: 0;
+            font-size: .98rem;
+            font-weight: 800;
+            color: #314216;
+        }
+
+        .ui-surface-subtitle {
+            font-size: .8rem;
+            color: #7a8660;
+            margin-top: .2rem;
+        }
+
+        .ui-surface-body {
+            padding: 1rem;
         }
 
         .card-header {
             background: linear-gradient(180deg, var(--lemon-bg-soft), #f4f7d8);
             border-bottom: 1px solid var(--lemon-line);
-            padding: .6rem .85rem;
+            padding: .75rem .95rem;
         }
 
-        .card-title {
-            font-size: 12px;
+        .card-body {
+            padding: 1rem;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: .75rem;
+            padding: 1rem;
+            align-items: end;
+        }
+
+        .span-12 { grid-column: span 12; }
+        .span-8 { grid-column: span 8; }
+        .span-6 { grid-column: span 6; }
+        .span-4 { grid-column: span 4; }
+        .span-3 { grid-column: span 3; }
+        .span-2 { grid-column: span 2; }
+        .span-1 { grid-column: span 1; }
+
+        .field-label,
+        .form-label {
+            display: block;
+            font-size: .76rem;
             font-weight: 700;
-            color: var(--lemon-olive);
-            text-transform: uppercase;
-            letter-spacing: .2px;
+            letter-spacing: .02em;
+            color: #52603d;
+            margin-bottom: .35rem;
         }
 
+        .field-help {
+            font-size: .72rem;
+            color: #7d866f;
+            margin-top: .3rem;
+            line-height: 1.3;
+        }
+
+        .table-wrap {
+            padding: 1rem;
+        }
+
+        .ui-table,
+        .table {
+            margin-bottom: 0;
+        }
+
+        .ui-table thead th,
         .table thead th {
             background: #f2f6cf;
             border-bottom: 1px solid var(--lemon-line);
-            font-size: 10.8px;
+            font-size: .69rem;
             text-transform: uppercase;
-            letter-spacing: .4px;
+            letter-spacing: .08em;
+            white-space: nowrap;
             color: #5f7331;
+            vertical-align: middle;
         }
 
         .table td,
         .table th {
-            padding: .42rem .55rem;
+            padding: .45rem .55rem;
             vertical-align: middle;
         }
 
@@ -162,13 +356,65 @@
             background: rgba(241, 217, 59, .08);
         }
 
-        .btn {
-            font-size: 12px;
-            padding: .32rem .58rem;
+        .doc-number {
+            font-weight: 700;
+            color: #314216;
         }
 
-        .badge {
-            font-size: 10.5px;
+        .doc-meta {
+            font-size: .8rem;
+            color: #7a8660;
+        }
+
+        .action-stack {
+            display: flex;
+            gap: .35rem;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .soft-alert {
+            border: 1px solid #e7eadf;
+            background: #fafcf5;
+            border-radius: 14px;
+            padding: .85rem 1rem;
+            font-size: .82rem;
+            color: #566246;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: .75rem;
+        }
+
+        .info-box {
+            border: 1px solid #e7eadf;
+            border-radius: 14px;
+            background: #fafcf5;
+            padding: .9rem 1rem;
+            height: 100%;
+        }
+
+        .info-label {
+            font-size: .72rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: #7d866f;
+            margin-bottom: .25rem;
+        }
+
+        .info-value {
+            font-size: .95rem;
+            font-weight: 700;
+            color: #2f3c1b;
+            word-break: break-word;
+        }
+
+        .btn {
+            font-size: 12px;
+            padding: .36rem .62rem;
+            border-radius: 10px;
         }
 
         .btn-primary {
@@ -210,19 +456,6 @@
             color: #1e290b;
         }
 
-        .btn-warning {
-            background: linear-gradient(135deg, #f3de59 0%, #e9c73d 100%);
-            border-color: #d6b330;
-            color: #4a3908;
-        }
-
-        .btn-warning:hover,
-        .btn-warning:focus {
-            background: linear-gradient(135deg, #ecd548 0%, #ddb72e 100%);
-            border-color: #c39f22;
-            color: #412f05;
-        }
-
         .btn-light {
             background: #fffef1;
             border-color: #dce6b2;
@@ -238,10 +471,14 @@
 
         .form-control,
         .form-select,
-        .custom-select {
+        .custom-select,
+        .form-control-sm,
+        .form-select-sm {
             border-color: #dfe6b8;
             background: #fffef8;
             color: var(--lemon-ink);
+            min-height: 38px;
+            border-radius: 10px;
         }
 
         .form-control:focus,
@@ -256,6 +493,28 @@
             background: #f7f8dd;
             border-color: #dfe6b8;
             color: #73822b;
+        }
+
+        .badge {
+            font-size: 10.5px;
+        }
+
+        .bg-primary {
+            background-color: #9ecb3c !important;
+            color: #21300b !important;
+        }
+
+        .bg-success {
+            background-color: #88b93b !important;
+        }
+
+        .bg-warning {
+            background-color: #f1d93b !important;
+            color: #4b3b07 !important;
+        }
+
+        .bg-secondary {
+            background-color: #9aa57a !important;
         }
 
         .page-link {
@@ -300,39 +559,8 @@
             color: #5c7130;
         }
 
-        .nav-sidebar .nav-link {
-            font-size: 12.5px;
-            padding: .42rem .65rem;
-            color: #e9f1ff !important;
-        }
-
-        .nav-sidebar .nav-link.active {
-            background: linear-gradient(90deg, #e4ef7b, #bfd730) !important;
-            color: #21300b !important;
-            font-weight: 700;
-        }
-
-        .nav-sidebar .nav-link:hover {
-            background: rgba(232, 241, 138, .15) !important;
-        }
-
-        .nav-sidebar .nav-treeview>.nav-item>.nav-link {
-            padding-left: 2.15rem;
-            font-size: 12px;
-        }
-
-        .nav-sidebar .nav-treeview>.nav-item>.nav-link.active {
-            background: rgba(232, 241, 138, .92) !important;
-            color: #21300b !important;
-            font-weight: 700;
-        }
-
-        .nav-header {
-            font-size: 10px;
-            color: #dceca7 !important;
-            letter-spacing: .7px;
-            text-transform: uppercase;
-            font-weight: 700;
+        .text-muted {
+            color: #7a8660 !important;
         }
 
         .footer-note {
@@ -350,26 +578,36 @@
             font-weight: 700;
         }
 
-        .bg-primary {
-            background-color: #9ecb3c !important;
-            color: #21300b !important;
+        @media (max-width: 991.98px) {
+            .span-8,
+            .span-6,
+            .span-4,
+            .span-3,
+            .span-2,
+            .span-1 {
+                grid-column: span 12;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
-        .bg-success {
-            background-color: #88b93b !important;
+        @media (max-width: 767.98px) {
+            .summary-chip {
+                flex: 1 1 calc(50% - .75rem);
+                min-width: 0;
+            }
+
+            .page-ribbon {
+                white-space: normal;
+            }
         }
 
-        .bg-warning {
-            background-color: #f1d93b !important;
-            color: #4b3b07 !important;
-        }
-
-        .bg-secondary {
-            background-color: #9aa57a !important;
-        }
-
-        .text-muted {
-            color: #7a8660 !important;
+        @media (max-width: 575.98px) {
+            .summary-chip {
+                flex: 1 1 100%;
+            }
         }
     </style>
 </head>
@@ -388,6 +626,7 @@
             };
 
             $shipmentMenuOpen = request()->routeIs('shipments.*');
+            $receivingMenuOpen = request()->routeIs('receiving.*');
 
             $shipmentWorklistActive =
                 request()->routeIs('shipments.process') ||
@@ -402,6 +641,14 @@
                 request()->routeIs('shipments.history') ||
                 request()->routeIs('shipments.show') ||
                 (request()->routeIs('shipments.index') && request('view') === 'history');
+
+            $receivingProcessActive =
+                request()->routeIs('receiving.process') ||
+                request()->routeIs('receiving.index');
+
+            $receivingHistoryActive =
+                request()->routeIs('receiving.history') ||
+                request()->routeIs('receiving.show');
         @endphp
 
         <nav class="main-header navbar navbar-expand">
@@ -452,13 +699,13 @@
                         </li>
 
                         @if ($currentUser?->hasAnyRole(['administrator', 'staff']))
-                            <li class="nav-header">Referensi Master</li>
+                            <li class="nav-header">Master Data</li>
 
                             <li class="nav-item">
                                 <a href="{{ route('suppliers.index') }}"
                                     class="nav-link {{ request()->routeIs('suppliers.*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-truck"></i>
-                                    <p>Data Supplier</p>
+                                    <p>Suppliers</p>
                                 </a>
                             </li>
 
@@ -466,7 +713,7 @@
                                 <a href="{{ route('items.index') }}"
                                     class="nav-link {{ request()->routeIs('items.*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-tags"></i>
-                                    <p>Data Barang</p>
+                                    <p>Items</p>
                                 </a>
                             </li>
 
@@ -474,7 +721,7 @@
                                 <a href="{{ route('item-categories.index') }}"
                                     class="nav-link {{ request()->routeIs('item-categories.*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-layer-group"></i>
-                                    <p>Kategori Barang</p>
+                                    <p>Categories</p>
                                 </a>
                             </li>
 
@@ -482,7 +729,7 @@
                                 <a href="{{ route('units.index') }}"
                                     class="nav-link {{ request()->routeIs('units.*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-ruler"></i>
-                                    <p>Data Satuan</p>
+                                    <p>Units</p>
                                 </a>
                             </li>
 
@@ -490,7 +737,7 @@
                                 <a href="{{ route('warehouses.index') }}"
                                     class="nav-link {{ request()->routeIs('warehouses.*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-warehouse"></i>
-                                    <p>Data Gudang</p>
+                                    <p>Warehouses</p>
                                 </a>
                             </li>
 
@@ -498,13 +745,13 @@
                                 <a href="{{ route('plants.index') }}"
                                     class="nav-link {{ request()->routeIs('plants.*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-industry"></i>
-                                    <p>Data Plant</p>
+                                    <p>Plants</p>
                                 </a>
                             </li>
                         @endif
 
                         @if ($currentUser?->hasAnyRole(['administrator', 'staff', 'supervisor']))
-                            <li class="nav-header">Operasional</li>
+                            <li class="nav-header">Operational</li>
 
                             <li class="nav-item">
                                 <a href="{{ route('po.index') }}"
@@ -531,7 +778,7 @@
                                         <a href="{{ route('shipments.index') }}"
                                             class="nav-link {{ $shipmentWorklistActive ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
-                                            <p>Shipment Worklist</p>
+                                            <p>Worklist</p>
                                         </a>
                                     </li>
 
@@ -547,18 +794,39 @@
                                         <a href="{{ route('shipments.history') }}"
                                             class="nav-link {{ $shipmentArchiveActive ? 'active' : '' }}">
                                             <i class="far fa-circle nav-icon"></i>
-                                            <p>Shipment Archive</p>
+                                            <p>Archive</p>
                                         </a>
                                     </li>
                                 </ul>
                             </li>
 
-                            <li class="nav-item">
-                                <a href="{{ route('receiving.process') }}"
-                                    class="nav-link {{ request()->routeIs('receiving.process') || request()->routeIs('receiving.index') || request()->routeIs('receiving.history') || request()->routeIs('receiving.show') ? 'active' : '' }}">
+                            <li class="nav-item has-treeview {{ $receivingMenuOpen ? 'menu-open' : '' }}">
+                                <a href="#"
+                                    class="nav-link {{ $receivingMenuOpen ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-box-open"></i>
-                                    <p>Receiving</p>
+                                    <p>
+                                        Receiving
+                                        <i class="right fas fa-angle-left"></i>
+                                    </p>
                                 </a>
+
+                                <ul class="nav nav-treeview">
+                                    <li class="nav-item">
+                                        <a href="{{ route('receiving.process') }}"
+                                            class="nav-link {{ $receivingProcessActive ? 'active' : '' }}">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>Open Receiving</p>
+                                        </a>
+                                    </li>
+
+                                    <li class="nav-item">
+                                        <a href="{{ route('receiving.history') }}"
+                                            class="nav-link {{ $receivingHistoryActive ? 'active' : '' }}">
+                                            <i class="far fa-circle nav-icon"></i>
+                                            <p>History</p>
+                                        </a>
+                                    </li>
+                                </ul>
                             </li>
                         @endif
 
@@ -569,7 +837,7 @@
                                 <a href="{{ route('monitoring') }}"
                                     class="nav-link {{ request()->routeIs('monitoring') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-eye"></i>
-                                    <p>Monitoring Item</p>
+                                    <p>Item Monitoring</p>
                                 </a>
                             </li>
 
@@ -585,7 +853,7 @@
                                 <a href="{{ route('reports.outstanding') }}"
                                     class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-chart-bar"></i>
-                                    <p>Laporan Outstanding</p>
+                                    <p>Outstanding Report</p>
                                 </a>
                             </li>
 
@@ -599,13 +867,13 @@
                         @endif
 
                         @if ($currentUser?->hasRole('administrator'))
-                            <li class="nav-header">Administrasi</li>
+                            <li class="nav-header">Administration</li>
 
                             <li class="nav-item">
                                 <a href="{{ route('settings.index') }}"
                                     class="nav-link {{ request()->routeIs('settings.*') && !request()->routeIs('users.*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-cogs"></i>
-                                    <p>Parameter Sistem</p>
+                                    <p>System Parameters</p>
                                 </a>
                             </li>
 
@@ -613,7 +881,7 @@
                                 <a href="{{ route('users.index') }}"
                                     class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-users"></i>
-                                    <p>Daftar User</p>
+                                    <p>Users</p>
                                 </a>
                             </li>
                         @endif
@@ -625,13 +893,16 @@
         <div class="content-wrapper">
             <section class="content-header">
                 <div class="container-fluid">
-                    <div class="row g-2 align-items-center mb-1">
-                        <div class="col-md-7">
-                            <h1 class="m-0">{{ $header ?? 'LEMON Internal Monitoring' }}</h1>
-                            <div class="bc-sub">Monitoring Purchase Order, dokumen shipment, dan proses penerimaan barang</div>
+                    <div class="page-topbar">
+                        <div class="page-title-wrap">
+                            <h1 class="page-title">{{ $header ?? 'LEMON Internal Monitoring' }}</h1>
+                            <div class="page-subtitle">
+                                {{ $headerSubtitle ?? 'Monitoring purchase order, shipment, receiving, dan proses operasional.' }}
+                            </div>
                         </div>
-                        <div class="col-md-5 text-md-right">
-                            <span class="bc-ribbon">Tanggal Sistem: {{ now()->timezone('Asia/Jakarta')->format('d-m-Y H:i') }} WIB</span>
+
+                        <div class="page-ribbon">
+                            Tanggal Sistem: {{ now()->timezone('Asia/Jakarta')->format('d-m-Y H:i') }} WIB
                         </div>
                     </div>
                 </div>
