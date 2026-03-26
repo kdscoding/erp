@@ -8,10 +8,17 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->call(ProductionBaselineSeeder::class);
+        $this->call([
+            RolePermissionSeeder::class,
+            DocumentTermSeeder::class,
+            MasterDataSeeder::class,
+        ]);
 
         if (! app()->environment('production')) {
-            $this->call(DevDemoSeeder::class);
+            $this->call([
+                PurchaseOrderDemoSeeder::class,
+                ShipmentDemoSeeder::class,
+            ]);
         }
     }
 }
