@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Exports\ShipmentDraftExport;
-use App\Imports\ShipmentDraftImport;
 use App\Support\DocumentTermCodes;
 use App\Support\ErpFlow;
 use Illuminate\Http\RedirectResponse;
@@ -13,7 +11,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ShipmentController extends Controller
 {
@@ -690,31 +691,186 @@ class ShipmentController extends Controller
 
         $lines = $this->shipmentLineQuery((int) $shipment->id)->get();
 
-        return Excel::download(
-            new ShipmentDraftExport($shipment, $lines),
-            'shipment-draft-' . $shipment->shipment_number . '.xlsx'
-        );
+        $spreadsheet = new Spreadsheet();
+
+        $headerSheet = $spreadsheet->getActiveSheet();
+        $headerSheet->setTitle('HEADER');
+
+        $headerColumns = [
+            'shipment_number',
+            'shipment_date',
+            'supplier_name',
+            'delivery_note_number',
+            'invoice_number',
+            'invoice_date',
+            'invoice_currency',
+            'supplier_remark',
+            'status',
+        ];
+
+        foreach ($headerColumns as $index => $column) {
+            $headerSheet->setCellValueByColumnAndRow($index + 1, 1, $column);
+        }
+
+        $headerValues = [
+            $shipment->shipment_number ?? '',
+            $shipment->shipment_date ?? '',
+            $shipment->supplier_name ?? '',
+            $shipment->delivery_note_number ?? '',
+            $shipment->invoice_number ?? '',
+            $shipment->invoice_date ?? '',
+            $shipment->invoice_currency ?? '',
+            $shipment->supplier_remark ?? '',
+            $shipment->status ?? '',
+        ];
+
+        foreach ($headerValues as $index => $value) {
+            $headerSheet->setCellValueByColumnAndRow($index + 1, 2, $value);
+        }
+
+        $lineSheet = $spreadsheet->createSheet();
+        $lineSheet->setTitle('LINES');
+
+        $lineColumns = [
+            'shipment_item_id',
+            'purchase_order_item_id',
+            'po_number',
+            'item_code',
+            'item_name',
+            'po_unit_price',
+            'shipped_qty',
+            'invoice_unit_price',
+            'invoice_line_total',
+            'keep',
+        ];
+
+        foreach ($lineColumns as $index => $column) {
+            $lineSheet->setCellValueByColumnAndRow($index + 1, 1, $column);
+        }
+
+        $rowNumber = 2;
+        foreach ($lines as $line) {
+            $row = [
+                $line->shipment_item_id ?? '',
+                $line->purchase_order_item_id ?? '',
+                $line->po_number ?? '',
+                $line->item_code ?? '',
+                $line->item_name ?? '',
+                $line->po_unit_price ?? '',
+                $line->shipped_qty ?? '',
+                $line->invoice_unit_price ?? '',
+                $line->invoice_line_total ?? '',
+                1,
+            ];
+
+            foreach ($row as $index => $value) {
+                $lineSheet->setCellValueByColumnAndRow($index + 1, $rowNumber, $value);
+            }
+
+            $rowNumber++;
+        }
+
+        foreach ([$headerSheet, $lineSheet] as $sheet) {
+            $highestColumn = $sheet->getHighestColumn();
+            $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
+
+            for ($col = 1; $col <= $highestColumnIndex; $col++) {
+                $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($col))->setAutoSize(true);
+            }
+        }
+
+        $filename = 'shipment-draft-' . $shipment->shipment_number . '.xlsx';
+        $tempPath = storage_path('app/temp/' . uniqid('shipment_export_', true) . '.xlsx');
+
+        if (!is_dir(dirname($tempPath))) {
+            mkdir(dirname($tempPath), 0775, true);
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        return response()->download($tempPath, $filename)->deleteFileAfterSend(true);
     }
 
     public function downloadDraftTemplate()
     {
-        return Excel::download(
-            new ShipmentDraftExport(
-                (object) [
-                    'shipment_number' => 'SHP-XXXXX',
-                    'shipment_date' => now()->format('Y-m-d'),
-                    'supplier_name' => '',
-                    'delivery_note_number' => '',
-                    'invoice_number' => '',
-                    'invoice_date' => '',
-                    'invoice_currency' => 'IDR',
-                    'supplier_remark' => '',
-                    'status' => DocumentTermCodes::SHIPMENT_DRAFT,
-                ],
-                collect()
-            ),
-            'shipment-draft-template.xlsx'
-        );
+        $spreadsheet = new Spreadsheet();
+
+        $headerSheet = $spreadsheet->getActiveSheet();
+        $headerSheet->setTitle('HEADER');
+
+        $headerColumns = [
+            'shipment_number',
+            'shipment_date',
+            'supplier_name',
+            'delivery_note_number',
+            'invoice_number',
+            'invoice_date',
+            'invoice_currency',
+            'supplier_remark',
+            'status',
+        ];
+
+        foreach ($headerColumns as $index => $column) {
+            $headerSheet->setCellValueByColumnAndRow($index + 1, 1, $column);
+        }
+
+        $headerValues = [
+            'SHP-XXXXX',
+            now()->format('Y-m-d'),
+            '',
+            '',
+            '',
+            '',
+            'IDR',
+            '',
+            DocumentTermCodes::SHIPMENT_DRAFT,
+        ];
+
+        foreach ($headerValues as $index => $value) {
+            $headerSheet->setCellValueByColumnAndRow($index + 1, 2, $value);
+        }
+
+        $lineSheet = $spreadsheet->createSheet();
+        $lineSheet->setTitle('LINES');
+
+        $lineColumns = [
+            'shipment_item_id',
+            'purchase_order_item_id',
+            'po_number',
+            'item_code',
+            'item_name',
+            'po_unit_price',
+            'shipped_qty',
+            'invoice_unit_price',
+            'invoice_line_total',
+            'keep',
+        ];
+
+        foreach ($lineColumns as $index => $column) {
+            $lineSheet->setCellValueByColumnAndRow($index + 1, 1, $column);
+        }
+
+        foreach ([$headerSheet, $lineSheet] as $sheet) {
+            $highestColumn = $sheet->getHighestColumn();
+            $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
+
+            for ($col = 1; $col <= $highestColumnIndex; $col++) {
+                $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($col))->setAutoSize(true);
+            }
+        }
+
+        $filename = 'shipment-draft-template.xlsx';
+        $tempPath = storage_path('app/temp/' . uniqid('shipment_template_', true) . '.xlsx');
+
+        if (!is_dir(dirname($tempPath))) {
+            mkdir(dirname($tempPath), 0775, true);
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        return response()->download($tempPath, $filename)->deleteFileAfterSend(true);
     }
 
     public function importDraftExcel(Request $request): RedirectResponse
@@ -730,9 +886,221 @@ class ShipmentController extends Controller
             return back()->with('error', 'Import hanya diperbolehkan untuk shipment Draft.');
         }
 
-        $import = new ShipmentDraftImport((int) $validated['shipment_id']);
-        Excel::import($import, $request->file('file'));
-        $import->apply();
+        $parsed = $this->parseShipmentDraftSpreadsheet($request->file('file')->getRealPath());
+
+        DB::transaction(function () use ($shipment, $parsed, $request) {
+            $lockedShipment = DB::table('shipments')->where('id', $shipment->id)->lockForUpdate()->firstOrFail();
+
+            $header = $parsed['header'];
+            $lines = collect($parsed['lines'])
+                ->filter(fn($row) => (string) ($row['keep'] ?? '1') === '1')
+                ->values();
+
+            if ($lines->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'file' => 'Minimal satu line harus keep=1.',
+                ]);
+            }
+
+            if (!empty($header['shipment_number']) && trim((string) $header['shipment_number']) !== trim((string) $lockedShipment->shipment_number)) {
+                throw ValidationException::withMessages([
+                    'file' => 'Shipment number pada file tidak sesuai dengan draft target.',
+                ]);
+            }
+
+            $supplierName = (string) (
+                DB::table('shipments as sh')
+                ->leftJoin('suppliers as s', 's.id', '=', 'sh.supplier_id')
+                ->where('sh.id', $lockedShipment->id)
+                ->value('s.supplier_name') ?? ''
+            );
+
+            if (!empty($header['supplier_name']) && trim((string) $header['supplier_name']) !== trim($supplierName)) {
+                throw ValidationException::withMessages([
+                    'file' => 'Supplier pada file tidak sesuai dengan shipment draft.',
+                ]);
+            }
+
+            $deliveryNote = $this->nullableString($header['delivery_note_number'] ?? null) ?: (string) $lockedShipment->delivery_note_number;
+            $invoiceNumber = $this->nullableString($header['invoice_number'] ?? null);
+            $invoiceCurrency = $this->nullableString($header['invoice_currency'] ?? null);
+            $supplierRemark = $this->nullableString($header['supplier_remark'] ?? null);
+            $shipmentDate = $this->nullableString($header['shipment_date'] ?? null) ?: (string) $lockedShipment->shipment_date;
+            $invoiceDate = $this->nullableString($header['invoice_date'] ?? null);
+
+            if (!$deliveryNote) {
+                throw ValidationException::withMessages([
+                    'file' => 'delivery_note_number wajib diisi pada sheet HEADER.',
+                ]);
+            }
+
+            $duplicateShipment = DB::table('shipments')
+                ->where('supplier_id', $lockedShipment->supplier_id)
+                ->where('id', '!=', $lockedShipment->id)
+                ->whereRaw('LOWER(TRIM(delivery_note_number)) = ?', [mb_strtolower($deliveryNote)])
+                ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
+                ->lockForUpdate()
+                ->first();
+
+            if ($duplicateShipment) {
+                throw ValidationException::withMessages([
+                    'file' => "Delivery note {$deliveryNote} sudah dipakai oleh shipment {$duplicateShipment->shipment_number}.",
+                ]);
+            }
+
+            if ($invoiceNumber) {
+                $duplicateInvoice = DB::table('shipments')
+                    ->where('supplier_id', $lockedShipment->supplier_id)
+                    ->where('id', '!=', $lockedShipment->id)
+                    ->whereRaw('LOWER(TRIM(invoice_number)) = ?', [mb_strtolower($invoiceNumber)])
+                    ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($duplicateInvoice) {
+                    throw ValidationException::withMessages([
+                        'file' => "Invoice {$invoiceNumber} sudah dipakai oleh shipment {$duplicateInvoice->shipment_number}.",
+                    ]);
+                }
+            }
+
+            DB::table('shipments')->where('id', $lockedShipment->id)->update([
+                'shipment_date' => $shipmentDate,
+                'delivery_note_number' => $deliveryNote,
+                'invoice_number' => $invoiceNumber,
+                'invoice_date' => $invoiceDate,
+                'invoice_currency' => $invoiceCurrency,
+                'supplier_remark' => $supplierRemark,
+                'updated_at' => now(),
+            ]);
+
+            $currentLines = DB::table('shipment_items as si')
+                ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
+                ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+                ->join('items as i', 'i.id', '=', 'poi.item_id')
+                ->leftJoin('shipment_items as other_si', function ($join) use ($lockedShipment) {
+                    $join->on('other_si.purchase_order_item_id', '=', 'poi.id')
+                        ->where('other_si.shipment_id', '!=', $lockedShipment->id);
+                })
+                ->leftJoin('shipments as other_sh', function ($join) {
+                    $join->on('other_sh.id', '=', 'other_si.shipment_id')
+                        ->where('other_sh.status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED);
+                })
+                ->where('si.shipment_id', $lockedShipment->id)
+                ->select(
+                    'si.id as shipment_item_id',
+                    'si.shipment_id',
+                    'si.purchase_order_item_id',
+                    'si.shipped_qty as current_shipped_qty',
+                    'si.received_qty',
+                    'poi.purchase_order_id',
+                    'poi.outstanding_qty',
+                    'poi.unit_price as po_unit_price',
+                    'i.item_code'
+                )
+                ->selectRaw('COALESCE(SUM(CASE WHEN other_sh.id IS NOT NULL THEN other_si.shipped_qty - other_si.received_qty ELSE 0 END), 0) as other_open_shipment_qty')
+                ->groupBy(
+                    'si.id',
+                    'si.shipment_id',
+                    'si.purchase_order_item_id',
+                    'si.shipped_qty',
+                    'si.received_qty',
+                    'poi.purchase_order_id',
+                    'poi.outstanding_qty',
+                    'poi.unit_price',
+                    'i.item_code'
+                )
+                ->get()
+                ->keyBy('shipment_item_id');
+
+            $keptIds = [];
+
+            foreach ($lines as $row) {
+                $shipmentItemId = (int) ($row['shipment_item_id'] ?? 0);
+
+                if ($shipmentItemId <= 0) {
+                    throw ValidationException::withMessages([
+                        'file' => 'Ada shipment_item_id yang kosong atau tidak valid di sheet LINES.',
+                    ]);
+                }
+
+                $currentLine = $currentLines->get($shipmentItemId);
+
+                if (!$currentLine) {
+                    throw ValidationException::withMessages([
+                        'file' => 'Ada shipment_item_id yang tidak cocok dengan draft target: ' . $shipmentItemId,
+                    ]);
+                }
+
+                $qty = (float) ($row['shipped_qty'] ?? 0);
+                $invoiceUnitPrice = $this->nullableNumber($row['invoice_unit_price'] ?? null);
+
+                if ($qty <= 0) {
+                    throw ValidationException::withMessages([
+                        'file' => "Qty kirim untuk shipment_item_id {$shipmentItemId} harus lebih besar dari 0.",
+                    ]);
+                }
+
+                $availableToShipQty = (float) $currentLine->outstanding_qty - (float) $currentLine->other_open_shipment_qty;
+
+                if ($qty > $availableToShipQty) {
+                    throw ValidationException::withMessages([
+                        'file' => "Qty kirim untuk item {$currentLine->item_code} melebihi qty tersedia.",
+                    ]);
+                }
+
+                if ($invoiceUnitPrice !== null && $invoiceUnitPrice < 0) {
+                    throw ValidationException::withMessages([
+                        'file' => "Harga invoice untuk item {$currentLine->item_code} tidak boleh negatif.",
+                    ]);
+                }
+
+                $invoiceLineTotal = $invoiceUnitPrice !== null
+                    ? round($qty * $invoiceUnitPrice, 2)
+                    : null;
+
+                DB::table('shipment_items')
+                    ->where('id', $shipmentItemId)
+                    ->update([
+                        'shipped_qty' => $qty,
+                        'invoice_unit_price' => $invoiceUnitPrice,
+                        'invoice_line_total' => $invoiceLineTotal,
+                        'updated_at' => now(),
+                    ]);
+
+                $keptIds[] = $shipmentItemId;
+            }
+
+            DB::table('shipment_items')
+                ->where('shipment_id', $lockedShipment->id)
+                ->whereNotIn('id', $keptIds)
+                ->delete();
+
+            $poIds = DB::table('shipment_items as si')
+                ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
+                ->where('si.shipment_id', $lockedShipment->id)
+                ->pluck('poi.purchase_order_id')
+                ->map(fn($poId) => (int) $poId)
+                ->unique()
+                ->values();
+
+            foreach ($poIds as $poId) {
+                ErpFlow::refreshPoStatusByOutstanding((int) $poId, optional($request->user())->id);
+            }
+
+            ErpFlow::audit(
+                'shipments',
+                (int) $lockedShipment->id,
+                'import_excel',
+                $lockedShipment,
+                [
+                    'header' => $header,
+                    'lines' => $lines->values()->all(),
+                ],
+                optional($request->user())->id,
+                $request->ip()
+            );
+        });
 
         return redirect()->route('shipments.edit', $validated['shipment_id'])
             ->with('success', 'Draft shipment berhasil diperbarui dari Excel.');
@@ -886,5 +1254,96 @@ class ShipmentController extends Controller
                 'i.item_name'
             )
             ->selectRaw('(poi.outstanding_qty - COALESCE(SUM(CASE WHEN other_sh.id IS NOT NULL THEN other_si.shipped_qty - other_si.received_qty ELSE 0 END), 0)) as available_to_ship_qty');
+    }
+
+    private function parseShipmentDraftSpreadsheet(string $filePath): array
+    {
+        $spreadsheet = IOFactory::load($filePath);
+
+        $headerSheet = $spreadsheet->getSheetByName('HEADER');
+        $lineSheet = $spreadsheet->getSheetByName('LINES');
+
+        if (!$headerSheet || !$lineSheet) {
+            throw ValidationException::withMessages([
+                'file' => 'File Excel wajib memiliki sheet HEADER dan LINES.',
+            ]);
+        }
+
+        $headerRows = $headerSheet->toArray(null, true, true, false);
+        $lineRows = $lineSheet->toArray(null, true, true, false);
+
+        $header = $this->extractSpreadsheetAssocRow($headerRows, 'HEADER');
+        $lines = $this->extractSpreadsheetAssocRows($lineRows, 'LINES');
+
+        return [
+            'header' => $header,
+            'lines' => $lines,
+        ];
+    }
+
+    private function extractSpreadsheetAssocRow(array $rows, string $sheetName): array
+    {
+        $rows = array_values(array_filter($rows, function ($row) {
+            return is_array($row) && count(array_filter($row, fn($value) => $value !== null && $value !== '')) > 0;
+        }));
+
+        if (count($rows) < 2) {
+            throw ValidationException::withMessages([
+                'file' => "Sheet {$sheetName} tidak valid. Minimal harus ada 2 baris: header dan value.",
+            ]);
+        }
+
+        $header = array_map(fn($value) => trim((string) $value), $rows[0]);
+        $values = array_pad($rows[1], count($header), null);
+
+        return array_combine($header, $values);
+    }
+
+    private function extractSpreadsheetAssocRows(array $rows, string $sheetName): array
+    {
+        $rows = array_values(array_filter($rows, function ($row) {
+            return is_array($row) && count(array_filter($row, fn($value) => $value !== null && $value !== '')) > 0;
+        }));
+
+        if (count($rows) < 2) {
+            throw ValidationException::withMessages([
+                'file' => "Sheet {$sheetName} tidak valid. Minimal harus ada 2 baris: header dan data.",
+            ]);
+        }
+
+        $header = array_map(fn($value) => trim((string) $value), $rows[0]);
+        $dataRows = [];
+
+        foreach (array_slice($rows, 1) as $row) {
+            $padded = array_pad($row, count($header), null);
+
+            if (!array_filter($padded, fn($value) => $value !== null && $value !== '')) {
+                continue;
+            }
+
+            $dataRows[] = array_combine($header, $padded);
+        }
+
+        return $dataRows;
+    }
+
+    private function nullableString(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = trim((string) $value);
+
+        return $normalized === '' ? null : $normalized;
+    }
+
+    private function nullableNumber(mixed $value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return (float) $value;
     }
 }

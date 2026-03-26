@@ -1,15 +1,17 @@
 @extends('layouts.erp')
-@php($title = 'Shipment Tracking')
-@php($header = 'Shipment Tracking')
+@php($title = 'Shipment')
+@php($header = 'Shipment')
 
 @section('content')
-    @php($focusedShipmentId = (int) request('focus'))
     @php($selectedItemIds = collect(request('selected_items', []))->map(fn($id) => (int) $id)->filter()->values()->all())
     @php($isBuilderView = request()->routeIs('shipments.create') || request('view') === 'draft')
-    @php($activeRowsData = isset($activeRows) ? $activeRows : null)
-    @php($archiveRowsData = isset($archiveRows) ? $archiveRows : null)
-    @php($activeCollection = $activeRowsData ? $activeRowsData->getCollection() : collect())
-    @php($archiveCollection = $archiveRowsData ? $archiveRowsData->getCollection() : collect())
+    @php($isArchiveView = request()->routeIs('shipments.history') || request('view') === 'history')
+    @php($isWorklistView = !$isBuilderView && !$isArchiveView)
+    @php($focusedShipmentId = (int) request('focus'))
+    @php($activeRowsData = $activeRows ?? null)
+    @php($archiveRowsData = $archiveRows ?? null)
+    @php($activeCollection = $activeRowsData ? collect($activeRowsData->items()) : collect())
+    @php($archiveCollection = $archiveRowsData ? collect($archiveRowsData->items()) : collect())
 
     <style>
         .ui-card {
@@ -32,10 +34,6 @@
             margin: 0;
         }
 
-        .ui-card .card-body {
-            padding: 1rem;
-        }
-
         .section-note {
             font-size: .82rem;
             color: #74805f;
@@ -48,33 +46,13 @@
             gap: 1rem .9rem;
         }
 
-        .span-12 {
-            grid-column: span 12;
-        }
-
-        .span-8 {
-            grid-column: span 8;
-        }
-
-        .span-6 {
-            grid-column: span 6;
-        }
-
-        .span-4 {
-            grid-column: span 4;
-        }
-
-        .span-3 {
-            grid-column: span 3;
-        }
-
-        .span-2 {
-            grid-column: span 2;
-        }
-
-        .span-1 {
-            grid-column: span 1;
-        }
+        .span-12 { grid-column: span 12; }
+        .span-8 { grid-column: span 8; }
+        .span-6 { grid-column: span 6; }
+        .span-4 { grid-column: span 4; }
+        .span-3 { grid-column: span 3; }
+        .span-2 { grid-column: span 2; }
+        .span-1 { grid-column: span 1; }
 
         .field-label {
             display: block;
@@ -282,13 +260,7 @@
         }
 
         @media (max-width: 991.98px) {
-
-            .span-8,
-            .span-6,
-            .span-4,
-            .span-3,
-            .span-2,
-            .span-1 {
+            .span-8, .span-6, .span-4, .span-3, .span-2, .span-1 {
                 grid-column: span 12;
             }
 
@@ -308,355 +280,268 @@
         }
     </style>
 
-    @if (session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-    @if (session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
-    @if ($errors->any())
-        <div class="alert alert-danger">
-            <ul class="mb-0">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    {{-- WORKLIST / LANDING PAGE --}}
     <div class="worklist-topbar">
         <div>
-            <h2>Shipment Worklist</h2>
-            <p class="worklist-topbar-copy">
-                Fokus ke dokumen shipment aktif lebih dulu. Draft, shipped, dan partial received tampil di depan.
-            </p>
+            @if ($isBuilderView)
+                <h2>Create Draft Shipment</h2>
+                <p class="worklist-topbar-copy">
+                    Buat draft shipment dari kandidat item PO yang siap dikirim supplier.
+                </p>
+            @elseif ($isArchiveView)
+                <h2>Shipment Archive</h2>
+                <p class="worklist-topbar-copy">
+                    Arsip dokumen shipment yang sudah selesai diterima atau dibatalkan.
+                </p>
+            @else
+                <h2>Shipment Worklist</h2>
+                <p class="worklist-topbar-copy">
+                    Fokus ke dokumen shipment aktif yang masih perlu diproses.
+                </p>
+            @endif
         </div>
+
         <div class="worklist-toolbar">
-            <a href="{{ route('shipments.create') }}" class="btn btn-primary btn-sm">Create Shipment</a>
-            <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal"
-                data-bs-target="#importDraftModal">
-                Import Draft Excel
-            </button>
-            <a href="{{ route('shipments.template') }}" class="btn btn-outline-secondary btn-sm">
-                Download Template
+            <a href="{{ route('shipments.index') }}"
+               class="btn btn-sm {{ $isWorklistView ? 'btn-primary' : 'btn-light' }}">
+                Worklist
+            </a>
+
+            <a href="{{ route('shipments.create') }}"
+               class="btn btn-sm {{ $isBuilderView ? 'btn-warning' : 'btn-light' }}">
+                Create Draft
+            </a>
+
+            <a href="{{ route('shipments.history') }}"
+               class="btn btn-sm {{ $isArchiveView ? 'btn-secondary' : 'btn-light' }}">
+                Archive
             </a>
         </div>
     </div>
 
-    <div class="history-shell">
-        <section class="history-hero">
-            <div class="row g-3 align-items-end">
-                <div class="col-lg-5">
-                    <div class="history-hero-title">Shipment sekarang berfungsi seperti inbox dokumen.</div>
-                    <p class="history-hero-copy">
-                        Draft tidak langsung dianggap selesai. User bisa buat draft, export Excel, import balik, lalu
-                        lanjut receiving saat dokumen sudah siap.
-                    </p>
-                </div>
-                <div class="col-lg-7">
-                    <div class="history-stat-grid">
-                        <div class="history-stat">
-                            <div class="history-stat-label">Draft</div>
-                            <div class="history-stat-value">
-                                {{ $activeCollection->where('status', \App\Support\DocumentTermCodes::SHIPMENT_DRAFT)->count() }}
+    @if ($isWorklistView)
+        <div class="history-shell">
+            <section class="history-hero">
+                <div class="row g-3 align-items-end">
+                    <div class="col-lg-5">
+                        <div class="history-hero-title">Shipment berfungsi sebagai worklist dokumen aktif.</div>
+                        <p class="history-hero-copy">
+                            Draft, shipment yang sudah dikirim, dan dokumen yang masih menunggu receiving ditampilkan lebih dulu.
+                        </p>
+                    </div>
+                    <div class="col-lg-7">
+                        <div class="history-stat-grid">
+                            <div class="history-stat">
+                                <div class="history-stat-label">Draft</div>
+                                <div class="history-stat-value">
+                                    {{ $activeCollection->where('status', \App\Support\DocumentTermCodes::SHIPMENT_DRAFT)->count() }}
+                                </div>
                             </div>
-                        </div>
-                        <div class="history-stat">
-                            <div class="history-stat-label">Shipped</div>
-                            <div class="history-stat-value">
-                                {{ $activeCollection->where('status', \App\Support\DocumentTermCodes::SHIPMENT_SHIPPED)->count() }}
+                            <div class="history-stat">
+                                <div class="history-stat-label">Shipped</div>
+                                <div class="history-stat-value">
+                                    {{ $activeCollection->where('status', \App\Support\DocumentTermCodes::SHIPMENT_SHIPPED)->count() }}
+                                </div>
                             </div>
-                        </div>
-                        <div class="history-stat">
-                            <div class="history-stat-label">Partial</div>
-                            <div class="history-stat-value">
-                                {{ $activeCollection->where('status', \App\Support\DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED)->count() }}
+                            <div class="history-stat">
+                                <div class="history-stat-label">Partial</div>
+                                <div class="history-stat-value">
+                                    {{ $activeCollection->where('status', \App\Support\DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED)->count() }}
+                                </div>
                             </div>
-                        </div>
-                        <div class="history-stat">
-                            <div class="history-stat-label">Archive</div>
-                            <div class="history-stat-value">{{ $archiveCollection->count() }}</div>
+                            <div class="history-stat">
+                                <div class="history-stat-label">Archive</div>
+                                <div class="history-stat-value">{{ $archiveCollection->count() }}</div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <section class="card ui-card">
-            <div class="card-header">
-                <h3 class="card-title">Filter Shipment Worklist</h3>
-                <div class="section-note">Cari berdasarkan supplier, delivery note, invoice, keyword, atau status dokumen.
-                </div>
-            </div>
-
-            <form method="GET" class="history-filter">
-                <div>
-                    <label class="field-label">Supplier</label>
-                    <select name="supplier_id" class="form-control form-control-sm">
-                        <option value="">Semua Supplier</option>
-                        @foreach ($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}" @selected((int) request('supplier_id') === (int) $supplier->id)>
-                                {{ $supplier->supplier_name }}
-                            </option>
-                        @endforeach
-                    </select>
+            <section class="card ui-card">
+                <div class="card-header">
+                    <h3 class="card-title">Filter Shipment Worklist</h3>
+                    <div class="section-note">Cari dokumen aktif berdasarkan supplier, delivery note, invoice, keyword, atau status.</div>
                 </div>
 
-                <div>
-                    <label class="field-label">Delivery Note</label>
-                    <input type="text" name="delivery_note_number" value="{{ request('delivery_note_number') }}"
-                        class="form-control form-control-sm" placeholder="No surat jalan supplier">
+                <form method="GET" class="history-filter">
+                    <div>
+                        <label class="field-label">Supplier</label>
+                        <select name="supplier_id" class="form-control form-control-sm">
+                            <option value="">Semua Supplier</option>
+                            @foreach ($suppliers as $supplier)
+                                <option value="{{ $supplier->id }}" @selected((int) request('supplier_id') === (int) $supplier->id)>
+                                    {{ $supplier->supplier_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="field-label">Delivery Note</label>
+                        <input type="text" name="delivery_note_number" value="{{ request('delivery_note_number') }}"
+                            class="form-control form-control-sm" placeholder="No surat jalan supplier">
+                    </div>
+
+                    <div>
+                        <label class="field-label">Invoice</label>
+                        <input type="text" name="invoice_number" value="{{ request('invoice_number') }}"
+                            class="form-control form-control-sm" placeholder="No invoice supplier">
+                    </div>
+
+                    <div>
+                        <label class="field-label">Keyword</label>
+                        <input type="text" name="keyword" value="{{ request('keyword') }}"
+                            class="form-control form-control-sm" placeholder="Shipment / PO / supplier">
+                    </div>
+
+                    <div>
+                        <label class="field-label">Status</label>
+                        <select name="status" class="form-control form-control-sm">
+                            <option value="">Semua Status</option>
+                            @foreach (\App\Support\DocumentTermCodes::shipmentStatuses() as $status)
+                                <option value="{{ $status }}" @selected(request('status') === $status)>{{ $status }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div><button class="btn btn-primary btn-sm w-100">Apply</button></div>
+                    <div><a href="{{ route('shipments.index') }}" class="btn btn-light btn-sm w-100">Reset</a></div>
+                </form>
+            </section>
+
+            <section class="card ui-card">
+                <div class="card-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                        <h3 class="card-title">Active Documents</h3>
+                        <div class="section-note">Draft, Shipped, dan Partial Received tampil paling depan untuk diproses.</div>
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{{ route('shipments.create') }}" class="btn btn-primary btn-sm">Create Shipment</a>
+                        <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#importDraftModal">
+                            Import Draft Excel
+                        </button>
+                        <a href="{{ route('shipments.template') }}" class="btn btn-outline-secondary btn-sm">Download Template</a>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="field-label">Invoice</label>
-                    <input type="text" name="invoice_number" value="{{ request('invoice_number') }}"
-                        class="form-control form-control-sm" placeholder="No invoice supplier">
-                </div>
+                <div class="history-table-wrap table-responsive">
+                    <table class="table table-hover history-table">
+                        <thead>
+                            <tr>
+                                <th>Shipment</th>
+                                <th>Supplier</th>
+                                <th>PO Terkait</th>
+                                <th>Delivery Note</th>
+                                <th>Invoice</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($activeRowsData ?? [] as $r)
+                                <tr class="{{ $focusedShipmentId === (int) $r->id ? 'table-success' : '' }}">
+                                    <td>
+                                        <div class="shipment-number">{{ $r->shipment_number }}</div>
+                                        <div class="shipment-meta">{{ \Carbon\Carbon::parse($r->shipment_date)->format('d-m-Y') }}</div>
+                                    </td>
+                                    <td>{{ $r->supplier_name ?: '-' }}</td>
+                                    <td>
+                                        {{ $r->po_numbers ?: '-' }}<br>
+                                        <span class="shipment-meta">{{ $r->po_count }} PO • {{ $r->line_count }} line</span>
+                                    </td>
+                                    <td>{{ $r->delivery_note_number ?: '-' }}</td>
+                                    <td>
+                                        {{ $r->invoice_number ?: '-' }}
+                                        @if ($r->invoice_date)
+                                            <br>
+                                            <span class="shipment-meta">
+                                                {{ \Carbon\Carbon::parse($r->invoice_date)->format('d-m-Y') }}
+                                                {{ $r->invoice_currency ?: '' }}
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td><x-status-badge :status="$r->status" scope="shipment" /></td>
+                                    <td>
+                                        <div class="progress-mini">
+                                            <strong>
+                                                {{ \App\Support\NumberFormatter::trim($r->total_received_qty ?? 0) }}
+                                                /
+                                                {{ \App\Support\NumberFormatter::trim($r->total_shipped_qty ?? 0) }}
+                                            </strong>
+                                            <span class="shipment-meta">
+                                                Open {{ \App\Support\NumberFormatter::trim($r->total_open_qty ?? 0) }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="action-stack">
+                                            <a href="{{ route('shipments.show', $r->id) }}" class="btn btn-sm btn-light">View</a>
 
-                <div>
-                    <label class="field-label">Keyword</label>
-                    <input type="text" name="keyword" value="{{ request('keyword') }}"
-                        class="form-control form-control-sm" placeholder="Shipment / PO / supplier">
-                </div>
-
-                <div>
-                    <label class="field-label">Status</label>
-                    <select name="status" class="form-control form-control-sm">
-                        <option value="">Semua Status</option>
-                        @foreach (\App\Support\DocumentTermCodes::shipmentStatuses() as $status)
-                            <option value="{{ $status }}" @selected(request('status') === $status)>{{ $status }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div><button class="btn btn-primary btn-sm w-100">Apply</button></div>
-                <div><a href="{{ route('shipments.index') }}" class="btn btn-light btn-sm w-100">Reset</a></div>
-            </form>
-        </section>
-
-        <section class="card ui-card">
-            <div class="card-header">
-                <h3 class="card-title">Active Documents</h3>
-                <div class="section-note">Draft, Shipped, dan Partial Received tampil paling depan untuk diproses.</div>
-            </div>
-
-            <div class="history-table-wrap table-responsive">
-                <table class="table table-hover history-table">
-                    <thead>
-                        <tr>
-                            <th>Shipment</th>
-                            <th>Supplier</th>
-                            <th>PO Terkait</th>
-                            <th>Delivery Note</th>
-                            <th>Invoice</th>
-                            <th>Status</th>
-                            <th>Progress</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($activeRowsData ?? [] as $r)
-                            <tr class="{{ $focusedShipmentId === (int) $r->id ? 'table-success' : '' }}">
-                                <td>
-                                    <div class="shipment-number">{{ $r->shipment_number }}</div>
-                                    <div class="shipment-meta">
-                                        {{ \Carbon\Carbon::parse($r->shipment_date)->format('d-m-Y') }}
-                                    </div>
-                                    @if ($focusedShipmentId === (int) $r->id)
-                                        <div class="shipment-meta text-success font-weight-bold">Dokumen terbaru</div>
-                                    @endif
-                                </td>
-                                <td>{{ $r->supplier_name ?: '-' }}</td>
-                                <td>
-                                    {{ $r->po_numbers ?: '-' }}
-                                    <br>
-                                    <span class="shipment-meta">{{ $r->po_count }} PO • {{ $r->line_count }} line</span>
-                                </td>
-                                <td>{{ $r->delivery_note_number ?: '-' }}</td>
-                                <td>
-                                    {{ $r->invoice_number ?: '-' }}
-                                    @if ($r->invoice_date)
-                                        <br>
-                                        <span class="shipment-meta">
-                                            {{ \Carbon\Carbon::parse($r->invoice_date)->format('d-m-Y') }}
-                                            {{ $r->invoice_currency ?: '' }}
-                                        </span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <x-status-badge :status="$r->status" scope="shipment" />
-                                </td>
-                                <td>
-                                    <div class="progress-mini">
-                                        <strong>
-                                            {{ \App\Support\NumberFormatter::trim($r->total_received_qty ?? 0) }}
-                                            /
-                                            {{ \App\Support\NumberFormatter::trim($r->total_shipped_qty ?? 0) }}
-                                        </strong>
-                                        <span class="shipment-meta">
-                                            Open
-                                            {{ \App\Support\NumberFormatter::trim($r->total_open_qty ?? 0) }}
-                                        </span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="action-stack">
-                                        <a href="{{ route('shipments.show', $r->id) }}"
-                                            class="btn btn-sm btn-light">View</a>
-
-                                        @if ($r->status === \App\Support\DocumentTermCodes::SHIPMENT_DRAFT)
-                                            <a href="{{ route('shipments.edit', $r->id) }}"
-                                                class="btn btn-sm btn-outline-secondary">Edit</a>
-
-                                            <a href="{{ route('shipments.export-excel', $r->id) }}"
-                                                class="btn btn-sm btn-outline-success">Export Excel</a>
-
-                                            <button type="button" class="btn btn-sm btn-outline-success"
-                                                onclick="openImportDraftModal({{ $r->id }}, '{{ $r->shipment_number }}')">
-                                                Import Excel
-                                            </button>
-
-                                            <form method="POST" action="{{ route('shipments.mark-shipped', $r->id) }}">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button class="btn btn-sm btn-outline-primary">Mark Shipped</button>
-                                            </form>
-
-                                            <form method="POST" action="{{ route('shipments.cancel-draft', $r->id) }}">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button class="btn btn-sm btn-outline-danger"
-                                                    onclick="return confirm('Batalkan draft shipment ini?')">
-                                                    Cancel Draft
+                                            @if ($r->status === \App\Support\DocumentTermCodes::SHIPMENT_DRAFT)
+                                                <a href="{{ route('shipments.edit', $r->id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                                <a href="{{ route('shipments.export-excel', $r->id) }}" class="btn btn-sm btn-outline-success">Export Excel</a>
+                                                <button type="button" class="btn btn-sm btn-outline-success"
+                                                    onclick="openImportDraftModal({{ $r->id }}, '{{ $r->shipment_number }}')">
+                                                    Import Excel
                                                 </button>
-                                            </form>
-                                        @elseif (in_array(
+
+                                                <form method="POST" action="{{ route('shipments.mark-shipped', $r->id) }}">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button class="btn btn-sm btn-outline-primary">Mark Shipped</button>
+                                                </form>
+
+                                                <form method="POST" action="{{ route('shipments.cancel-draft', $r->id) }}">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button class="btn btn-sm btn-outline-danger"
+                                                        onclick="return confirm('Batalkan draft shipment ini?')">
+                                                        Cancel Draft
+                                                    </button>
+                                                </form>
+                                            @elseif (in_array(
                                                 $r->status,
                                                 [\App\Support\DocumentTermCodes::SHIPMENT_SHIPPED, \App\Support\DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED],
                                                 true))
-                                            <a href="{{ route('receiving.process', ['supplier_id' => $r->supplier_id, 'shipment_id' => $r->id, 'document_number' => $r->delivery_note_number]) }}"
-                                                class="btn btn-sm btn-outline-primary">
-                                                Continue Receiving
-                                            </a>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center text-muted">Tidak ada dokumen aktif.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                                                <a href="{{ route('receiving.process', ['supplier_id' => $r->supplier_id, 'shipment_id' => $r->id, 'document_number' => $r->delivery_note_number]) }}"
+                                                    class="btn btn-sm btn-outline-primary">
+                                                    Continue Receiving
+                                                </a>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">Tidak ada dokumen aktif.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
 
-            @if ($activeRowsData)
-                <div class="px-3 pb-3">{{ $activeRowsData->links() }}</div>
-            @endif
-        </section>
+                @if ($activeRowsData)
+                    <div class="px-3 pb-3">{{ $activeRowsData->links() }}</div>
+                @endif
+            </section>
+        </div>
+    @endif
 
-        <section class="card ui-card">
-            <div class="card-header">
-                <h3 class="card-title">Archive / Completed Documents</h3>
-                <div class="section-note">Dokumen yang sudah selesai diterima atau dibatalkan dipindahkan ke arsip.</div>
-            </div>
-
-            <div class="history-table-wrap table-responsive">
-                <table class="table table-hover history-table">
-                    <thead>
-                        <tr>
-                            <th>Shipment</th>
-                            <th>Supplier</th>
-                            <th>PO Terkait</th>
-                            <th>Delivery Note</th>
-                            <th>Invoice</th>
-                            <th>Status</th>
-                            <th>Progress</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($archiveRowsData ?? [] as $r)
-                            <tr>
-                                <td>
-                                    <div class="shipment-number">{{ $r->shipment_number }}</div>
-                                    <div class="shipment-meta">
-                                        {{ \Carbon\Carbon::parse($r->shipment_date)->format('d-m-Y') }}
-                                    </div>
-                                </td>
-                                <td>{{ $r->supplier_name ?: '-' }}</td>
-                                <td>
-                                    {{ $r->po_numbers ?: '-' }}
-                                    <br>
-                                    <span class="shipment-meta">{{ $r->po_count }} PO • {{ $r->line_count }} line</span>
-                                </td>
-                                <td>{{ $r->delivery_note_number ?: '-' }}</td>
-                                <td>
-                                    {{ $r->invoice_number ?: '-' }}
-                                    @if ($r->invoice_date)
-                                        <br>
-                                        <span class="shipment-meta">
-                                            {{ \Carbon\Carbon::parse($r->invoice_date)->format('d-m-Y') }}
-                                            {{ $r->invoice_currency ?: '' }}
-                                        </span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <x-status-badge :status="$r->status" scope="shipment" />
-                                </td>
-                                <td>
-                                    <div class="progress-mini">
-                                        <strong>
-                                            {{ \App\Support\NumberFormatter::trim($r->total_received_qty ?? 0) }}
-                                            /
-                                            {{ \App\Support\NumberFormatter::trim($r->total_shipped_qty ?? 0) }}
-                                        </strong>
-                                        <span class="shipment-meta">
-                                            Open
-                                            {{ \App\Support\NumberFormatter::trim($r->total_open_qty ?? 0) }}
-                                        </span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <a href="{{ route('shipments.show', $r->id) }}"
-                                        class="btn btn-sm btn-light">View</a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center text-muted">Belum ada dokumen arsip.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            @if ($archiveRowsData)
-                <div class="px-3 pb-3">{{ $archiveRowsData->links() }}</div>
-            @endif
-        </section>
-    </div>
-
-    {{-- BUILDER MANUAL --}}
     @if ($isBuilderView)
-        <div class="card ui-card mt-4 mb-3">
+        <div class="alert alert-warning">
+            <strong>Create Draft Shipment.</strong>
+            Halaman ini khusus untuk menyusun draft shipment dari kandidat item PO, sebelum dokumen dikonfirmasi menjadi shipped.
+        </div>
+
+        <div class="card ui-card mb-3">
             <div class="card-header">
-                <h3 class="card-title">Pembuatan Draft Shipment</h3>
-                <div class="section-note">Form manual tetap dipertahankan untuk user yang ingin membuat draft langsung dari
-                    kandidat item PO.</div>
+                <h3 class="card-title">Filter Kandidat Item PO</h3>
+                <div class="section-note">Pilih supplier atau cari item/PO untuk menyusun draft shipment.</div>
             </div>
             <div class="card-body">
-                @if ($selectedItems->isNotEmpty())
-                    <div class="alert alert-warning mb-3">
-                        Supplier terkunci ke <strong>{{ $selectedItems->first()->supplier_name }}</strong> agar satu draft
-                        shipment tetap konsisten dalam satu supplier.
-                    </div>
-                @endif
-
                 <form method="GET" class="shipment-selection-form">
                     <div class="form-grid">
                         <div class="span-3">
@@ -665,7 +550,7 @@
                                 {{ $selectedItems->isNotEmpty() ? 'disabled' : '' }}>
                                 <option value="">Semua Supplier</option>
                                 @foreach ($suppliers as $supplier)
-                                    <option value="{{ $supplier->id }}" @selected((int) request('supplier_id', $selectedSupplierId) == (int) $supplier->id)>
+                                    <option value="{{ $supplier->id }}" @selected((int) request('supplier_id', $selectedSupplierId) === (int) $supplier->id)>
                                         {{ $supplier->supplier_name }}
                                     </option>
                                 @endforeach
@@ -679,9 +564,8 @@
                             <label class="field-label">Cari Item / PO / Supplier</label>
                             <input type="text" name="keyword" value="{{ request('keyword') }}"
                                 class="form-control form-control-sm"
-                                placeholder="Contoh: item code, nama item, nomor PO, nama supplier">
-                            <div class="field-help">Gunakan pencarian ini untuk mempersempit kandidat item sebelum
-                                dimasukkan ke draft.</div>
+                                placeholder="Item code, nama item, nomor PO, nama supplier">
+                            <div class="field-help">Filter kandidat item yang outstanding dan masih bisa dialokasikan ke shipment draft.</div>
                         </div>
 
                         <div class="span-1 d-flex align-items-end">
@@ -710,18 +594,20 @@
             <div class="card-header d-flex justify-content-between align-items-start flex-wrap gap-2">
                 <div>
                     <h3 class="card-title">1. Pilih Item yang Akan Dikirim</h3>
-                    <div class="section-note">Centang item yang akan masuk ke dokumen shipment draft.</div>
+                    <div class="section-note">Centang item yang ingin dimasukkan ke draft shipment.</div>
                 </div>
+
                 @if ($hasSearch)
                     <button type="button" class="btn btn-primary btn-sm" onclick="addCheckedCandidateItems()">
                         Tambahkan ke Draft
                     </button>
                 @endif
             </div>
+
             <div class="card-body table-responsive p-0">
                 @if (!$hasSearch)
                     <div class="p-3 text-muted">
-                        Kandidat item akan muncul setelah kamu memilih supplier atau melakukan pencarian.
+                        Kandidat item akan muncul setelah memilih supplier atau melakukan pencarian.
                     </div>
                 @else
                     <table class="table table-hover mb-0 builder-table">
@@ -741,8 +627,7 @@
                         <tbody>
                             @forelse($candidateItems as $candidate)
                                 @php($isAllocatable = (float) $candidate->available_to_ship_qty > 0)
-                                <tr
-                                    class="{{ in_array((int) $candidate->purchase_order_item_id, $selectedItemIds, true) ? 'table-primary' : (!$isAllocatable ? 'table-light' : '') }}">
+                                <tr class="{{ in_array((int) $candidate->purchase_order_item_id, $selectedItemIds, true) ? 'table-primary' : (!$isAllocatable ? 'table-light' : '') }}">
                                     <td>
                                         <input type="checkbox" class="candidate-item-checkbox"
                                             value="{{ $candidate->purchase_order_item_id }}"
@@ -757,27 +642,19 @@
                                         <strong>{{ $candidate->item_code }}</strong><br>
                                         {{ $candidate->item_name }}
                                     </td>
-                                    <td>
-                                        {{ $candidate->unit_price !== null ? \App\Support\NumberFormatter::trim($candidate->unit_price) : '-' }}
-                                    </td>
+                                    <td>{{ $candidate->unit_price !== null ? \App\Support\NumberFormatter::trim($candidate->unit_price) : '-' }}</td>
                                     <td>{{ \App\Support\NumberFormatter::trim($candidate->outstanding_qty) }}</td>
                                     <td>{{ \App\Support\NumberFormatter::trim($candidate->open_shipment_qty) }}</td>
                                     <td>
                                         <span class="badge {{ $isAllocatable ? 'bg-warning text-dark' : 'bg-secondary' }}">
                                             {{ \App\Support\NumberFormatter::trim(max(0, $candidate->available_to_ship_qty)) }}
                                         </span>
-                                        @if (!$isAllocatable)
-                                            <div class="compact-note mt-1">Sudah teralokasi di shipment aktif.</div>
-                                        @endif
                                     </td>
-                                    <td>{{ $candidate->etd_date ? \Carbon\Carbon::parse($candidate->etd_date)->format('d-m-Y') : '-' }}
-                                    </td>
+                                    <td>{{ $candidate->etd_date ? \Carbon\Carbon::parse($candidate->etd_date)->format('d-m-Y') : '-' }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="text-center text-muted">
-                                        Belum ada kandidat. Coba ubah filter atau kata kunci pencarian.
-                                    </td>
+                                    <td colspan="9" class="text-center text-muted">Belum ada kandidat. Coba ubah filter atau kata kunci pencarian.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -809,9 +686,7 @@
                         <div class="col-md-4">
                             <div class="soft-box">
                                 <div class="soft-box-title">PO Terkait</div>
-                                <div class="soft-box-value">
-                                    {{ $selectedItems->pluck('purchase_order_id')->unique()->count() }}
-                                </div>
+                                <div class="soft-box-value">{{ $selectedItems->pluck('purchase_order_id')->unique()->count() }}</div>
                             </div>
                         </div>
                     </div>
@@ -918,9 +793,7 @@
                                             <strong>{{ $item->item_code }}</strong><br>
                                             {{ $item->item_name }}
                                         </td>
-                                        <td>
-                                            {{ $item->unit_price !== null ? \App\Support\NumberFormatter::trim($item->unit_price) : '-' }}
-                                        </td>
+                                        <td>{{ $item->unit_price !== null ? \App\Support\NumberFormatter::trim($item->unit_price) : '-' }}</td>
                                         <td>{{ \App\Support\NumberFormatter::trim($item->available_to_ship_qty) }}</td>
                                         <td style="min-width: 140px;">
                                             <input type="hidden" name="selected_items[]"
@@ -972,7 +845,101 @@
         </div>
     @endif
 
-    {{-- GLOBAL IMPORT MODAL --}}
+    @if ($isArchiveView)
+        <div class="history-shell">
+            <section class="history-hero">
+                <div class="row g-3 align-items-end">
+                    <div class="col-lg-7">
+                        <div class="history-hero-title">Shipment Archive</div>
+                        <p class="history-hero-copy">
+                            Menampilkan dokumen shipment yang sudah selesai diterima atau dibatalkan.
+                        </p>
+                    </div>
+                    <div class="col-lg-5">
+                        <div class="d-flex justify-content-lg-end gap-2 flex-wrap">
+                            <a href="{{ route('shipments.index') }}" class="btn btn-light btn-sm">Back to Worklist</a>
+                            <a href="{{ route('shipments.create') }}" class="btn btn-warning btn-sm">Create Draft</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card ui-card">
+                <div class="card-header">
+                    <h3 class="card-title">Archive / Completed Documents</h3>
+                    <div class="section-note">Dokumen shipment yang statusnya selesai diterima atau dibatalkan.</div>
+                </div>
+
+                <div class="history-table-wrap table-responsive">
+                    <table class="table table-hover history-table">
+                        <thead>
+                            <tr>
+                                <th>Shipment</th>
+                                <th>Supplier</th>
+                                <th>PO Terkait</th>
+                                <th>Delivery Note</th>
+                                <th>Invoice</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($archiveRowsData ?? [] as $r)
+                                <tr>
+                                    <td>
+                                        <div class="shipment-number">{{ $r->shipment_number }}</div>
+                                        <div class="shipment-meta">{{ \Carbon\Carbon::parse($r->shipment_date)->format('d-m-Y') }}</div>
+                                    </td>
+                                    <td>{{ $r->supplier_name ?: '-' }}</td>
+                                    <td>
+                                        {{ $r->po_numbers ?: '-' }}<br>
+                                        <span class="shipment-meta">{{ $r->po_count }} PO • {{ $r->line_count }} line</span>
+                                    </td>
+                                    <td>{{ $r->delivery_note_number ?: '-' }}</td>
+                                    <td>
+                                        {{ $r->invoice_number ?: '-' }}
+                                        @if ($r->invoice_date)
+                                            <br>
+                                            <span class="shipment-meta">
+                                                {{ \Carbon\Carbon::parse($r->invoice_date)->format('d-m-Y') }}
+                                                {{ $r->invoice_currency ?: '' }}
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td><x-status-badge :status="$r->status" scope="shipment" /></td>
+                                    <td>
+                                        <div class="progress-mini">
+                                            <strong>
+                                                {{ \App\Support\NumberFormatter::trim($r->total_received_qty ?? 0) }}
+                                                /
+                                                {{ \App\Support\NumberFormatter::trim($r->total_shipped_qty ?? 0) }}
+                                            </strong>
+                                            <span class="shipment-meta">
+                                                Open {{ \App\Support\NumberFormatter::trim($r->total_open_qty ?? 0) }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('shipments.show', $r->id) }}" class="btn btn-sm btn-light">View</a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">Belum ada dokumen arsip.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                @if ($archiveRowsData)
+                    <div class="px-3 pb-3">{{ $archiveRowsData->links() }}</div>
+                @endif
+            </section>
+        </div>
+    @endif
+
     <div class="modal fade" id="importDraftModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <form method="POST" action="{{ route('shipments.import-excel') }}" enctype="multipart/form-data"
@@ -1000,11 +967,6 @@
 
     <script>
         const draftStorageKey = 'shipment-draft-state-{{ auth()->id() ?? 'guest' }}';
-
-        @if (session('shipment_builder_reset'))
-            localStorage.removeItem(draftStorageKey);
-            sessionStorage.removeItem('shipment-draft-rehydrated');
-        @endif
 
         function openImportDraftModal(id, number) {
             const shipmentIdInput = document.getElementById('import_shipment_id');
@@ -1053,48 +1015,10 @@
                 quantities: getDraftQuantities(),
                 invoice_prices: getDraftInvoicePrices(),
             };
-
             localStorage.setItem(draftStorageKey, JSON.stringify(draftState));
         };
 
-        const restoreDraftState = () => {
-            const rawState = localStorage.getItem(draftStorageKey);
-            if (!rawState) return;
-
-            try {
-                const state = JSON.parse(rawState);
-
-                Object.entries(state.quantities || {}).forEach(([name, value]) => {
-                    document.querySelectorAll(`input[name="${name.replace(/"/g, '\\"')}"]`).forEach((input) => {
-                        input.value = value;
-                    });
-                });
-
-                Object.entries(state.invoice_prices || {}).forEach(([name, value]) => {
-                    document.querySelectorAll(`input[name="${name.replace(/"/g, '\\"')}"]`).forEach((input) => {
-                        input.value = value;
-                    });
-                });
-
-                const keywordInput = document.querySelector('.shipment-selection-form input[name="keyword"]');
-                if (keywordInput && !keywordInput.value && state.keyword) {
-                    keywordInput.value = state.keyword;
-                }
-            } catch (error) {
-                localStorage.removeItem(draftStorageKey);
-            }
-        };
-
-        const submitDraftSelectionState = (selectedItemsOverride = null, quantitiesOverride = null, invoicePricesOverride =
-            null) => {
-            let savedState = {};
-            try {
-                const rawState = localStorage.getItem(draftStorageKey);
-                savedState = rawState ? JSON.parse(rawState) : {};
-            } catch (error) {
-                localStorage.removeItem(draftStorageKey);
-            }
-
+        const submitDraftSelectionState = (selectedItemsOverride = null, quantitiesOverride = null, invoicePricesOverride = null) => {
             const selectedItems = selectedItemsOverride ?? getSelectedItems();
             const quantities = quantitiesOverride ?? getDraftQuantities();
             const invoicePrices = invoicePricesOverride ?? getDraftInvoicePrices();
@@ -1114,10 +1038,8 @@
             appendHidden('view', 'draft');
 
             const supplierId = document.querySelector('input[name="supplier_id"][type="hidden"]')?.value ||
-                document.querySelector('.shipment-selection-form select[name="supplier_id"]')?.value ||
-                savedState.supplier_id || '';
-            const keyword = document.querySelector('.shipment-selection-form input[name="keyword"]')?.value || savedState
-                .keyword || '';
+                document.querySelector('.shipment-selection-form select[name="supplier_id"]')?.value || '';
+            const keyword = document.querySelector('.shipment-selection-form input[name="keyword"]')?.value || '';
 
             if (supplierId) appendHidden('supplier_id', supplierId);
             if (keyword) appendHidden('keyword', keyword);
@@ -1132,56 +1054,6 @@
 
             document.body.appendChild(form);
             form.submit();
-        };
-
-        const rehydrateDraftSelection = () => {
-            const rawState = localStorage.getItem(draftStorageKey);
-            if (!rawState) return;
-
-            const hasSelectedDraftRows = getSelectedItems().length > 0;
-            if (hasSelectedDraftRows) {
-                sessionStorage.removeItem('shipment-draft-rehydrated');
-                return;
-            }
-
-            if (sessionStorage.getItem('shipment-draft-rehydrated') === '1') {
-                sessionStorage.removeItem('shipment-draft-rehydrated');
-                return;
-            }
-
-            try {
-                const state = JSON.parse(rawState);
-                if (!Array.isArray(state.selected_items) || state.selected_items.length === 0) return;
-
-                sessionStorage.setItem('shipment-draft-rehydrated', '1');
-                submitDraftSelectionState(state.selected_items, state.quantities || {}, state.invoice_prices || {});
-            } catch (error) {
-                sessionStorage.removeItem('shipment-draft-rehydrated');
-                localStorage.removeItem(draftStorageKey);
-            }
-        };
-
-        const syncDraftInputs = (form) => {
-            form.querySelectorAll('input[name^="shipped_qty["]').forEach((input) => input.remove());
-            form.querySelectorAll('input[name^="invoice_unit_price["]').forEach((input) => input.remove());
-
-            Object.entries(getDraftQuantities()).forEach(([name, value]) => {
-                const hidden = document.createElement('input');
-                hidden.type = 'hidden';
-                hidden.name = name;
-                hidden.value = value;
-                form.appendChild(hidden);
-            });
-
-            Object.entries(getDraftInvoicePrices()).forEach(([name, value]) => {
-                const hidden = document.createElement('input');
-                hidden.type = 'hidden';
-                hidden.name = name;
-                hidden.value = value;
-                form.appendChild(hidden);
-            });
-
-            persistDraftState();
         };
 
         const formatNumber = (value) => {
@@ -1207,62 +1079,16 @@
                     return;
                 }
 
-                const total = qty * price;
-                totalInput.value = formatNumber(total);
+                totalInput.value = formatNumber(qty * price);
             });
         };
 
-        restoreDraftState();
-        rehydrateDraftSelection();
+        document.querySelectorAll('.draft-qty-input, .draft-price-input').forEach((input) => {
+            input.addEventListener('input', recalcDraftLineTotals);
+            input.addEventListener('change', recalcDraftLineTotals);
+        });
+
         recalcDraftLineTotals();
-
-        document.querySelectorAll(
-            'form[method="POST"] input[name^="shipped_qty["], form[method="POST"] input[name^="invoice_unit_price["], .shipment-selection-form input[name="keyword"]'
-        ).forEach((input) => {
-            input.addEventListener('input', () => {
-                persistDraftState();
-                recalcDraftLineTotals();
-            });
-            input.addEventListener('change', () => {
-                persistDraftState();
-                recalcDraftLineTotals();
-            });
-        });
-
-        document.querySelectorAll('.shipment-selection-form').forEach((form) => {
-            form.addEventListener('submit', () => syncDraftInputs(form));
-        });
-
-        window.removeDraftItem = (itemId) => {
-            persistDraftState();
-
-            const normalizedItemId = String(itemId);
-            const nextSelectedItems = getSelectedItems().filter((selectedItemId) => String(selectedItemId) !==
-                normalizedItemId);
-            const nextQuantities = {
-                ...getDraftQuantities()
-            };
-            const nextInvoicePrices = {
-                ...getDraftInvoicePrices()
-            };
-
-            delete nextQuantities[`shipped_qty[${normalizedItemId}]`];
-            delete nextInvoicePrices[`invoice_unit_price[${normalizedItemId}]`];
-
-            let draftState = {};
-            try {
-                draftState = JSON.parse(localStorage.getItem(draftStorageKey) || '{}');
-            } catch (error) {
-                draftState = {};
-            }
-
-            draftState.selected_items = nextSelectedItems;
-            draftState.quantities = nextQuantities;
-            draftState.invoice_prices = nextInvoicePrices;
-            localStorage.setItem(draftStorageKey, JSON.stringify(draftState));
-
-            submitDraftSelectionState(nextSelectedItems, nextQuantities, nextInvoicePrices);
-        };
 
         window.toggleCandidateCheckboxes = (checked) => {
             document.querySelectorAll('.candidate-item-checkbox').forEach((checkbox) => {
@@ -1277,79 +1103,41 @@
         };
 
         window.addCheckedCandidateItems = () => {
-            persistDraftState();
-
-            const checkedItems = Array.from(document.querySelectorAll('.candidate-item-checkbox:checked')).map((
-                checkbox) => checkbox.value);
+            const checkedItems = Array.from(document.querySelectorAll('.candidate-item-checkbox:checked')).map((checkbox) => checkbox.value);
             if (checkedItems.length === 0) return;
 
             const nextSelectedItems = Array.from(new Set([...getSelectedItems(), ...checkedItems]));
-            const nextQuantities = {
-                ...getDraftQuantities()
-            };
-            const nextInvoicePrices = {
-                ...getDraftInvoicePrices()
-            };
+            persistDraftState();
+            submitDraftSelectionState(nextSelectedItems, getDraftQuantities(), getDraftInvoicePrices());
+        };
 
-            let draftState = {};
-            try {
-                draftState = JSON.parse(localStorage.getItem(draftStorageKey) || '{}');
-            } catch (error) {
-                draftState = {};
-            }
+        window.removeDraftItem = (itemId) => {
+            const normalizedItemId = String(itemId);
+            const nextSelectedItems = getSelectedItems().filter((selectedItemId) => String(selectedItemId) !== normalizedItemId);
+            const nextQuantities = { ...getDraftQuantities() };
+            const nextInvoicePrices = { ...getDraftInvoicePrices() };
 
-            draftState.selected_items = nextSelectedItems;
-            draftState.quantities = nextQuantities;
-            draftState.invoice_prices = nextInvoicePrices;
-            localStorage.setItem(draftStorageKey, JSON.stringify(draftState));
+            delete nextQuantities[`shipped_qty[${normalizedItemId}]`];
+            delete nextInvoicePrices[`invoice_unit_price[${normalizedItemId}]`];
 
             submitDraftSelectionState(nextSelectedItems, nextQuantities, nextInvoicePrices);
         };
 
         window.removeCheckedDraftItems = () => {
-            persistDraftState();
-
-            const checkedItems = Array.from(document.querySelectorAll('.draft-item-checkbox:checked')).map((checkbox) =>
-                checkbox.value);
+            const checkedItems = Array.from(document.querySelectorAll('.draft-item-checkbox:checked')).map((checkbox) => checkbox.value);
             if (checkedItems.length === 0) return;
 
             const checkedSet = new Set(checkedItems.map(String));
-            const nextSelectedItems = getSelectedItems().filter((selectedItemId) => !checkedSet.has(String(
-                selectedItemId)));
-            const nextQuantities = {
-                ...getDraftQuantities()
-            };
-            const nextInvoicePrices = {
-                ...getDraftInvoicePrices()
-            };
+            const nextSelectedItems = getSelectedItems().filter((selectedItemId) => !checkedSet.has(String(selectedItemId)));
+            const nextQuantities = { ...getDraftQuantities() };
+            const nextInvoicePrices = { ...getDraftInvoicePrices() };
 
             checkedItems.forEach((itemId) => {
                 delete nextQuantities[`shipped_qty[${itemId}]`];
                 delete nextInvoicePrices[`invoice_unit_price[${itemId}]`];
             });
 
-            let draftState = {};
-            try {
-                draftState = JSON.parse(localStorage.getItem(draftStorageKey) || '{}');
-            } catch (error) {
-                draftState = {};
-            }
-
-            draftState.selected_items = nextSelectedItems;
-            draftState.quantities = nextQuantities;
-            draftState.invoice_prices = nextInvoicePrices;
-            localStorage.setItem(draftStorageKey, JSON.stringify(draftState));
-
             submitDraftSelectionState(nextSelectedItems, nextQuantities, nextInvoicePrices);
         };
-
-        document.querySelectorAll(
-            'form[action="{{ route('shipments.store') }}"], form[action="{{ route('shipments.create') }}"]').forEach(
-            (form) => {
-                form.addEventListener('submit', () => {
-                    persistDraftState();
-                    recalcDraftLineTotals();
-                });
-            });
     </script>
 @endsection

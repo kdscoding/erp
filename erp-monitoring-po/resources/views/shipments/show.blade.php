@@ -1,6 +1,6 @@
 @extends('layouts.erp')
-@php($title = 'Detail Shipment')
-@php($header = 'Detail Shipment')
+@php($title = 'Shipment Archive')
+@php($header = 'Shipment Archive')
 
 @section('content')
     <style>
@@ -72,17 +72,18 @@
                 <h3 class="card-title">Dokumen Shipment {{ $shipment->shipment_number }}</h3>
                 <div class="section-note">Detail shipment, dokumen supplier, dan line item yang ikut terkirim.</div>
             </div>
+
             <div class="action-stack">
-                <a href="{{ route('shipments.index', ['focus' => $shipment->id]) }}" class="btn btn-sm btn-light">
-                    Back to Worklist
-                </a>
+                <a href="{{ route('shipments.history') }}" class="btn btn-sm btn-light">Back to Archive</a>
+                <a href="{{ route('shipments.index') }}" class="btn btn-sm btn-light">Back to Worklist</a>
+
                 @if ($shipment->status === \App\Support\DocumentTermCodes::SHIPMENT_DRAFT)
                     <a href="{{ route('shipments.edit', $shipment->id) }}" class="btn btn-sm btn-primary">Edit Draft</a>
-                    <a href="{{ route('shipments.export-excel', $shipment->id) }}"
-                        class="btn btn-sm btn-outline-success">Export Excel</a>
+                    <a href="{{ route('shipments.export-excel', $shipment->id) }}" class="btn btn-sm btn-outline-success">Export Excel</a>
                 @endif
             </div>
         </div>
+
         <div class="card-body">
             <div class="row g-3 mb-3">
                 <div class="col-md-3">
@@ -157,6 +158,7 @@
             <h3 class="card-title">Item Dalam Dokumen Shipment</h3>
             <div class="section-note">Harga invoice tetap menjadi referensi dari dokumen shipment, bukan dari receiving.</div>
         </div>
+
         <div class="card-body table-responsive p-0">
             <table class="table table-hover mb-0 builder-table">
                 <thead>
@@ -178,19 +180,12 @@
                             <td>
                                 <strong>{{ $line->item_code }}</strong><br>{{ $line->item_name }}
                             </td>
-                            <td>
-                                {{ $line->po_unit_price !== null ? \App\Support\NumberFormatter::trim($line->po_unit_price) : '-' }}
-                            </td>
-                            <td>
-                                {{ $line->invoice_unit_price !== null ? \App\Support\NumberFormatter::trim($line->invoice_unit_price) : '-' }}
-                            </td>
-                            <td>
-                                {{ $line->invoice_line_total !== null ? \App\Support\NumberFormatter::trim($line->invoice_line_total) : '-' }}
-                            </td>
+                            <td>{{ $line->po_unit_price !== null ? \App\Support\NumberFormatter::trim($line->po_unit_price) : '-' }}</td>
+                            <td>{{ $line->invoice_unit_price !== null ? \App\Support\NumberFormatter::trim($line->invoice_unit_price) : '-' }}</td>
+                            <td>{{ $line->invoice_line_total !== null ? \App\Support\NumberFormatter::trim($line->invoice_line_total) : '-' }}</td>
                             <td>{{ \App\Support\NumberFormatter::trim($line->shipped_qty) }}</td>
                             <td>{{ \App\Support\NumberFormatter::trim($line->received_qty) }}</td>
-                            <td>{{ \App\Support\NumberFormatter::trim(max(0, $line->shipped_qty - $line->received_qty)) }}
-                            </td>
+                            <td>{{ \App\Support\NumberFormatter::trim(max(0, $line->shipped_qty - $line->received_qty)) }}</td>
                         </tr>
                     @endforeach
                 </tbody>

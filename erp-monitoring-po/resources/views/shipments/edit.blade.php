@@ -1,6 +1,6 @@
 @extends('layouts.erp')
-@php($title = 'Edit Draft Shipment')
-@php($header = 'Edit Draft Shipment')
+@php($title = 'Create Draft Shipment')
+@php($header = 'Create Draft Shipment')
 
 @section('content')
     <style>
@@ -77,23 +77,10 @@
         }
     </style>
 
-    @if (session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-
-    @if (session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
-
-    @if ($errors->any())
-        <div class="alert alert-danger">
-            <ul class="mb-0">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+    <div class="alert alert-warning">
+        <strong>Edit Draft Shipment.</strong>
+        Draft masih bisa direvisi sebelum dikonfirmasi menjadi shipped.
+    </div>
 
     <form method="POST" action="{{ route('shipments.update', $shipment->id) }}">
         @csrf
@@ -103,20 +90,19 @@
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
                     <h3 class="card-title">Ubah Draft {{ $shipment->shipment_number }}</h3>
-                    <div class="section-note">Dokumen shipment draft masih bisa direvisi sebelum dikonfirmasi shipped.</div>
+                    <div class="section-note">Perbarui dokumen supplier, qty line, dan harga invoice draft.</div>
                 </div>
                 <div class="action-stack">
-                    <a href="{{ route('shipments.export-excel', $shipment->id) }}"
-                        class="btn btn-sm btn-outline-success">Export Excel</a>
+                    <a href="{{ route('shipments.create') }}" class="btn btn-sm btn-light">Back to Create Draft</a>
+                    <a href="{{ route('shipments.show', $shipment->id) }}" class="btn btn-sm btn-light">Lihat Detail</a>
+                    <a href="{{ route('shipments.export-excel', $shipment->id) }}" class="btn btn-sm btn-outline-success">Export Excel</a>
                     <button type="button" class="btn btn-sm btn-outline-success"
                         onclick="openImportDraftModal({{ $shipment->id }}, '{{ $shipment->shipment_number }}')">
                         Import Excel
                     </button>
-                    <a href="{{ route('shipments.show', $shipment->id) }}" class="btn btn-sm btn-light">Lihat Detail</a>
-                    <a href="{{ route('shipments.index', ['focus' => $shipment->id]) }}"
-                        class="btn btn-sm btn-light">Back to Worklist</a>
                 </div>
             </div>
+
             <div class="card-body">
                 <div class="row g-3 mb-3">
                     <div class="col-md-3">
@@ -195,9 +181,9 @@
         <div class="card ui-card">
             <div class="card-header">
                 <h3 class="card-title">Item Draft Shipment</h3>
-                <div class="section-note">User bisa ubah qty draft, harga invoice, atau mengeluarkan line yang tidak jadi
-                    dipakai.</div>
+                <div class="section-note">User bisa ubah qty draft, harga invoice, atau mengeluarkan line yang tidak dipakai.</div>
             </div>
+
             <div class="card-body table-responsive p-0">
                 <table class="table table-hover mb-0 builder-table">
                     <thead>
@@ -235,9 +221,7 @@
                                 <td>
                                     <strong>{{ $line->item_code }}</strong><br>{{ $line->item_name }}
                                 </td>
-                                <td>
-                                    {{ $line->po_unit_price !== null ? \App\Support\NumberFormatter::trim($line->po_unit_price) : '-' }}
-                                </td>
+                                <td>{{ $line->po_unit_price !== null ? \App\Support\NumberFormatter::trim($line->po_unit_price) : '-' }}</td>
                                 <td>
                                     <input type="number" step="0.01" min="0.01"
                                         max="{{ \App\Support\NumberFormatter::input($maxQty) }}"
@@ -263,6 +247,7 @@
                     </tbody>
                 </table>
             </div>
+
             <div class="card-footer d-flex justify-content-end">
                 <button class="btn btn-primary btn-sm">Simpan Perubahan Draft</button>
             </div>
