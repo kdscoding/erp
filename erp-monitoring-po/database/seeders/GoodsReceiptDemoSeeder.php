@@ -66,7 +66,6 @@ class GoodsReceiptDemoSeeder extends Seeder
         'received_qty' => (float) $shipmentItem->received_qty,
         'qty_variance' => (float) $shipmentItem->shipped_qty - (float) $shipmentItem->received_qty,
         'accepted_qty' => (float) $shipmentItem->received_qty,
-        'rejected_qty' => 0,
         'remark' => 'Demo receiving ' . $suffix,
         'created_at' => $now,
         'updated_at' => $now,

@@ -27,6 +27,7 @@ class ShipmentController extends Controller
     public function index(Request $request): View
     {
         $viewMode = (string) ($request->route()->defaults['view'] ?? $request->get('view', 'worklist'));
+        $syncSelection = $request->boolean('sync_selection');
 
         if ($request->boolean('clear_selection')) {
             $request->session()->forget('shipment_selected_items');
@@ -34,7 +35,7 @@ class ShipmentController extends Controller
             $request->session()->forget('shipment_invoice_unit_price');
         }
 
-        if ($request->has('shipped_qty')) {
+        if ($syncSelection || $request->has('shipped_qty')) {
             $request->session()->put(
                 'shipment_shipped_qty',
                 collect($request->input('shipped_qty', []))
@@ -43,7 +44,7 @@ class ShipmentController extends Controller
             );
         }
 
-        if ($request->has('invoice_unit_price')) {
+        if ($syncSelection || $request->has('invoice_unit_price')) {
             $request->session()->put(
                 'shipment_invoice_unit_price',
                 collect($request->input('invoice_unit_price', []))
@@ -55,7 +56,7 @@ class ShipmentController extends Controller
             );
         }
 
-        if ($request->has('selected_items')) {
+        if ($syncSelection || $request->has('selected_items')) {
             $request->session()->put(
                 'shipment_selected_items',
                 collect($request->input('selected_items', []))
@@ -68,7 +69,7 @@ class ShipmentController extends Controller
         }
 
         $selectedItemIds = collect(
-            $request->has('selected_items')
+            ($syncSelection || $request->has('selected_items'))
                 ? $request->input('selected_items', [])
                 : $request->session()->get('shipment_selected_items', [])
         )
@@ -183,10 +184,16 @@ class ShipmentController extends Controller
         $draftInvoicePrices = collect($request->session()->get('shipment_invoice_unit_price', []))
             ->mapWithKeys(fn($price, $itemId) => [(int) $itemId => $price === null ? null : (float) $price]);
 
+        $selectedItemIds = $selectedItems
+            ->pluck('purchase_order_item_id')
+            ->map(fn($id) => (int) $id)
+            ->values()
+            ->all();
+
         $candidateItems = $hasSearch
             ? $this->candidateItemsQuery($request)
             ->when($selectedSupplierId, fn($query) => $query->where('po.supplier_id', $selectedSupplierId))
-            ->when($selectedItemIds->isNotEmpty(), fn($query) => $query->whereNotIn('poi.id', $selectedItemIds))
+            ->when(! empty($selectedItemIds), fn($query) => $query->whereNotIn('poi.id', $selectedItemIds))
             ->orderBy('s.supplier_name')
             ->orderBy('po.po_number')
             ->orderBy('i.item_code')
@@ -202,6 +209,7 @@ class ShipmentController extends Controller
             'suppliers',
             'candidateItems',
             'selectedItems',
+            'selectedItemIds',
             'hasSearch',
             'selectedSupplierId',
             'draftQuantities',
@@ -1108,6 +1116,8 @@ class ShipmentController extends Controller
 
     private function shipmentWorklistBaseQuery()
     {
+        $poNumbersExpression = $this->groupConcatPoNumbersExpression();
+
         return DB::table('shipments as sh')
             ->leftJoin('suppliers as s', 's.id', '=', 'sh.supplier_id')
             ->leftJoin('purchase_orders as anchor_po', 'anchor_po.id', '=', 'sh.purchase_order_id')
@@ -1120,7 +1130,7 @@ class ShipmentController extends Controller
                 DB::raw('COALESCE(s.supplier_name, anchor_s.supplier_name) as supplier_name'),
                 DB::raw('COUNT(DISTINCT si.id) as line_count'),
                 DB::raw('COUNT(DISTINCT po.id) as po_count'),
-                DB::raw("GROUP_CONCAT(DISTINCT po.po_number ORDER BY po.po_number SEPARATOR ', ') as po_numbers"),
+                DB::raw($poNumbersExpression . ' as po_numbers'),
                 DB::raw('COALESCE(SUM(si.shipped_qty),0) as total_shipped_qty'),
                 DB::raw('COALESCE(SUM(si.received_qty),0) as total_received_qty'),
                 DB::raw('COALESCE(SUM(si.shipped_qty - si.received_qty),0) as total_open_qty')
@@ -1143,6 +1153,13 @@ class ShipmentController extends Controller
                 's.supplier_name',
                 'anchor_s.supplier_name'
             );
+    }
+
+    private function groupConcatPoNumbersExpression(): string
+    {
+        return DB::connection()->getDriverName() === 'sqlite'
+            ? "GROUP_CONCAT(DISTINCT po.po_number)"
+            : "GROUP_CONCAT(DISTINCT po.po_number ORDER BY po.po_number SEPARATOR ', ')";
     }
 
     private function candidateItemsQuery(Request $request)

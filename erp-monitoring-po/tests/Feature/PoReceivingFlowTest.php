@@ -270,6 +270,111 @@ class PoReceivingFlowTest extends TestCase
         $this->assertDatabaseHas('shipments', ['id' => $shipmentId, 'status' => 'Cancelled']);
     }
 
+    public function test_shipment_worklist_and_edit_page_show_compact_actions_and_excel_tools(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-UI-01',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemId,
+            'ordered_qty' => 12,
+            'received_qty' => 0,
+            'outstanding_qty' => 12,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)->post('/shipments', [
+            'supplier_id' => $supplierId,
+            'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'SJ-UI-01',
+            'selected_items' => [$poItemId],
+            'shipped_qty' => [
+                $poItemId => 12,
+            ],
+        ])->assertSessionHas('success');
+
+        $shipmentId = DB::table('shipments')->value('id');
+
+        $this->actingAs($user)
+            ->get('/shipments')
+            ->assertOk()
+            ->assertSee('Active Documents')
+            ->assertSee('Actions')
+            ->assertSee('Create Draft')
+            ->assertSee('Import Excel');
+
+        $this->actingAs($user)
+            ->get('/shipments/'.$shipmentId.'/edit')
+            ->assertOk()
+            ->assertSee('Tools Draft Shipment')
+            ->assertSee('Export Excel')
+            ->assertSee('Import Excel')
+            ->assertSee('Cancel Draft');
+    }
+
+    public function test_shipment_builder_allows_removing_the_last_selected_item(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-BUILDER-01',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemId,
+            'ordered_qty' => 15,
+            'received_qty' => 0,
+            'outstanding_qty' => 15,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->withSession([
+            'shipment_selected_items' => [$poItemId],
+            'shipment_shipped_qty' => [$poItemId => 15],
+            'shipment_invoice_unit_price' => [],
+        ]);
+
+        $this->actingAs($user)
+            ->get('/shipments/create?view=draft')
+            ->assertOk()
+            ->assertSee('Keluarkan Item Checklist')
+            ->assertSee('Keluarkan Item')
+            ->assertDontSee('Batal Pilih Semua');
+
+        $this->withSession([
+            'shipment_selected_items' => [$poItemId],
+            'shipment_shipped_qty' => [$poItemId => 15],
+            'shipment_invoice_unit_price' => [],
+        ]);
+
+        $this->actingAs($user)
+            ->get('/shipments/create?view=draft&sync_selection=1')
+            ->assertOk()
+            ->assertSee('Pilih minimal satu item dari tabel kandidat sebelum membuat draft shipment.')
+            ->assertDontSee('Keluarkan Item');
+    }
+
     public function test_same_delivery_note_for_same_supplier_cannot_be_processed_twice(): void
     {
         $firstUser = $this->makeUserWithRole('administrator');
@@ -518,7 +623,6 @@ class PoReceivingFlowTest extends TestCase
             'item_id' => $itemId,
             'received_qty' => 25,
             'accepted_qty' => 25,
-            'rejected_qty' => 0,
             'qty_variance' => 0,
             'created_at' => now(),
             'updated_at' => now(),
@@ -660,7 +764,6 @@ class PoReceivingFlowTest extends TestCase
             'item_id' => $itemId,
             'received_qty' => 40,
             'accepted_qty' => 40,
-            'rejected_qty' => 0,
             'qty_variance' => 0,
             'created_at' => now(),
             'updated_at' => now(),
@@ -825,7 +928,6 @@ class PoReceivingFlowTest extends TestCase
             'item_id' => $itemId,
             'received_qty' => 40,
             'accepted_qty' => 40,
-            'rejected_qty' => 0,
             'qty_variance' => 60,
             'created_at' => now(),
             'updated_at' => now(),
@@ -849,7 +951,6 @@ class PoReceivingFlowTest extends TestCase
             'item_id' => $itemId,
             'received_qty' => 60,
             'accepted_qty' => 60,
-            'rejected_qty' => 0,
             'qty_variance' => 0,
             'created_at' => now(),
             'updated_at' => now(),
@@ -859,14 +960,16 @@ class PoReceivingFlowTest extends TestCase
             ->get('/po/'.$poId)
             ->assertOk()
             ->assertSee('Tracking Shipment / GR')
-            ->assertSee('Buka histori pengiriman & GR', false)
+            ->assertSee('Lihat Tracking')
             ->assertSee('SHP-TRACK-01')
             ->assertSee('SJ-TRACK-01')
             ->assertSee('GR-TRACK-01')
             ->assertSee('GR-TRACK-02')
-            ->assertSee('21-03-2026')
-            ->assertSee('22-03-2026')
-            ->assertSee('24-03-2026')
+            ->assertSee('20/03/2026')
+            ->assertSee('22/03/2026')
+            ->assertSee('24/03/2026')
+            ->assertSee('PO Created')
+            ->assertSee('Pengiriman ke-1 | DN SJ-TRACK-01')
             ->assertSeeText('Item complete. Seluruh qty PO sudah diterima.');
     }
 

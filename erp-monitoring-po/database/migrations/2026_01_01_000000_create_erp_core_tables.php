@@ -191,7 +191,6 @@ return new class extends Migration {
                 $table->decimal('received_qty', 14, 2)->default(0);
                 $table->decimal('qty_variance', 14, 2)->default(0);
                 $table->decimal('accepted_qty', 14, 2)->default(0);
-                $table->decimal('rejected_qty', 14, 2)->default(0);
                 $table->text('remark')->nullable();
                 $table->timestamps();
             });

@@ -1,14 +1,13 @@
 @extends('layouts.erp')
 
 @php($title = 'Shipment')
-@php($header = $isArchiveView ?? false ? 'Shipment Archive' : ($isBuilderView ?? false ? 'Create Draft Shipment' : 'Shipment Worklist'))
-@php($headerSubtitle = $isArchiveView ?? false ? 'Arsip dokumen shipment yang sudah selesai atau dibatalkan.' : ($isBuilderView ?? false ? 'Susun draft shipment dari kandidat item PO yang siap dikirim.' : 'Dokumen shipment aktif yang masih perlu diproses.'))
 
 @section('content')
-    @php($selectedItemIds = collect(request('selected_items', []))->map(fn($id) => (int) $id)->filter()->values()->all())
     @php($isBuilderView = request()->routeIs('shipments.create') || request('view') === 'draft')
     @php($isArchiveView = request()->routeIs('shipments.history') || request('view') === 'history')
     @php($isWorklistView = !$isBuilderView && !$isArchiveView)
+    @php($header = $isArchiveView ? 'Shipment Archive' : ($isBuilderView ? 'Create Draft Shipment' : 'Shipment Worklist'))
+    @php($headerSubtitle = $isArchiveView ? 'Arsip dokumen shipment yang sudah selesai atau dibatalkan.' : ($isBuilderView ? 'Susun draft shipment dari kandidat item PO yang siap dikirim.' : 'Dokumen shipment aktif yang masih perlu diproses.'))
     @php($focusedShipmentId = (int) request('focus'))
     @php($activeRowsData = $activeRows ?? null)
     @php($archiveRowsData = $archiveRows ?? null)
@@ -140,27 +139,64 @@
                                         <div class="doc-meta">Open {{ \App\Support\NumberFormatter::trim($r->total_open_qty ?? 0) }}</div>
                                     </td>
                                     <td class="text-end">
-                                        <div class="action-stack">
-                                            <a href="{{ route('shipments.show', $r->id) }}" class="btn btn-sm btn-light">View</a>
-                                            @if ($r->status === \App\Support\DocumentTermCodes::SHIPMENT_DRAFT)
-                                                <a href="{{ route('shipments.edit', $r->id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                                <a href="{{ route('shipments.export-excel', $r->id) }}" class="btn btn-sm btn-outline-success">Export</a>
-                                                <form method="POST" action="{{ route('shipments.mark-shipped', $r->id) }}">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <button class="btn btn-sm btn-outline-primary">Mark Shipped</button>
-                                                </form>
-                                                <form method="POST" action="{{ route('shipments.cancel-draft', $r->id) }}">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Batalkan draft shipment ini?')">Cancel</button>
-                                                </form>
-                                            @elseif (in_array($r->status, [\App\Support\DocumentTermCodes::SHIPMENT_SHIPPED, \App\Support\DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED], true))
-                                                <a href="{{ route('receiving.process', ['supplier_id' => $r->supplier_id, 'shipment_id' => $r->id, 'document_number' => $r->delivery_note_number]) }}" class="btn btn-sm btn-outline-primary">Continue Receiving</a>
-                                            @endif
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-toggle="dropdown" aria-expanded="false">
+                                                Actions
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu-right shadow-sm">
+                                                <a href="{{ route('shipments.show', $r->id) }}" class="dropdown-item">View Detail</a>
+                                                @if ($r->status === \App\Support\DocumentTermCodes::SHIPMENT_DRAFT)
+                                                    <a href="{{ route('shipments.edit', $r->id) }}" class="dropdown-item">Edit Draft</a>
+                                                    <a href="{{ route('shipments.export-excel', $r->id) }}" class="dropdown-item">Export Excel</a>
+                                                    <button type="button" class="dropdown-item" data-toggle="modal" data-target="#importDraftModal{{ $r->id }}">
+                                                        Import Excel
+                                                    </button>
+                                                    <div class="dropdown-divider"></div>
+                                                    <form method="POST" action="{{ route('shipments.mark-shipped', $r->id) }}">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <button class="dropdown-item text-primary">Mark Shipped</button>
+                                                    </form>
+                                                    <form method="POST" action="{{ route('shipments.cancel-draft', $r->id) }}">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <button class="dropdown-item text-danger" onclick="return confirm('Batalkan draft shipment ini?')">Cancel Draft</button>
+                                                    </form>
+                                                @elseif (in_array($r->status, [\App\Support\DocumentTermCodes::SHIPMENT_SHIPPED, \App\Support\DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED], true))
+                                                    <a href="{{ route('receiving.process', ['supplier_id' => $r->supplier_id, 'shipment_id' => $r->id, 'document_number' => $r->delivery_note_number]) }}" class="dropdown-item text-primary">Continue Receiving</a>
+                                                @endif
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
+
+                                @if ($r->status === \App\Support\DocumentTermCodes::SHIPMENT_DRAFT)
+                                    <div class="modal fade" id="importDraftModal{{ $r->id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <form method="POST" action="{{ route('shipments.import-excel') }}" enctype="multipart/form-data" class="modal-content">
+                                                @csrf
+                                                <input type="hidden" name="shipment_id" value="{{ $r->id }}">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Import Excel {{ $r->shipment_number }}</h5>
+                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="small text-muted mb-2">
+                                                        Gunakan file hasil export draft shipment ini, lalu upload ulang setelah diedit.
+                                                    </div>
+                                                    <label class="field-label">File Excel</label>
+                                                    <input type="file" name="file" class="form-control form-control-sm" accept=".xlsx,.xls" required>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Tutup</button>
+                                                    <button class="btn btn-primary btn-sm">Import Excel</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                @endif
                             @empty
                                 <tr>
                                     <td colspan="8" class="text-center text-muted">Tidak ada dokumen aktif.</td>
@@ -186,7 +222,8 @@
                 </div>
 
                 <div class="ui-surface-body">
-                    <form method="GET" class="shipment-selection-form">
+                    <form method="GET" class="shipment-selection-form" action="{{ route('shipments.create') }}">
+                        <input type="hidden" name="sync_selection" value="1">
                         <div class="filter-grid px-0 pt-0 pb-0">
                             <div class="span-3">
                                 <label class="field-label">Supplier</label>
@@ -225,6 +262,13 @@
                             <input type="hidden" name="invoice_unit_price[{{ $itemId }}]" value="{{ $price }}">
                         @endforeach
                     </form>
+                    @if ($selectedItems->isNotEmpty())
+                        <div class="d-flex justify-content-end mt-3">
+                            <a href="{{ route('shipments.create', ['view' => 'draft', 'clear_selection' => 1]) }}" class="btn btn-light btn-sm">
+                                Reset Builder
+                            </a>
+                        </div>
+                    @endif
                 </div>
             </section>
 
@@ -234,9 +278,14 @@
                         <h3 class="ui-surface-title">Pilih Item yang Akan Dikirim</h3>
                         <div class="ui-surface-subtitle">Centang item yang ingin dimasukkan ke draft shipment.</div>
                     </div>
-                    @if ($hasSearch)
-                        <button type="button" class="btn btn-primary btn-sm" onclick="addCheckedCandidateItems()">Tambahkan ke Draft</button>
-                    @endif
+                    <div class="page-actions">
+                        @if ($hasSearch)
+                            <button type="button" class="btn btn-primary btn-sm" onclick="addCheckedCandidateItems()">Tambahkan ke Draft</button>
+                        @endif
+                        @if ($hasSearch)
+                            <button type="button" class="btn btn-light btn-sm" onclick="clearCandidateChecks()">Clear Check</button>
+                        @endif
+                    </div>
                 </div>
 
                 <div class="table-wrap table-responsive">
@@ -340,9 +389,13 @@
 
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
                             <div class="doc-meta">Harga invoice dicatat di draft shipment agar tidak perlu diinput ulang saat receiving.</div>
-                            @if ($selectedItems->isNotEmpty())
-                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeCheckedDraftItems()">Keluarkan Item Terpilih</button>
-                            @endif
+                            <div class="page-actions">
+                                @if ($selectedItems->isNotEmpty())
+                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeCheckedDraftItems()">
+                                        Keluarkan Item Checklist
+                                    </button>
+                                @endif
+                            </div>
                         </div>
 
                         <div class="table-responsive">
@@ -380,7 +433,9 @@
                                                 <input type="text" class="form-control form-control-sm bg-light draft-line-total" data-item-id="{{ $item->purchase_order_item_id }}" value="-" readonly>
                                             </td>
                                             <td>
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeDraftItem('{{ $item->purchase_order_item_id }}')">Batal Pilih</button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeDraftItem('{{ $item->purchase_order_item_id }}')">
+                                                    Keluarkan Item
+                                                </button>
                                             </td>
                                         </tr>
                                     @empty
@@ -497,11 +552,21 @@
             document.querySelectorAll('.draft-item-checkbox').forEach((checkbox) => checkbox.checked = checked);
         };
 
+        window.clearCandidateChecks = () => {
+            document.querySelectorAll('.candidate-item-checkbox').forEach((checkbox) => checkbox.checked = false);
+        };
+
         window.addCheckedCandidateItems = () => {
             const checkedItems = Array.from(document.querySelectorAll('.candidate-item-checkbox:checked')).map((checkbox) => checkbox.value);
             if (checkedItems.length === 0) return;
             const form = document.querySelector('.shipment-selection-form');
+            const existingIds = new Set(
+                Array.from(form.querySelectorAll('input[name="selected_items[]"]')).map((input) => input.value)
+            );
             checkedItems.forEach((id) => {
+                if (existingIds.has(id)) {
+                    return;
+                }
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = 'selected_items[]';
@@ -513,16 +578,31 @@
 
         window.removeDraftItem = (itemId) => {
             const normalizedItemId = String(itemId);
-            document.querySelectorAll(`input[name="selected_items[]"][value="${normalizedItemId}"]`).forEach((node) => node.remove());
-            document.querySelectorAll(`input[name="shipped_qty[${normalizedItemId}]"]`).forEach((node) => node.remove());
-            document.querySelectorAll(`input[name="invoice_unit_price[${normalizedItemId}]"]`).forEach((node) => node.remove());
-            window.location.reload();
+            const form = document.querySelector('.shipment-selection-form');
+            if (!form) return;
+
+            form.querySelectorAll(`input[name="selected_items[]"][value="${normalizedItemId}"]`).forEach((node) => node.remove());
+            form.querySelectorAll(`input[name="shipped_qty[${normalizedItemId}]"]`).forEach((node) => node.remove());
+            form.querySelectorAll(`input[name="invoice_unit_price[${normalizedItemId}]"]`).forEach((node) => node.remove());
+            form.submit();
         };
 
         window.removeCheckedDraftItems = () => {
             const checkedItems = Array.from(document.querySelectorAll('.draft-item-checkbox:checked')).map((checkbox) => checkbox.value);
             if (checkedItems.length === 0) return;
-            checkedItems.forEach((itemId) => removeDraftItem(itemId));
+
+            const form = document.querySelector('.shipment-selection-form');
+            if (!form) return;
+
+            const uniqueChecked = [...new Set(checkedItems)];
+
+            uniqueChecked.forEach((itemId) => {
+                form.querySelectorAll(`input[name="selected_items[]"][value="${itemId}"]`).forEach((node) => node.remove());
+                form.querySelectorAll(`input[name="shipped_qty[${itemId}]"]`).forEach((node) => node.remove());
+                form.querySelectorAll(`input[name="invoice_unit_price[${itemId}]"]`).forEach((node) => node.remove());
+            });
+
+            form.submit();
         };
     </script>
 @endsection

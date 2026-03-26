@@ -350,7 +350,6 @@ class GoodsReceiptController extends Controller
                     'received_qty' => $receivedQty,
                     'qty_variance' => (float) $poItem->ordered_qty - $receivedQty,
                     'accepted_qty' => $receivedQty,
-                    'rejected_qty' => 0,
                     'remark' => $v['note'] ?? null,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -414,7 +413,6 @@ class GoodsReceiptController extends Controller
             'receipt_date' => 'required|date',
             'received_qty' => 'required|numeric|min:0.01',
             'accepted_qty' => 'nullable|numeric|min:0',
-            'rejected_qty' => 'nullable|numeric|min:0',
             'note' => 'nullable|string|max:500',
             'document_number' => 'required|string|max:100',
             'attachment' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:4096',
@@ -475,7 +473,6 @@ class GoodsReceiptController extends Controller
             ]);
 
             $acceptedQty = $v['accepted_qty'] ?? $v['received_qty'];
-            $rejectedQty = $v['rejected_qty'] ?? max(0, $v['received_qty'] - $acceptedQty);
             $variance = (float) $poItem->ordered_qty - (float) $v['received_qty'];
 
             DB::table('goods_receipt_items')->insert([
@@ -486,7 +483,6 @@ class GoodsReceiptController extends Controller
                 'received_qty' => $v['received_qty'],
                 'qty_variance' => $variance,
                 'accepted_qty' => $acceptedQty,
-                'rejected_qty' => $rejectedQty,
                 'remark' => $v['note'] ?? null,
                 'created_at' => now(),
                 'updated_at' => now(),

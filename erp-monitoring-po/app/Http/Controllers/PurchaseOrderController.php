@@ -111,8 +111,7 @@ class PurchaseOrderController extends Controller
                 'gr.document_number as gr_document_number',
                 'gr.status as gr_status',
                 'gri.received_qty as gr_received_qty',
-                'gri.accepted_qty',
-                'gri.rejected_qty'
+                'gri.accepted_qty'
             )
             ->orderBy('sh.shipment_date')
             ->orderBy('sh.id')
@@ -150,7 +149,6 @@ class PurchaseOrderController extends Controller
                                 'gr_status' => $row->gr_status,
                                 'gr_received_qty' => $row->gr_received_qty,
                                 'accepted_qty' => $row->accepted_qty,
-                                'rejected_qty' => $row->rejected_qty,
                             ])
                             ->values(),
                     ];

@@ -31,6 +31,46 @@
             <section class="ui-surface">
                 <div class="ui-surface-head">
                     <div>
+                        <h3 class="ui-surface-title">Tools Draft Shipment</h3>
+                        <div class="ui-surface-subtitle">Export, import ulang, atau batalkan draft dari satu area kerja.</div>
+                    </div>
+                </div>
+
+                <div class="ui-surface-body">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <div class="info-label">Export Draft</div>
+                            <div class="info-value mb-2">Unduh file Excel draft shipment ini.</div>
+                            <a href="{{ route('shipments.export-excel', $shipment->id) }}" class="btn btn-sm btn-outline-success">Export Excel</a>
+                        </div>
+
+                        <div class="info-box">
+                            <div class="info-label">Import Revisi</div>
+                            <div class="info-value mb-2">Upload file hasil export untuk update header dan line draft ini.</div>
+                            <form method="POST" action="{{ route('shipments.import-excel') }}" enctype="multipart/form-data" class="d-flex flex-column gap-2">
+                                @csrf
+                                <input type="hidden" name="shipment_id" value="{{ $shipment->id }}">
+                                <input type="file" name="file" class="form-control form-control-sm" accept=".xlsx,.xls" required>
+                                <button class="btn btn-sm btn-primary align-self-start">Import Excel</button>
+                            </form>
+                        </div>
+
+                        <div class="info-box">
+                            <div class="info-label">Cancel Draft</div>
+                            <div class="info-value mb-2">Batalkan draft jika dokumen supplier tidak jadi diproses.</div>
+                            <form method="POST" action="{{ route('shipments.cancel-draft', $shipment->id) }}">
+                                @csrf
+                                @method('PATCH')
+                                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Batalkan draft shipment ini?')">Cancel Draft</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="ui-surface">
+                <div class="ui-surface-head">
+                    <div>
                         <h3 class="ui-surface-title">Header Draft Shipment</h3>
                         <div class="ui-surface-subtitle">Perbarui dokumen supplier, qty line, dan harga invoice draft.</div>
                     </div>

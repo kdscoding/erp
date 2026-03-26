@@ -62,7 +62,7 @@
             <div class="ui-surface-head">
                 <div>
                     <h3 class="ui-surface-title">Detail Item Goods Receipt</h3>
-                    <div class="ui-surface-subtitle">Accepted, rejected, variance, dan outstanding PO ditampilkan dalam satu tabel detail.</div>
+                    <div class="ui-surface-subtitle">Qty diterima, accepted, variance, dan outstanding PO ditampilkan dalam satu tabel detail.</div>
                 </div>
             </div>
             <div class="table-wrap table-responsive">
@@ -76,7 +76,6 @@
                             <th>Qty Shipment</th>
                             <th>Qty Diterima</th>
                             <th>Accepted</th>
-                            <th>Rejected</th>
                             <th>Variance</th>
                             <th>Total Received PO</th>
                             <th>Outstanding PO</th>
@@ -93,7 +92,6 @@
                                 <td>{{ \App\Support\NumberFormatter::trim($item->shipped_qty ?? 0) }} {{ $item->unit_name }}</td>
                                 <td>{{ \App\Support\NumberFormatter::trim($item->received_qty) }} {{ $item->unit_name }}</td>
                                 <td>{{ \App\Support\NumberFormatter::trim($item->accepted_qty) }} {{ $item->unit_name }}</td>
-                                <td>{{ \App\Support\NumberFormatter::trim($item->rejected_qty) }} {{ $item->unit_name }}</td>
                                 <td>{{ \App\Support\NumberFormatter::trim($item->qty_variance) }}</td>
                                 <td>{{ \App\Support\NumberFormatter::trim($item->total_po_received_qty) }} {{ $item->unit_name }}</td>
                                 <td>{{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }} {{ $item->unit_name }}</td>

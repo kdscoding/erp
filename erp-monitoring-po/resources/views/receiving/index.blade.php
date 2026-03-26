@@ -248,7 +248,8 @@
                                                     <input type="number" step="0.01" min="0" max="{{ $item->shipment_outstanding_qty }}"
                                                         name="received_qty[{{ $item->shipment_item_id }}]"
                                                         value="{{ old('received_qty.' . $item->shipment_item_id) }}"
-                                                        class="form-control form-control-sm" placeholder="Isi jika datang">
+                                                        class="form-control form-control-sm"
+                                                        placeholder="Isi jika datang">
                                                 </td>
                                             </tr>
                                         @endforeach
