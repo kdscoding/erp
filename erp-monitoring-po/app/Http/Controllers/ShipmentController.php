@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ShipmentDraftExport;
+use App\Imports\ShipmentDraftImport;
 use App\Support\DocumentTermCodes;
 use App\Support\ErpFlow;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ShipmentController extends Controller
 {
@@ -20,7 +25,7 @@ class ShipmentController extends Controller
 
     public function index(Request $request): View
     {
-        $viewMode = (string) ($request->route()->defaults['view'] ?? $request->get('view', 'draft'));
+        $viewMode = (string) ($request->route()->defaults['view'] ?? $request->get('view', 'worklist'));
 
         if ($request->boolean('clear_selection')) {
             $request->session()->forget('shipment_selected_items');
@@ -74,44 +79,93 @@ class ShipmentController extends Controller
             || $request->filled('keyword')
             || $selectedItemIds->isNotEmpty();
 
-        $rows = DB::table('shipments as sh')
-            ->leftJoin('suppliers as s', 's.id', '=', 'sh.supplier_id')
-            ->leftJoin('purchase_orders as anchor_po', 'anchor_po.id', '=', 'sh.purchase_order_id')
-            ->leftJoin('suppliers as anchor_s', 'anchor_s.id', '=', 'anchor_po.supplier_id')
-            ->leftJoin('shipment_items as si', 'si.shipment_id', '=', 'sh.id')
-            ->leftJoin('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
-            ->leftJoin('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
-            ->select(
-                'sh.*',
-                DB::raw('COALESCE(s.supplier_name, anchor_s.supplier_name) as supplier_name'),
-                DB::raw('COUNT(DISTINCT si.id) as line_count'),
-                DB::raw('COUNT(DISTINCT po.id) as po_count'),
-                DB::raw("GROUP_CONCAT(DISTINCT po.po_number ORDER BY po.po_number SEPARATOR ', ') as po_numbers")
+        $activeRows = $this->shipmentWorklistBaseQuery()
+            ->when(
+                $request->filled('supplier_id'),
+                fn($q) => $q->where('sh.supplier_id', $request->integer('supplier_id'))
             )
-            ->when($viewMode === 'draft', fn($q) => $q->where('sh.status', DocumentTermCodes::SHIPMENT_DRAFT))
-            ->when($viewMode === 'history', fn($q) => $q->where('sh.status', '!=', DocumentTermCodes::SHIPMENT_DRAFT))
-            ->when($request->filled('delivery_note_number'), fn($q) => $q->where('sh.delivery_note_number', 'like', '%' . $request->string('delivery_note_number') . '%'))
-            ->when($request->filled('invoice_number'), fn($q) => $q->where('sh.invoice_number', 'like', '%' . $request->string('invoice_number') . '%'))
-            ->groupBy(
-                'sh.id',
-                'sh.purchase_order_id',
-                'sh.supplier_id',
-                'sh.shipment_number',
-                'sh.shipment_date',
-                'sh.delivery_note_number',
-                'sh.invoice_number',
-                'sh.invoice_date',
-                'sh.invoice_currency',
-                'sh.supplier_remark',
-                'sh.status',
-                'sh.created_by',
-                'sh.created_at',
-                'sh.updated_at',
-                's.supplier_name',
-                'anchor_s.supplier_name'
+            ->when(
+                $request->filled('delivery_note_number'),
+                fn($q) => $q->where('sh.delivery_note_number', 'like', '%' . $request->string('delivery_note_number') . '%')
             )
+            ->when(
+                $request->filled('invoice_number'),
+                fn($q) => $q->where('sh.invoice_number', 'like', '%' . $request->string('invoice_number') . '%')
+            )
+            ->when(
+                $request->filled('keyword'),
+                function ($q) use ($request) {
+                    $keyword = '%' . $request->string('keyword') . '%';
+                    $q->where(function ($inner) use ($keyword) {
+                        $inner->where('sh.shipment_number', 'like', $keyword)
+                            ->orWhere('sh.delivery_note_number', 'like', $keyword)
+                            ->orWhere('sh.invoice_number', 'like', $keyword)
+                            ->orWhere('s.supplier_name', 'like', $keyword)
+                            ->orWhere('anchor_s.supplier_name', 'like', $keyword)
+                            ->orWhere('po.po_number', 'like', $keyword);
+                    });
+                }
+            )
+            ->when(
+                $request->filled('status'),
+                fn($q) => $q->where('sh.status', $request->string('status'))
+            )
+            ->whereIn('sh.status', [
+                DocumentTermCodes::SHIPMENT_DRAFT,
+                DocumentTermCodes::SHIPMENT_SHIPPED,
+                DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED,
+            ])
+            ->orderByRaw("
+                CASE sh.status
+                    WHEN '" . DocumentTermCodes::SHIPMENT_DRAFT . "' THEN 1
+                    WHEN '" . DocumentTermCodes::SHIPMENT_SHIPPED . "' THEN 2
+                    WHEN '" . DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED . "' THEN 3
+                    ELSE 9
+                END
+            ")
+            ->orderByDesc('sh.shipment_date')
             ->orderByDesc('sh.id')
-            ->paginate(20)
+            ->paginate(20, ['*'], 'active_page')
+            ->withQueryString();
+
+        $archiveRows = $this->shipmentWorklistBaseQuery()
+            ->when(
+                $request->filled('supplier_id'),
+                fn($q) => $q->where('sh.supplier_id', $request->integer('supplier_id'))
+            )
+            ->when(
+                $request->filled('delivery_note_number'),
+                fn($q) => $q->where('sh.delivery_note_number', 'like', '%' . $request->string('delivery_note_number') . '%')
+            )
+            ->when(
+                $request->filled('invoice_number'),
+                fn($q) => $q->where('sh.invoice_number', 'like', '%' . $request->string('invoice_number') . '%')
+            )
+            ->when(
+                $request->filled('keyword'),
+                function ($q) use ($request) {
+                    $keyword = '%' . $request->string('keyword') . '%';
+                    $q->where(function ($inner) use ($keyword) {
+                        $inner->where('sh.shipment_number', 'like', $keyword)
+                            ->orWhere('sh.delivery_note_number', 'like', $keyword)
+                            ->orWhere('sh.invoice_number', 'like', $keyword)
+                            ->orWhere('s.supplier_name', 'like', $keyword)
+                            ->orWhere('anchor_s.supplier_name', 'like', $keyword)
+                            ->orWhere('po.po_number', 'like', $keyword);
+                    });
+                }
+            )
+            ->when(
+                $request->filled('status'),
+                fn($q) => $q->where('sh.status', $request->string('status'))
+            )
+            ->whereIn('sh.status', [
+                DocumentTermCodes::SHIPMENT_RECEIVED,
+                DocumentTermCodes::SHIPMENT_CANCELLED,
+            ])
+            ->orderByDesc('sh.shipment_date')
+            ->orderByDesc('sh.id')
+            ->paginate(20, ['*'], 'archive_page')
             ->withQueryString();
 
         $selectedItems = $selectedItemIds->isNotEmpty()
@@ -142,7 +196,8 @@ class ShipmentController extends Controller
         $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name']);
 
         return view('shipments.index', compact(
-            'rows',
+            'activeRows',
+            'archiveRows',
             'suppliers',
             'candidateItems',
             'selectedItems',
@@ -178,7 +233,7 @@ class ShipmentController extends Controller
         return view('shipments.edit', compact('shipment', 'lines'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $v = $request->validate([
             'shipment_date' => 'required|date',
@@ -198,7 +253,7 @@ class ShipmentController extends Controller
         $userId = optional($request->user())->id;
 
         $remark = trim(implode(' | ', array_filter([
-            ! empty($v['po_reference_missing']) ? 'Dokumen supplier tidak mencantumkan nomor PO.' : null,
+            !empty($v['po_reference_missing']) ? 'Dokumen supplier tidak mencantumkan nomor PO.' : null,
             $v['supplier_remark'] ?? null,
         ]))) ?: null;
 
@@ -206,92 +261,128 @@ class ShipmentController extends Controller
         $invoiceNumber = trim((string) ($v['invoice_number'] ?? '')) ?: null;
         $shipmentId = null;
 
-        try {
-            $shipmentId = DB::transaction(function () use ($selectedIds, $request, $deliveryNote, $invoiceNumber, $remark, $userId, $v) {
-                $items = $this->candidateItemsBaseQuery()
-                    ->whereIn('poi.id', $selectedIds)
-                    ->lockForUpdate()
-                    ->get();
+        $shipmentId = DB::transaction(function () use ($selectedIds, $request, $deliveryNote, $invoiceNumber, $remark, $userId, $v) {
+            $items = $this->candidateItemsBaseQuery()
+                ->whereIn('poi.id', $selectedIds)
+                ->lockForUpdate()
+                ->get();
 
-                if ($items->count() !== $selectedIds->count()) {
-                    throw ValidationException::withMessages([
-                        'selected_items' => 'Sebagian item tidak lagi tersedia untuk dibuat shipment.',
-                    ]);
-                }
+            if ($items->count() !== $selectedIds->count()) {
+                throw ValidationException::withMessages([
+                    'selected_items' => 'Sebagian item tidak lagi tersedia untuk dibuat shipment.',
+                ]);
+            }
 
-                if ($items->pluck('supplier_id')->unique()->count() !== 1) {
-                    throw ValidationException::withMessages([
-                        'selected_items' => 'Semua item shipment harus berasal dari supplier yang sama.',
-                    ]);
-                }
+            if ($items->pluck('supplier_id')->unique()->count() !== 1) {
+                throw ValidationException::withMessages([
+                    'selected_items' => 'Semua item shipment harus berasal dari supplier yang sama.',
+                ]);
+            }
 
-                $supplierId = (int) $items->first()->supplier_id;
+            $supplierId = (int) $items->first()->supplier_id;
 
-                $duplicateShipment = DB::table('shipments')
+            $duplicateShipment = DB::table('shipments')
+                ->where('supplier_id', $supplierId)
+                ->whereRaw('LOWER(TRIM(delivery_note_number)) = ?', [mb_strtolower($deliveryNote)])
+                ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
+                ->lockForUpdate()
+                ->first();
+
+            if ($duplicateShipment) {
+                $statusLabel = $duplicateShipment->status === DocumentTermCodes::SHIPMENT_DRAFT
+                    ? 'masih berupa Draft'
+                    : 'sudah diproses dengan status ' . $duplicateShipment->status;
+
+                throw ValidationException::withMessages([
+                    'delivery_note_number' => "Delivery note {$deliveryNote} untuk supplier ini sudah digunakan pada shipment {$duplicateShipment->shipment_number} dan {$statusLabel}.",
+                ]);
+            }
+
+            if ($invoiceNumber) {
+                $duplicateInvoice = DB::table('shipments')
                     ->where('supplier_id', $supplierId)
-                    ->whereRaw('LOWER(TRIM(delivery_note_number)) = ?', [mb_strtolower($deliveryNote)])
+                    ->whereRaw('LOWER(TRIM(invoice_number)) = ?', [mb_strtolower($invoiceNumber)])
                     ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
                     ->lockForUpdate()
                     ->first();
 
-                if ($duplicateShipment) {
-                    $statusLabel = $duplicateShipment->status === DocumentTermCodes::SHIPMENT_DRAFT
-                        ? 'masih berupa Draft'
-                        : 'sudah diproses dengan status ' . $duplicateShipment->status;
-
+                if ($duplicateInvoice) {
                     throw ValidationException::withMessages([
-                        'delivery_note_number' => "Delivery note {$deliveryNote} untuk supplier ini sudah digunakan pada shipment {$duplicateShipment->shipment_number} dan {$statusLabel}.",
+                        'invoice_number' => "Invoice {$invoiceNumber} untuk supplier ini sudah dipakai pada shipment {$duplicateInvoice->shipment_number}.",
+                    ]);
+                }
+            }
+
+            $linePayloads = [];
+            foreach ($items as $item) {
+                $qty = (float) ($request->input("shipped_qty.{$item->purchase_order_item_id}") ?? 0);
+                $invoiceUnitPrice = $request->input("invoice_unit_price.{$item->purchase_order_item_id}");
+                $invoiceUnitPrice = ($invoiceUnitPrice === null || $invoiceUnitPrice === '') ? null : (float) $invoiceUnitPrice;
+
+                if ($qty <= 0) {
+                    throw ValidationException::withMessages([
+                        'shipped_qty' => 'Qty kirim harus diisi untuk setiap item yang dipilih.',
                     ]);
                 }
 
-                if ($invoiceNumber) {
-                    $duplicateInvoice = DB::table('shipments')
-                        ->where('supplier_id', $supplierId)
-                        ->whereRaw('LOWER(TRIM(invoice_number)) = ?', [mb_strtolower($invoiceNumber)])
-                        ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
-                        ->lockForUpdate()
-                        ->first();
-
-                    if ($duplicateInvoice) {
-                        throw ValidationException::withMessages([
-                            'invoice_number' => "Invoice {$invoiceNumber} untuk supplier ini sudah dipakai pada shipment {$duplicateInvoice->shipment_number}.",
-                        ]);
-                    }
+                if ($qty > (float) $item->available_to_ship_qty) {
+                    throw ValidationException::withMessages([
+                        'shipped_qty.' . $item->purchase_order_item_id => "Qty kirim untuk {$item->item_code} melebihi sisa qty yang masih bisa dialokasikan.",
+                    ]);
                 }
 
-                $linePayloads = [];
-                foreach ($items as $item) {
-                    $qty = (float) ($request->input("shipped_qty.{$item->purchase_order_item_id}") ?? 0);
-                    $invoiceUnitPrice = $request->input("invoice_unit_price.{$item->purchase_order_item_id}");
-                    $invoiceUnitPrice = ($invoiceUnitPrice === null || $invoiceUnitPrice === '') ? null : (float) $invoiceUnitPrice;
+                $linePayloads[] = [
+                    'purchase_order_item_id' => $item->purchase_order_item_id,
+                    'purchase_order_id' => $item->purchase_order_id,
+                    'shipped_qty' => $qty,
+                    'invoice_unit_price' => $invoiceUnitPrice,
+                    'invoice_line_total' => $invoiceUnitPrice !== null ? round($invoiceUnitPrice * $qty, 2) : null,
+                ];
+            }
 
-                    if ($qty <= 0) {
-                        throw ValidationException::withMessages([
-                            'shipped_qty' => 'Qty kirim harus diisi untuk setiap item yang dipilih.',
-                        ]);
-                    }
+            $number = ErpFlow::generateNumber('SHP', 'shipments', 'shipment_number');
 
-                    if ($qty > (float) $item->available_to_ship_qty) {
-                        throw ValidationException::withMessages([
-                            'shipped_qty.' . $item->purchase_order_item_id => "Qty kirim untuk {$item->item_code} melebihi sisa qty yang masih bisa dialokasikan.",
-                        ]);
-                    }
+            $shipmentId = DB::table('shipments')->insertGetId([
+                'purchase_order_id' => $linePayloads[0]['purchase_order_id'],
+                'supplier_id' => $supplierId,
+                'shipment_number' => $number,
+                'shipment_date' => $v['shipment_date'],
+                'delivery_note_number' => $deliveryNote,
+                'invoice_number' => $invoiceNumber,
+                'invoice_date' => $v['invoice_date'] ?? null,
+                'invoice_currency' => $v['invoice_currency'] ?? null,
+                'supplier_remark' => $remark,
+                'status' => DocumentTermCodes::SHIPMENT_DRAFT,
+                'created_by' => $userId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-                    $linePayloads[] = [
-                        'purchase_order_item_id' => $item->purchase_order_item_id,
-                        'purchase_order_id' => $item->purchase_order_id,
-                        'shipped_qty' => $qty,
-                        'invoice_unit_price' => $invoiceUnitPrice,
-                        'invoice_line_total' => $invoiceUnitPrice !== null ? round($invoiceUnitPrice * $qty, 2) : null,
-                    ];
-                }
+            $lineRows = collect($linePayloads)->map(fn($line) => [
+                'shipment_id' => $shipmentId,
+                'purchase_order_item_id' => $line['purchase_order_item_id'],
+                'shipped_qty' => $line['shipped_qty'],
+                'received_qty' => 0,
+                'invoice_unit_price' => $line['invoice_unit_price'],
+                'invoice_line_total' => $line['invoice_line_total'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ])->all();
 
-                $number = ErpFlow::generateNumber('SHP', 'shipments', 'shipment_number');
+            DB::table('shipment_items')->insert($lineRows);
 
-                $shipmentId = DB::table('shipments')->insertGetId([
-                    'purchase_order_id' => $linePayloads[0]['purchase_order_id'],
-                    'supplier_id' => $supplierId,
-                    'shipment_number' => $number,
+            $poIds = collect($linePayloads)
+                ->pluck('purchase_order_id')
+                ->map(fn($poId) => (int) $poId)
+                ->unique()
+                ->values();
+
+            foreach ($poIds as $poId) {
+                ErpFlow::refreshPoStatusByOutstanding($poId, $userId);
+            }
+
+            ErpFlow::audit('shipments', $shipmentId, 'create', null, [
+                'shipment' => [
                     'shipment_date' => $v['shipment_date'],
                     'delivery_note_number' => $deliveryNote,
                     'invoice_number' => $invoiceNumber,
@@ -299,155 +390,24 @@ class ShipmentController extends Controller
                     'invoice_currency' => $v['invoice_currency'] ?? null,
                     'supplier_remark' => $remark,
                     'status' => DocumentTermCodes::SHIPMENT_DRAFT,
-                    'created_by' => $userId,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                ],
+                'lines' => $linePayloads,
+            ], $userId, $request->ip());
 
-                $lineRows = collect($linePayloads)->map(fn($line) => [
-                    'shipment_id' => $shipmentId,
-                    'purchase_order_item_id' => $line['purchase_order_item_id'],
-                    'shipped_qty' => $line['shipped_qty'],
-                    'received_qty' => 0,
-                    'invoice_unit_price' => $line['invoice_unit_price'],
-                    'invoice_line_total' => $line['invoice_line_total'],
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ])->all();
-
-                DB::table('shipment_items')->insert($lineRows);
-
-                $poIds = collect($linePayloads)
-                    ->pluck('purchase_order_id')
-                    ->map(fn($poId) => (int) $poId)
-                    ->unique()
-                    ->values();
-
-                foreach ($poIds as $poId) {
-                    ErpFlow::refreshPoStatusByOutstanding($poId, $userId);
-                }
-
-                ErpFlow::audit('shipments', $shipmentId, 'create', null, [
-                    'shipment' => [
-                        'shipment_date' => $v['shipment_date'],
-                        'delivery_note_number' => $deliveryNote,
-                        'invoice_number' => $invoiceNumber,
-                        'invoice_date' => $v['invoice_date'] ?? null,
-                        'invoice_currency' => $v['invoice_currency'] ?? null,
-                        'supplier_remark' => $remark,
-                        'status' => DocumentTermCodes::SHIPMENT_DRAFT,
-                    ],
-                    'lines' => $linePayloads,
-                ], $userId, $request->ip());
-
-                return $shipmentId;
-            });
-        } catch (ValidationException $e) {
-            throw $e;
-        }
+            return $shipmentId;
+        });
 
         $request->session()->forget('shipment_selected_items');
         $request->session()->forget('shipment_shipped_qty');
         $request->session()->forget('shipment_invoice_unit_price');
         $request->session()->flash('shipment_builder_reset', true);
 
-        return redirect()->route('shipments.history', [
+        return redirect()->route('shipments.index', [
             'focus' => $shipmentId,
         ])->with('success', 'Shipment tersimpan dengan status Draft.');
     }
 
-    public function markShipped(string $id, Request $request)
-    {
-        $userId = optional($request->user())->id;
-        $shipment = null;
-
-        try {
-            $shipment = DB::transaction(function () use ($id, $userId, $request) {
-                $shipment = DB::table('shipments')->where('id', $id)->lockForUpdate()->firstOrFail();
-
-                if ($shipment->status !== DocumentTermCodes::SHIPMENT_DRAFT) {
-                    throw ValidationException::withMessages([
-                        'shipment' => 'Hanya shipment Draft yang bisa dikonfirmasi menjadi Shipped.',
-                    ]);
-                }
-
-                $duplicateShipment = DB::table('shipments')
-                    ->where('supplier_id', $shipment->supplier_id)
-                    ->where('id', '!=', $shipment->id)
-                    ->whereRaw('LOWER(TRIM(delivery_note_number)) = ?', [mb_strtolower(trim((string) $shipment->delivery_note_number))])
-                    ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($duplicateShipment) {
-                    throw ValidationException::withMessages([
-                        'shipment' => "Delivery note {$shipment->delivery_note_number} sudah dipakai oleh shipment {$duplicateShipment->shipment_number}.",
-                    ]);
-                }
-
-                if ($shipment->invoice_number) {
-                    $duplicateInvoice = DB::table('shipments')
-                        ->where('supplier_id', $shipment->supplier_id)
-                        ->where('id', '!=', $shipment->id)
-                        ->whereRaw('LOWER(TRIM(invoice_number)) = ?', [mb_strtolower(trim((string) $shipment->invoice_number))])
-                        ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
-                        ->lockForUpdate()
-                        ->first();
-
-                    if ($duplicateInvoice) {
-                        throw ValidationException::withMessages([
-                            'shipment' => "Invoice {$shipment->invoice_number} sudah dipakai oleh shipment {$duplicateInvoice->shipment_number}.",
-                        ]);
-                    }
-                }
-
-                $linePoIds = DB::table('shipment_items as si')
-                    ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
-                    ->where('si.shipment_id', $shipment->id)
-                    ->pluck('poi.purchase_order_id')
-                    ->map(fn($poId) => (int) $poId)
-                    ->unique()
-                    ->values();
-
-                if ($linePoIds->isEmpty()) {
-                    throw ValidationException::withMessages([
-                        'shipment' => 'Shipment belum memiliki item yang bisa dikirim.',
-                    ]);
-                }
-
-                DB::table('shipments')->where('id', $shipment->id)->update([
-                    'status' => DocumentTermCodes::SHIPMENT_SHIPPED,
-                    'updated_at' => now(),
-                ]);
-
-                foreach ($linePoIds as $poId) {
-                    ErpFlow::refreshPoStatusByOutstanding((int) $poId, $userId);
-                }
-
-                ErpFlow::audit(
-                    'shipments',
-                    (int) $shipment->id,
-                    'mark_shipped',
-                    ['status' => DocumentTermCodes::SHIPMENT_DRAFT],
-                    ['status' => DocumentTermCodes::SHIPMENT_SHIPPED],
-                    $userId,
-                    $request->ip()
-                );
-
-                return $shipment;
-            });
-        } catch (ValidationException $e) {
-            throw $e;
-        }
-
-        return redirect()->route('receiving.process', [
-            'supplier_id' => $shipment->supplier_id,
-            'shipment_id' => $shipment->id,
-            'document_number' => $shipment->delivery_note_number,
-        ])->with('success', 'Shipment berhasil dikonfirmasi menjadi Shipped.');
-    }
-
-    public function update(string $id, Request $request)
+    public function update(string $id, Request $request): RedirectResponse
     {
         $v = $request->validate([
             'shipment_date' => 'required|date',
@@ -524,7 +484,7 @@ class ShipmentController extends Controller
             foreach ($keptLines as $line) {
                 $existing = $currentLines->get((int) $line['id']);
 
-                if (! $existing) {
+                if (!$existing) {
                     throw ValidationException::withMessages([
                         'shipment_items' => 'Ada item draft yang tidak valid.',
                     ]);
@@ -593,7 +553,94 @@ class ShipmentController extends Controller
         return redirect()->route('shipments.edit', $id)->with('success', 'Draft shipment berhasil diperbarui.');
     }
 
-    public function cancelDraft(string $id, Request $request)
+    public function markShipped(string $id, Request $request): RedirectResponse
+    {
+        $userId = optional($request->user())->id;
+        $shipment = null;
+
+        $shipment = DB::transaction(function () use ($id, $userId, $request) {
+            $shipment = DB::table('shipments')->where('id', $id)->lockForUpdate()->firstOrFail();
+
+            if ($shipment->status !== DocumentTermCodes::SHIPMENT_DRAFT) {
+                throw ValidationException::withMessages([
+                    'shipment' => 'Hanya shipment Draft yang bisa dikonfirmasi menjadi Shipped.',
+                ]);
+            }
+
+            $duplicateShipment = DB::table('shipments')
+                ->where('supplier_id', $shipment->supplier_id)
+                ->where('id', '!=', $shipment->id)
+                ->whereRaw('LOWER(TRIM(delivery_note_number)) = ?', [mb_strtolower(trim((string) $shipment->delivery_note_number))])
+                ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
+                ->lockForUpdate()
+                ->first();
+
+            if ($duplicateShipment) {
+                throw ValidationException::withMessages([
+                    'shipment' => "Delivery note {$shipment->delivery_note_number} sudah dipakai oleh shipment {$duplicateShipment->shipment_number}.",
+                ]);
+            }
+
+            if ($shipment->invoice_number) {
+                $duplicateInvoice = DB::table('shipments')
+                    ->where('supplier_id', $shipment->supplier_id)
+                    ->where('id', '!=', $shipment->id)
+                    ->whereRaw('LOWER(TRIM(invoice_number)) = ?', [mb_strtolower(trim((string) $shipment->invoice_number))])
+                    ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($duplicateInvoice) {
+                    throw ValidationException::withMessages([
+                        'shipment' => "Invoice {$shipment->invoice_number} sudah dipakai oleh shipment {$duplicateInvoice->shipment_number}.",
+                    ]);
+                }
+            }
+
+            $linePoIds = DB::table('shipment_items as si')
+                ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
+                ->where('si.shipment_id', $shipment->id)
+                ->pluck('poi.purchase_order_id')
+                ->map(fn($poId) => (int) $poId)
+                ->unique()
+                ->values();
+
+            if ($linePoIds->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'shipment' => 'Shipment belum memiliki item yang bisa dikirim.',
+                ]);
+            }
+
+            DB::table('shipments')->where('id', $shipment->id)->update([
+                'status' => DocumentTermCodes::SHIPMENT_SHIPPED,
+                'updated_at' => now(),
+            ]);
+
+            foreach ($linePoIds as $poId) {
+                ErpFlow::refreshPoStatusByOutstanding((int) $poId, $userId);
+            }
+
+            ErpFlow::audit(
+                'shipments',
+                (int) $shipment->id,
+                'mark_shipped',
+                ['status' => DocumentTermCodes::SHIPMENT_DRAFT],
+                ['status' => DocumentTermCodes::SHIPMENT_SHIPPED],
+                $userId,
+                $request->ip()
+            );
+
+            return $shipment;
+        });
+
+        return redirect()->route('receiving.process', [
+            'supplier_id' => $shipment->supplier_id,
+            'shipment_id' => $shipment->id,
+            'document_number' => $shipment->delivery_note_number,
+        ])->with('success', 'Shipment berhasil dikonfirmasi menjadi Shipped.');
+    }
+
+    public function cancelDraft(string $id, Request $request): RedirectResponse
     {
         $shipment = DB::table('shipments')->where('id', $id)->firstOrFail();
 
@@ -631,6 +678,103 @@ class ShipmentController extends Controller
         });
 
         return back()->with('success', 'Draft shipment berhasil dibatalkan.');
+    }
+
+    public function exportDraftExcel(string $id)
+    {
+        $shipment = $this->shipmentHeaderQuery()
+            ->where('sh.id', $id)
+            ->firstOrFail();
+
+        abort_if($shipment->status !== DocumentTermCodes::SHIPMENT_DRAFT, 404);
+
+        $lines = $this->shipmentLineQuery((int) $shipment->id)->get();
+
+        return Excel::download(
+            new ShipmentDraftExport($shipment, $lines),
+            'shipment-draft-' . $shipment->shipment_number . '.xlsx'
+        );
+    }
+
+    public function downloadDraftTemplate()
+    {
+        return Excel::download(
+            new ShipmentDraftExport(
+                (object) [
+                    'shipment_number' => 'SHP-XXXXX',
+                    'shipment_date' => now()->format('Y-m-d'),
+                    'supplier_name' => '',
+                    'delivery_note_number' => '',
+                    'invoice_number' => '',
+                    'invoice_date' => '',
+                    'invoice_currency' => 'IDR',
+                    'supplier_remark' => '',
+                    'status' => DocumentTermCodes::SHIPMENT_DRAFT,
+                ],
+                collect()
+            ),
+            'shipment-draft-template.xlsx'
+        );
+    }
+
+    public function importDraftExcel(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'shipment_id' => 'required|integer|exists:shipments,id',
+            'file' => 'required|file|mimes:xlsx,xls',
+        ]);
+
+        $shipment = DB::table('shipments')->where('id', $validated['shipment_id'])->firstOrFail();
+
+        if ($shipment->status !== DocumentTermCodes::SHIPMENT_DRAFT) {
+            return back()->with('error', 'Import hanya diperbolehkan untuk shipment Draft.');
+        }
+
+        $import = new ShipmentDraftImport((int) $validated['shipment_id']);
+        Excel::import($import, $request->file('file'));
+        $import->apply();
+
+        return redirect()->route('shipments.edit', $validated['shipment_id'])
+            ->with('success', 'Draft shipment berhasil diperbarui dari Excel.');
+    }
+
+    private function shipmentWorklistBaseQuery()
+    {
+        return DB::table('shipments as sh')
+            ->leftJoin('suppliers as s', 's.id', '=', 'sh.supplier_id')
+            ->leftJoin('purchase_orders as anchor_po', 'anchor_po.id', '=', 'sh.purchase_order_id')
+            ->leftJoin('suppliers as anchor_s', 'anchor_s.id', '=', 'anchor_po.supplier_id')
+            ->leftJoin('shipment_items as si', 'si.shipment_id', '=', 'sh.id')
+            ->leftJoin('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
+            ->leftJoin('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->select(
+                'sh.*',
+                DB::raw('COALESCE(s.supplier_name, anchor_s.supplier_name) as supplier_name'),
+                DB::raw('COUNT(DISTINCT si.id) as line_count'),
+                DB::raw('COUNT(DISTINCT po.id) as po_count'),
+                DB::raw("GROUP_CONCAT(DISTINCT po.po_number ORDER BY po.po_number SEPARATOR ', ') as po_numbers"),
+                DB::raw('COALESCE(SUM(si.shipped_qty),0) as total_shipped_qty'),
+                DB::raw('COALESCE(SUM(si.received_qty),0) as total_received_qty'),
+                DB::raw('COALESCE(SUM(si.shipped_qty - si.received_qty),0) as total_open_qty')
+            )
+            ->groupBy(
+                'sh.id',
+                'sh.purchase_order_id',
+                'sh.supplier_id',
+                'sh.shipment_number',
+                'sh.shipment_date',
+                'sh.delivery_note_number',
+                'sh.invoice_number',
+                'sh.invoice_date',
+                'sh.invoice_currency',
+                'sh.supplier_remark',
+                'sh.status',
+                'sh.created_by',
+                'sh.created_at',
+                'sh.updated_at',
+                's.supplier_name',
+                'anchor_s.supplier_name'
+            );
     }
 
     private function candidateItemsQuery(Request $request)

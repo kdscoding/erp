@@ -20,13 +20,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn() => redirect()->route('dashboard'));
 
-    Route::middleware(['auth', 'verified'])->group(function () {
-        Route::get('/dashboard', DashboardController::class)->name('dashboard');
-        Route::get('/monitoring', [DashboardController::class, 'monitoring'])->name('monitoring');
-        Route::get('/po', [PurchaseOrderController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('po.index');
-        Route::get('/reports/outstanding', [ReportController::class, 'outstanding'])->middleware('role:administrator|staff|supervisor')->name('reports.outstanding');
-        Route::get('/traceability', [TraceabilityController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('traceability.index');
-        Route::get('/audit-trail', [AuditTrailController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('audit.index');
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/monitoring', [DashboardController::class, 'monitoring'])->name('monitoring');
+    Route::get('/po', [PurchaseOrderController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('po.index');
+    Route::get('/reports/outstanding', [ReportController::class, 'outstanding'])->middleware('role:administrator|staff|supervisor')->name('reports.outstanding');
+    Route::get('/traceability', [TraceabilityController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('traceability.index');
+    Route::get('/audit-trail', [AuditTrailController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('audit.index');
 
     Route::middleware('role:administrator|staff')->group(function () {
         Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
@@ -65,8 +65,9 @@ Route::get('/', fn() => redirect()->route('dashboard'));
         Route::post('/po/items/{itemId}/force-close', [PurchaseOrderController::class, 'forceCloseItem'])->name('po.items.force-close');
         Route::post('/po/{id}/cancel', [PurchaseOrderController::class, 'cancelPo'])->name('po.cancel');
 
-        Route::get('/shipments', [ShipmentController::class, 'index'])->defaults('view', 'draft')->name('shipments.index');
-        Route::get('/shipments/process', [ShipmentController::class, 'index'])->defaults('view', 'draft')->name('shipments.process');
+        Route::get('/shipments', [ShipmentController::class, 'index'])->defaults('view', 'worklist')->name('shipments.index');
+        Route::get('/shipments/process', [ShipmentController::class, 'index'])->defaults('view', 'worklist')->name('shipments.process');
+        Route::get('/shipments/create', [ShipmentController::class, 'index'])->defaults('view', 'draft')->name('shipments.create');
         Route::get('/shipments/history', [ShipmentController::class, 'index'])->defaults('view', 'history')->name('shipments.history');
         Route::get('/shipments/{id}', [ShipmentController::class, 'show'])->name('shipments.show');
         Route::get('/shipments/{id}/edit', [ShipmentController::class, 'edit'])->name('shipments.edit');
@@ -74,6 +75,9 @@ Route::get('/', fn() => redirect()->route('dashboard'));
         Route::put('/shipments/{id}', [ShipmentController::class, 'update'])->name('shipments.update');
         Route::patch('/shipments/{id}/mark-shipped', [ShipmentController::class, 'markShipped'])->name('shipments.mark-shipped');
         Route::patch('/shipments/{id}/cancel-draft', [ShipmentController::class, 'cancelDraft'])->name('shipments.cancel-draft');
+        Route::get('/shipments/{id}/export-excel', [ShipmentController::class, 'exportDraftExcel'])->name('shipments.export-excel');
+        Route::post('/shipments/import-draft-excel', [ShipmentController::class, 'importDraftExcel'])->name('shipments.import-excel');
+        Route::get('/shipments/template/draft-excel', [ShipmentController::class, 'downloadDraftTemplate'])->name('shipments.template');
     });
 
     Route::get('/po/{id}', [PurchaseOrderController::class, 'show'])->middleware('role:administrator|staff|supervisor')->name('po.show');
