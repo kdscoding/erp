@@ -1,9 +1,12 @@
 @extends('layouts.erp')
 @php($title='Edit Unit')
-@php($header='Ubah Data Unit')
+@php($header='Edit Unit')
+@php($headerSubtitle='Gunakan kode singkat dan nama unit yang konsisten.')
+
 @section('content')
-<form method="POST" action="{{ route('units.update', $unit->id) }}" class="row g-3">
-    @csrf @method('PUT')
+<form method="POST" action="{{ route('units.update', $unit->id) }}">
+    @csrf
+    @method('PUT')
     <x-master-edit-layout
         title="Form Edit Unit"
         subtitle="Gunakan kode singkat dan nama unit yang konsisten agar tidak terjadi variasi satuan di item atau transaksi."

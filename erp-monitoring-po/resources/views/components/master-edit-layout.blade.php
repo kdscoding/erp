@@ -6,30 +6,30 @@
     'submitLabel' => 'Simpan Perubahan',
 ])
 
-@if ($errors->any())
-    <div class="alert alert-danger">
-        <ul class="mb-0">
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
-
-<div class="card card-outline card-primary">
-    <div class="card-header">
-        <h3 class="card-title">{{ $title }}</h3>
-    </div>
-    <div class="card-body">
-        @if ($subtitle)
-            <p class="text-muted mb-3">{{ $subtitle }}</p>
-        @endif
-
-        {{ $slot }}
-
-        <div class="col-12 d-flex justify-content-end gap-2 mt-3">
-            <a href="{{ $backRoute }}" class="btn btn-secondary btn-sm">{{ $backLabel }}</a>
-            <button class="btn btn-primary btn-sm">{{ $submitLabel }}</button>
+<div class="page-shell">
+    <section class="page-head">
+        <div class="page-head-main">
+            <h2 class="page-section-title">{{ $title }}</h2>
+            @if ($subtitle)
+                <p class="page-section-subtitle">{{ $subtitle }}</p>
+            @endif
         </div>
-    </div>
+
+        <div class="page-actions">
+            <a href="{{ $backRoute }}" class="btn btn-sm btn-light">{{ $backLabel }}</a>
+        </div>
+    </section>
+
+    <section class="ui-surface">
+        <div class="ui-surface-body">
+            <div class="row g-3">
+                {{ $slot }}
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <a href="{{ $backRoute }}" class="btn btn-light btn-sm">{{ $backLabel }}</a>
+                <button class="btn btn-primary btn-sm">{{ $submitLabel }}</button>
+            </div>
+        </div>
+    </section>
 </div>

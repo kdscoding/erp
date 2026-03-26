@@ -1,9 +1,12 @@
 @extends('layouts.erp')
 @php($title='Edit Plant')
-@php($header='Ubah Data Plant')
+@php($header='Edit Plant')
+@php($headerSubtitle='Jaga konsistensi master plant karena muncul di header PO dan laporan.')
+
 @section('content')
-<form method="POST" action="{{ route('plants.update', $plant->id) }}" class="row g-3">
-    @csrf @method('PUT')
+<form method="POST" action="{{ route('plants.update', $plant->id) }}">
+    @csrf
+    @method('PUT')
     <x-master-edit-layout
         title="Form Edit Plant"
         subtitle="Jaga konsistensi master plant karena akan muncul di header PO dan laporan monitoring."
