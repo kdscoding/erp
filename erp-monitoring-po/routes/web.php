@@ -23,7 +23,9 @@ Route::get('/', fn() => redirect()->route('dashboard'));
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/monitoring', [DashboardController::class, 'monitoring'])->name('monitoring');
+    Route::get('/monitoring/export-excel', [DashboardController::class, 'exportMonitoringExcel'])->name('monitoring.export-excel');
     Route::get('/po', [PurchaseOrderController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('po.index');
+    Route::get('/po/export-excel', [PurchaseOrderController::class, 'exportIndexExcel'])->middleware('role:administrator|staff|supervisor')->name('po.export-excel');
     Route::get('/reports/outstanding', [ReportController::class, 'outstanding'])->middleware('role:administrator|staff|supervisor')->name('reports.outstanding');
     Route::get('/traceability', [TraceabilityController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('traceability.index');
     Route::get('/audit-trail', [AuditTrailController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('audit.index');
@@ -81,6 +83,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::get('/po/{id}', [PurchaseOrderController::class, 'show'])->middleware('role:administrator|staff|supervisor')->name('po.show');
+    Route::get('/po/{id}/export-excel', [PurchaseOrderController::class, 'exportDetailExcel'])->middleware('role:administrator|staff|supervisor')->name('po.export-detail-excel');
 
     Route::middleware('role:administrator|staff')->group(function () {
         Route::get('/receiving', [GoodsReceiptController::class, 'index'])->defaults('mode', 'process')->name('receiving.index');

@@ -98,6 +98,14 @@ class DocumentTermSeeder extends Seeder
             ],
             [
                 'group_key' => DocumentTermCodes::GROUP_PO_ITEM_STATUS,
+                'code' => DocumentTermCodes::ITEM_FORCE_CLOSED,
+                'label' => 'Force Closed',
+                'badge_class' => 'bg-dark',
+                'badge_text' => 'text-white',
+                'sort_order' => 55,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_ITEM_STATUS,
                 'code' => DocumentTermCodes::ITEM_CANCELLED,
                 'label' => 'Cancelled',
                 'badge_class' => 'bg-danger',

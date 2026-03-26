@@ -14,7 +14,12 @@
         <div class="col-md-8">
             <div class="card card-outline card-primary mb-3">
                 <div class="card-header">
-                    <h3 class="card-title">Header PO</h3>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h3 class="card-title mb-0">Header PO</h3>
+                        <a href="{{ route('po.export-detail-excel', $po->id) }}" class="btn btn-sm btn-outline-success">
+                            Export Excel
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body row g-2">
                     <div class="col-md-6"><strong>Nomor PO:</strong> {{ $po->po_number }}</div>
@@ -46,10 +51,10 @@
                         <strong>Interpretasi cepat:</strong> {{ $itemSummary['progress_label'] }}
                     </div>
                     <div class="row g-2 text-center">
-                        @foreach (['total', 'waiting', 'confirmed', 'late', 'partial', 'closed', 'cancelled'] as $key)
+                        @foreach (['total', 'waiting', 'confirmed', 'late', 'partial', 'closed', 'force_closed', 'cancelled'] as $key)
                             <div class="col-6 col-lg-2">
                                 <div class="border rounded p-2 h-100">
-                                    <div class="small text-muted">{{ ucfirst($key) }}</div>
+                                    <div class="small text-muted">{{ ucfirst(str_replace('_', ' ', $key)) }}</div>
                                     <div
                                         class="fs-5 fw-bold {{ match ($key) {
                                             'waiting' => 'text-secondary',
@@ -57,6 +62,7 @@
                                             'late' => 'text-danger',
                                             'partial' => 'text-primary',
                                             'closed' => 'text-success',
+                                            'force_closed' => 'text-dark',
                                             'cancelled' => 'text-danger',
                                             default => '',
                                         } }}">
@@ -181,6 +187,8 @@
                                         @elseif ($item->monitoring_status === 'Closed')
                                             <div class="small text-success mt-1">Item complete. Seluruh qty PO sudah
                                                 diterima.</div>
+                                        @elseif ($item->monitoring_status === 'Force Closed')
+                                            <div class="small text-dark mt-1">Item ditutup paksa. Outstanding dihentikan secara manual.</div>
                                         @elseif ($item->monitoring_status === 'Late')
                                             <div class="small text-danger mt-1">ETD lewat, item belum selesai diterima.
                                             </div>
@@ -263,7 +271,7 @@
                                 aria-hidden="true">&times;</span></button>
                     </div>
                     <div class="modal-body">
-                        <div class="alert alert-warning">Status akan jadi <strong>Cancelled</strong></div>
+                        <div class="alert alert-warning">Status akan jadi <strong>Force Closed</strong></div>
                         <label class="form-label">Cancel Reason *</label>
                         <textarea name="cancel_reason" class="form-control form-control-sm" required rows="3"></textarea>
                     </div>
@@ -329,6 +337,7 @@
                                         @php($runningReceivedQty = 0)
                                         @php($initialTimelineStatus = match (true) {
                                             $item->monitoring_status === \App\Support\DocumentTermCodes::ITEM_CANCELLED => \App\Support\DocumentTermCodes::ITEM_CANCELLED,
+                                            $item->monitoring_status === \App\Support\DocumentTermCodes::ITEM_FORCE_CLOSED => \App\Support\DocumentTermCodes::ITEM_FORCE_CLOSED,
                                             $item->etd_date && \Carbon\Carbon::parse($item->etd_date)->isPast() && (float) $item->received_qty <= 0 => \App\Support\DocumentTermCodes::ITEM_LATE,
                                             $item->etd_date => \App\Support\DocumentTermCodes::ITEM_CONFIRMED,
                                             default => \App\Support\DocumentTermCodes::ITEM_WAITING,

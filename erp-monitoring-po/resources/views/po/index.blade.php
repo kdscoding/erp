@@ -79,6 +79,9 @@
                 </div>
                 
             <div class="page-actions">
+                <a href="{{ route('po.export-excel', request()->query()) }}" class="btn btn-light btn-sm">
+                    <i class="fas fa-file-excel"></i> Export Monitoring
+                </a>
                 <a href="{{ route('po.create') }}" class="btn btn-success btn-sm">
                     <i class="fas fa-plus"></i> Create PO
                 </a>
@@ -109,6 +112,7 @@
                                 <td class="text-end">
                                     <div class="action-stack">
                                         <a href="{{ route('po.show', $r->id) }}" class="btn btn-sm btn-outline-primary">Detail</a>
+                                        <a href="{{ route('po.export-detail-excel', $r->id) }}" class="btn btn-sm btn-outline-success">Export Excel</a>
                                     </div>
                                 </td>
                             </tr>

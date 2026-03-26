@@ -13,12 +13,7 @@ class PurchaseOrderController extends Controller
 {
     public function index(Request $request): View
     {
-        $rows = DB::table('purchase_orders as po')
-            ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
-            ->select('po.*', 's.supplier_name')
-            ->when($request->filled('status'), fn($q) => $q->where('po.status', $request->string('status')))
-            ->when($request->filled('supplier_id'), fn($q) => $q->where('po.supplier_id', $request->integer('supplier_id')))
-            ->orderByDesc('po.id')
+        $rows = $this->poIndexBaseQuery($request)
             ->paginate(20)
             ->withQueryString();
 
@@ -42,6 +37,42 @@ class PurchaseOrderController extends Controller
 
     public function show(string $id): View
     {
+        $data = $this->poDetailData($id);
+
+        return view('po.show', $data);
+    }
+
+    public function exportIndexExcel(Request $request)
+    {
+        $rows = $this->poIndexBaseQuery($request)->get();
+
+        $content = view('po.exports.index', [
+            'rows' => $rows,
+            'generatedAt' => now(),
+        ])->render();
+
+        return response($content, 200, [
+            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="po-monitoring-' . now()->format('Ymd-His') . '.xls"',
+        ]);
+    }
+
+    public function exportDetailExcel(string $id)
+    {
+        $data = $this->poDetailData($id);
+
+        $content = view('po.exports.detail', array_merge($data, [
+            'generatedAt' => now(),
+        ]))->render();
+
+        return response($content, 200, [
+            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="po-detail-' . $data['po']->po_number . '.xls"',
+        ]);
+    }
+
+    private function poDetailData(string $id): array
+    {
         $currentDateSql = $this->currentDateExpression();
 
         $po = DB::table('purchase_orders as po')
@@ -58,6 +89,7 @@ class PurchaseOrderController extends Controller
             ->select('poi.*', 'i.item_code', 'i.item_name', 'u.unit_name')
             ->selectRaw("CASE
                 WHEN poi.item_status = '" . DocumentTermCodes::ITEM_CANCELLED . "' THEN '" . DocumentTermCodes::ITEM_CANCELLED . "'
+                WHEN poi.item_status = '" . DocumentTermCodes::ITEM_FORCE_CLOSED . "' THEN '" . DocumentTermCodes::ITEM_FORCE_CLOSED . "'
                 WHEN poi.outstanding_qty <= 0 THEN '" . DocumentTermCodes::ITEM_CLOSED . "'
                 WHEN poi.received_qty > 0 THEN '" . DocumentTermCodes::ITEM_PARTIAL . "'
                 WHEN poi.etd_date IS NULL THEN '" . DocumentTermCodes::ITEM_WAITING . "'
@@ -76,6 +108,7 @@ class PurchaseOrderController extends Controller
         $items = $items->map(function ($item) use ($poIsFinal) {
             $itemIsFinal = in_array($item->monitoring_status, [
                 DocumentTermCodes::ITEM_CLOSED,
+                DocumentTermCodes::ITEM_FORCE_CLOSED,
                 DocumentTermCodes::ITEM_CANCELLED,
             ], true);
 
@@ -165,6 +198,7 @@ class PurchaseOrderController extends Controller
             'late' => $items->where('monitoring_status', DocumentTermCodes::ITEM_LATE)->count(),
             'partial' => $items->where('monitoring_status', DocumentTermCodes::ITEM_PARTIAL)->count(),
             'closed' => $items->where('monitoring_status', DocumentTermCodes::ITEM_CLOSED)->count(),
+            'force_closed' => $items->where('monitoring_status', DocumentTermCodes::ITEM_FORCE_CLOSED)->count(),
             'cancelled' => $items->where('monitoring_status', DocumentTermCodes::ITEM_CANCELLED)->count(),
         ];
 
@@ -177,7 +211,7 @@ class PurchaseOrderController extends Controller
             $itemSummary['late'] > 0 => 'Ada item overdue ETD',
             $itemSummary['confirmed'] > 0 => 'Seluruh item aktif sudah terkonfirmasi',
             $itemSummary['waiting'] === $itemSummary['active'] => 'Semua item aktif masih waiting',
-            $itemSummary['closed'] === $itemSummary['active'] => 'Semua item selesai',
+            ($itemSummary['closed'] + $itemSummary['force_closed']) === $itemSummary['active'] => 'Semua item sudah final',
             default => 'Perlu review manual',
         };
 
@@ -190,7 +224,7 @@ class PurchaseOrderController extends Controller
 
         $poCanCancel = ! $poIsFinal;
 
-        return view('po.show', compact('po', 'items', 'itemSummary', 'histories', 'poCanCancel', 'poIsFinal'));
+        return compact('po', 'items', 'itemSummary', 'histories', 'poCanCancel', 'poIsFinal');
     }
 
     public function store(Request $request, CreatePurchaseOrder $createPurchaseOrder): RedirectResponse
@@ -331,7 +365,7 @@ class PurchaseOrderController extends Controller
             }
 
             DB::table('purchase_order_items')->where('id', $itemId)->update([
-                'item_status' => DocumentTermCodes::ITEM_CANCELLED,
+                'item_status' => DocumentTermCodes::ITEM_FORCE_CLOSED,
                 'cancel_reason' => '[FORCE CLOSE] ' . $validated['cancel_reason'],
                 'outstanding_qty' => 0,
                 'updated_at' => now(),
@@ -342,7 +376,7 @@ class PurchaseOrderController extends Controller
                 (int) $itemId,
                 'item_force_close',
                 ['item_status' => $item->item_status, 'cancel_reason' => $item->cancel_reason],
-                ['item_status' => DocumentTermCodes::ITEM_CANCELLED, 'cancel_reason' => '[FORCE CLOSE] ' . $validated['cancel_reason']],
+                ['item_status' => DocumentTermCodes::ITEM_FORCE_CLOSED, 'cancel_reason' => '[FORCE CLOSE] ' . $validated['cancel_reason']],
                 optional($request->user())->id,
                 $request->ip()
             );
@@ -354,7 +388,7 @@ class PurchaseOrderController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', 'Force close item berhasil. Status item menjadi Cancelled.');
+        return back()->with('success', 'Force close item berhasil. Status item menjadi Force Closed.');
     }
 
     public function cancelPo(Request $request, string $id): RedirectResponse
@@ -384,7 +418,7 @@ class PurchaseOrderController extends Controller
 
             DB::table('purchase_order_items')
                 ->where('purchase_order_id', $id)
-                ->where('item_status', '!=', DocumentTermCodes::ITEM_CLOSED)
+                ->whereNotIn('item_status', [DocumentTermCodes::ITEM_CLOSED, DocumentTermCodes::ITEM_FORCE_CLOSED])
                 ->update([
                     'item_status' => DocumentTermCodes::ITEM_CANCELLED,
                     'cancel_reason' => $validated['cancel_reason'],
@@ -412,20 +446,20 @@ class PurchaseOrderController extends Controller
     private function canUpdateItemSchedule(object $item, ?string $poStatus): bool
     {
         return ! in_array($poStatus, [DocumentTermCodes::PO_CLOSED, DocumentTermCodes::PO_CANCELLED], true)
-            && ! in_array($item->item_status, [DocumentTermCodes::ITEM_CLOSED, DocumentTermCodes::ITEM_CANCELLED], true);
+            && ! in_array($item->item_status, [DocumentTermCodes::ITEM_CLOSED, DocumentTermCodes::ITEM_FORCE_CLOSED, DocumentTermCodes::ITEM_CANCELLED], true);
     }
 
     private function canCancelItem(object $item, ?string $poStatus): bool
     {
         return ! in_array($poStatus, [DocumentTermCodes::PO_CLOSED, DocumentTermCodes::PO_CANCELLED], true)
-            && ! in_array($item->item_status, [DocumentTermCodes::ITEM_CLOSED, DocumentTermCodes::ITEM_CANCELLED], true)
+            && ! in_array($item->item_status, [DocumentTermCodes::ITEM_CLOSED, DocumentTermCodes::ITEM_FORCE_CLOSED, DocumentTermCodes::ITEM_CANCELLED], true)
             && (float) $item->received_qty <= 0;
     }
 
     private function canForceCloseItem(object $item, ?string $poStatus): bool
     {
         return ! in_array($poStatus, [DocumentTermCodes::PO_CLOSED, DocumentTermCodes::PO_CANCELLED], true)
-            && ! in_array($item->item_status, [DocumentTermCodes::ITEM_CLOSED, DocumentTermCodes::ITEM_CANCELLED], true)
+            && ! in_array($item->item_status, [DocumentTermCodes::ITEM_CLOSED, DocumentTermCodes::ITEM_FORCE_CLOSED, DocumentTermCodes::ITEM_CANCELLED], true)
             && (float) $item->outstanding_qty > 0;
     }
 
@@ -434,5 +468,15 @@ class PurchaseOrderController extends Controller
         return DB::connection()->getDriverName() === 'sqlite'
             ? "date('now')"
             : 'CURDATE()';
+    }
+
+    private function poIndexBaseQuery(Request $request)
+    {
+        return DB::table('purchase_orders as po')
+            ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->select('po.*', 's.supplier_name')
+            ->when($request->filled('status'), fn($q) => $q->where('po.status', $request->string('status')))
+            ->when($request->filled('supplier_id'), fn($q) => $q->where('po.supplier_id', $request->integer('supplier_id')))
+            ->orderByDesc('po.id');
     }
 }

@@ -23,6 +23,7 @@ class DocumentTermCodes
   public const ITEM_LATE = 'Late';
   public const ITEM_PARTIAL = 'Partial';
   public const ITEM_CLOSED = 'Closed';
+  public const ITEM_FORCE_CLOSED = 'Force Closed';
   public const ITEM_CANCELLED = 'Cancelled';
 
   // Shipment statuses
@@ -58,6 +59,7 @@ class DocumentTermCodes
       self::ITEM_LATE,
       self::ITEM_PARTIAL,
       self::ITEM_CLOSED,
+      self::ITEM_FORCE_CLOSED,
       self::ITEM_CANCELLED,
     ];
   }

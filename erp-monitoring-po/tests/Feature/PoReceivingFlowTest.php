@@ -700,6 +700,77 @@ class PoReceivingFlowTest extends TestCase
             ->assertSessionHas('error');
     }
 
+    public function test_force_close_marks_item_closed_and_po_monitoring_can_be_exported(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-EXPORT-01',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemId,
+            'ordered_qty' => 50,
+            'received_qty' => 0,
+            'outstanding_qty' => 50,
+            'item_status' => 'Confirmed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->post('/po/items/'.$poItemId.'/force-close', [
+                'cancel_reason' => 'Tutup manual karena sisa tidak dilanjutkan',
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('purchase_order_items', [
+            'id' => $poItemId,
+            'item_status' => 'Force Closed',
+            'outstanding_qty' => 0,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/po')
+            ->assertOk()
+            ->assertSee('Export Monitoring')
+            ->assertSee('Export Excel');
+
+        $this->actingAs($user)
+            ->get('/po/export-excel')
+            ->assertOk()
+            ->assertSee('Monitoring Purchase Order')
+            ->assertSee('PO-TEST-EXPORT-01');
+
+        $this->actingAs($user)
+            ->get('/po/'.$poId.'/export-excel')
+            ->assertOk()
+            ->assertSee('Purchase Order Detail')
+            ->assertSee('Tracking Shipment / GR')
+            ->assertSee('PO-TEST-EXPORT-01');
+
+        $this->actingAs($user)
+            ->get('/monitoring')
+            ->assertOk()
+            ->assertSee('Export Monitoring');
+
+        $this->actingAs($user)
+            ->get('/monitoring/export-excel')
+            ->assertOk()
+            ->assertSee('Monitoring Summary Per Purchase Order')
+            ->assertSee('Monitoring Detail Per Item')
+            ->assertSee('PO-TEST-EXPORT-01')
+            ->assertSee('Force Closed');
+    }
+
     public function test_posted_goods_receipt_can_be_cancelled_and_reversed(): void
     {
         $user = $this->makeUserWithRole('administrator');
