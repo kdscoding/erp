@@ -5,17 +5,13 @@
 @php($headerSubtitle = 'Ringkasan operasional untuk membaca outstanding, risiko ETD, dan prioritas tindak lanjut.')
 
 @section('content')
-    @php($etdTotal = max(array_sum($etdHealth), 1))
-    @php($atRiskPercent = round(($etdHealth['At-Risk'] / $etdTotal) * 100, 1))
-    @php($onTimePercent = round(($etdHealth['On-Time'] / $etdTotal) * 100, 1))
-
     <style>
         .dash{display:grid;gap:1rem}.box{background:rgba(255,255,255,.96);border:1px solid rgba(111,150,40,.12);border-radius:20px;box-shadow:0 14px 32px rgba(111,150,40,.05)}.head{display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding:1rem 1rem 0}.head h3{margin:0;font-size:1rem;color:#314216}.sub{font-size:.8rem;color:#7a8660}.body{padding:1rem}
         .hero{padding:1.2rem;background:radial-gradient(circle at top right,rgba(241,217,59,.34),transparent 24%),radial-gradient(circle at bottom left,rgba(158,203,60,.18),transparent 24%),linear-gradient(135deg,rgba(255,255,255,.98),rgba(244,248,219,.98))}.eyebrow{display:inline-flex;gap:.45rem;padding:.35rem .7rem;border-radius:999px;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5f7331;border:1px solid rgba(111,150,40,.16);background:rgba(255,255,255,.7)}.hero h2{margin:.75rem 0 .45rem;font-size:1.55rem;line-height:1.1;color:#2d3d15}.muted,.meta,.note{font-size:.82rem;color:#728058}
         .filters{display:grid;grid-template-columns:2fr 1fr 1fr auto auto;gap:.75rem;align-items:end;margin-top:1rem}.chips{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.85rem}.chip{padding:.32rem .65rem;border-radius:999px;background:#f7f9e7;border:1px solid #dbe5b0;font-size:.76rem;color:#62743a}.actions{display:flex;gap:.5rem;flex-wrap:wrap}
         .kpis,.main,.secondary{display:grid;gap:1rem}.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.main{grid-template-columns:1.15fr 1fr .85fr}.secondary{grid-template-columns:1fr 1fr}.kpi{position:relative;overflow:hidden;padding:1rem;border-radius:18px;border:1px solid rgba(111,150,40,.12);box-shadow:0 12px 24px rgba(111,150,40,.04)}.kpi:after{content:"";position:absolute;right:-18px;bottom:-24px;width:80px;height:80px;border-radius:999px;background:rgba(255,255,255,.35)}.k1{background:linear-gradient(135deg,#fff,#eef7d2)}.k2{background:linear-gradient(135deg,#fffef8,#fff0d5)}.k3{background:linear-gradient(135deg,#fff,#e6f4d8)}.k4{background:linear-gradient(135deg,#fff,#edf7cf)}
         .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#7a8660}.value{font-size:1.8rem;font-weight:800;color:#314216;line-height:1;margin-top:.25rem}.chart{position:relative;min-height:280px}.legend{display:grid;gap:.55rem;margin-top:.8rem}.legend-row{display:grid;grid-template-columns:auto 1fr auto;gap:.6rem;align-items:center;font-size:.82rem;color:#647248}.sw{width:12px;height:12px;border-radius:999px}.lv{font-weight:800;color:#314216}
-        .meter{height:16px;display:flex;overflow:hidden;border-radius:999px;background:#edf2d5;margin-bottom:1rem}.risk{background:linear-gradient(90deg,#efaa8d,#d66848)}.safe{background:linear-gradient(90deg,#bfd86d,#86b83d)}.stack,.list{display:grid;gap:.75rem}.item,.list-card,.receipt{padding:.9rem;border-radius:16px;border:1px solid rgba(111,150,40,.1);background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(247,248,234,.96))}.receipt{text-decoration:none;display:block}.top{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start}.rank{width:30px;height:30px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800;background:#f4f7d8;color:#5d7425;flex:0 0 auto}.pill{padding:.38rem .65rem;border-radius:999px;background:#fff1eb;color:#b04835;font-size:.8rem;font-weight:800;white-space:nowrap}.ttl{font-weight:700;color:#314216}.table-wrap{padding:1rem}.qty{display:inline-flex;min-width:34px;justify-content:center;padding:.18rem .5rem;border-radius:999px;font-size:.76rem;font-weight:700;background:#f4f7d8;color:#5d7425}
+        .meter{height:16px;display:flex;overflow:hidden;border-radius:999px;background:#edf2d5;margin-bottom:1rem}.risk{background:linear-gradient(90deg,#efaa8d,#d66848)}.safe{background:linear-gradient(90deg,#bfd86d,#86b83d)}.stack,.list{display:grid;gap:.75rem}.item,.list-card,.receipt{padding:.9rem;border-radius:16px;border:1px solid rgba(111,150,40,.1);background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(247,248,234,.96))}.receipt{text-decoration:none;display:block}.top{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start}.rank{width:30px;height:30px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800;background:#f4f7d8;color:#5d7425;flex:0 0 auto}.pill{padding:.38rem .65rem;border-radius:999px;background:#fff1eb;color:#b04835;font-size:.8rem;font-weight:800;white-space:nowrap}.ttl{font-weight:700;color:#314216}.table-wrap{padding:1rem}.qty{display:inline-flex;min-width:34px;justify-content:center;padding:.18rem .5rem;border-radius:999px;font-size:.76rem;font-weight:700;background:#f4f7d8;color:#5d7425}.health-table td,.health-table th{font-size:.8rem}.health-badge{display:inline-flex;padding:.2rem .5rem;border-radius:999px;font-size:.74rem;font-weight:700}.health-badge.red{background:#fff1eb;color:#b04835}.health-badge.yellow{background:#fff7d9;color:#8b6b12}.health-badge.green{background:#eef7d2;color:#5b7c24}
         .modal-list{display:grid;gap:.75rem}.modal-item{padding:.8rem .9rem;border-radius:14px;border:1px solid #e4eabc;background:#fbfcf3}.modal-kpi{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.modal-stat{padding:.8rem .9rem;border-radius:14px;background:#f7f9e7;border:1px solid #dbe5b0}.modal-stat-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7b42}.modal-stat-value{font-size:1.2rem;font-weight:800;color:#314216}.modal-subtable{margin-top:.65rem}.modal-subtable th{font-size:.68rem;text-transform:uppercase;color:#6d7c44}.kpi-actions{position:relative;z-index:1;display:flex;justify-content:flex-end;margin-top:.65rem}
         .modal-summary th,.modal-summary td{font-size:.84rem}.modal-subtable th,.modal-subtable td{font-size:.8rem}.kpi-actions{position:relative;z-index:1;display:flex;justify-content:flex-end;margin-top:.65rem}
         .modal-filters{display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr auto;gap:.75rem;align-items:end;margin-bottom:1rem}.filter-result{font-size:.8rem;color:#728058}
@@ -107,22 +103,26 @@
 
             <article class="box">
                 <div class="head">
-                    <div><h3>ETD Health</h3><div class="sub">Ringkas, langsung, dan fokus ke kondisi pengiriman.</div></div>
+                    <div><h3>Supplier ETD Health</h3><div class="sub">Lihat supplier mana yang sehat dan mana yang paling perlu dikejar.</div></div>
                     <div class="actions"><button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#etdHealthDetailModal">Detail</button></div>
                 </div>
                 <div class="body">
-                    <div class="meter"><div class="risk" style="width: {{ $atRiskPercent }}%"></div><div class="safe" style="width: {{ $onTimePercent }}%"></div></div>
                     <div class="stack">
-                        <div class="item"><div class="ttl">At-Risk</div><div class="meta">{{ $etdHealth['At-Risk'] }} item | {{ $atRiskPercent }}%</div></div>
-                        <div class="item"><div class="ttl">On-Time</div><div class="meta">{{ $etdHealth['On-Time'] }} item | {{ $onTimePercent }}%</div></div>
-                        @forelse($onTimeItems->take(2) as $item)
+                        @forelse($supplierEtdHealth->take(5) as $supplier)
                             <div class="item">
-                                <div class="ttl">{{ $item->po_number }} - {{ $item->item_code }}</div>
-                                <div class="meta">{{ $item->supplier_name }}</div>
-                                <div class="meta">ETD {{ \Carbon\Carbon::parse($item->etd_date)->format('d-m-Y') }} | Outstanding {{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }}</div>
+                                <div class="top">
+                                    <div>
+                                        <div class="ttl">{{ $supplier->supplier_name }}</div>
+                                        <div class="meta">At-Risk {{ $supplier->at_risk_items }} | On-Time {{ $supplier->on_time_items }} | Waiting ETD {{ $supplier->waiting_etd_items }}</div>
+                                        <div class="meta">PO terdampak {{ $supplier->impacted_po }} | Outstanding {{ \App\Support\NumberFormatter::trim($supplier->outstanding_qty) }}</div>
+                                    </div>
+                                    <div class="health-badge {{ $supplier->at_risk_percent >= 50 ? 'red' : ($supplier->at_risk_percent >= 20 ? 'yellow' : 'green') }}">
+                                        {{ $supplier->at_risk_percent }}% at-risk
+                                    </div>
+                                </div>
                             </div>
                         @empty
-                            <div class="text-muted">Belum ada item on-time yang terjadwal.</div>
+                            <div class="text-muted">Belum ada data ETD supplier.</div>
                         @endforelse
                     </div>
                 </div>
@@ -495,30 +495,23 @@
             <div class="modal-content">
                 <div class="modal-header"><h5 class="modal-title">Detail ETD Health</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
                 <div class="modal-body">
-                    <div class="table-responsive mb-3">
-                        <table class="table table-sm table-hover modal-summary mb-0">
-                            <thead><tr><th>Status</th><th>Jumlah</th><th>Persentase</th></tr></thead>
-                            <tbody>
-                                <tr><td>At-Risk</td><td>{{ $etdHealth['At-Risk'] }}</td><td>{{ $atRiskPercent }}%</td></tr>
-                                <tr><td>On-Time</td><td>{{ $etdHealth['On-Time'] }}</td><td>{{ $onTimePercent }}%</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
                     <div class="table-responsive">
-                        <table class="table table-sm table-hover mb-0">
-                            <thead><tr><th>PO</th><th>Item</th><th>Supplier</th><th>Status</th><th>ETD</th><th>Outstanding</th></tr></thead>
+                        <table class="table table-sm table-hover mb-0 health-table">
+                            <thead><tr><th>Supplier</th><th>At-Risk</th><th>On-Time</th><th>Waiting ETD</th><th>% At-Risk</th><th>PO Terdampak</th><th>Outstanding</th><th>ETD Terdekat</th></tr></thead>
                             <tbody>
-                                @forelse(($statusDetailGroups->get('Late') ?? collect())->take(10) as $item)
+                                @forelse($supplierEtdHealth as $supplier)
                                     <tr>
-                                        <td>{{ $item->po_number }}</td>
-                                        <td>{{ $item->item_code }} - {{ $item->item_name }}</td>
-                                        <td>{{ $item->supplier_name }}</td>
-                                        <td>{{ $item->item_status_label }}</td>
-                                        <td>{{ $item->etd_date ? \Carbon\Carbon::parse($item->etd_date)->format('d-m-Y') : '-' }}</td>
-                                        <td>{{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }}</td>
+                                        <td>{{ $supplier->supplier_name }}</td>
+                                        <td>{{ $supplier->at_risk_items }}</td>
+                                        <td>{{ $supplier->on_time_items }}</td>
+                                        <td>{{ $supplier->waiting_etd_items }}</td>
+                                        <td>{{ $supplier->at_risk_percent }}%</td>
+                                        <td>{{ $supplier->impacted_po }}</td>
+                                        <td>{{ \App\Support\NumberFormatter::trim($supplier->outstanding_qty) }}</td>
+                                        <td>{{ $supplier->nearest_etd ? \Carbon\Carbon::parse($supplier->nearest_etd)->format('d-m-Y') : '-' }}</td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="6" class="text-center text-muted">Belum ada item late.</td></tr>
+                                    <tr><td colspan="8" class="text-center text-muted">Belum ada data ETD supplier.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>

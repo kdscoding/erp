@@ -256,6 +256,39 @@ class DashboardController extends Controller
             'On-Time' => (int) $onTimeItems->count(),
         ];
 
+        $supplierEtdHealth = DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
+            ->where('poi.item_status', '!=', 'Cancelled')
+            ->where('poi.outstanding_qty', '>', 0)
+            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
+            ->select('s.supplier_name')
+            ->selectRaw("SUM(CASE WHEN poi.etd_date IS NOT NULL AND DATE(poi.etd_date) < {$currentDateSql} THEN 1 ELSE 0 END) as at_risk_items")
+            ->selectRaw("SUM(CASE WHEN poi.etd_date IS NOT NULL AND DATE(poi.etd_date) >= {$currentDateSql} THEN 1 ELSE 0 END) as on_time_items")
+            ->selectRaw("SUM(CASE WHEN poi.etd_date IS NULL THEN 1 ELSE 0 END) as waiting_etd_items")
+            ->selectRaw('COUNT(DISTINCT po.id) as impacted_po')
+            ->selectRaw('SUM(poi.outstanding_qty) as outstanding_qty')
+            ->selectRaw('MIN(poi.etd_date) as nearest_etd')
+            ->groupBy('s.supplier_name')
+            ->get()
+            ->map(function ($row) {
+                $knownEtdItems = (int) $row->at_risk_items + (int) $row->on_time_items;
+                $row->at_risk_percent = $knownEtdItems > 0
+                    ? round(((int) $row->at_risk_items / $knownEtdItems) * 100, 1)
+                    : 0;
+
+                return $row;
+            })
+            ->sortBy([
+                ['at_risk_items', 'desc'],
+                ['at_risk_percent', 'desc'],
+                ['outstanding_qty', 'desc'],
+            ])
+            ->values();
+
         $supplierRiskChart = [
             'labels' => $supplierDelay->pluck('supplier_name')->values()->all(),
             'late_items' => $supplierDelay->pluck('late_item_count')->map(fn ($value) => (int) $value)->values()->all(),
@@ -416,6 +449,7 @@ class DashboardController extends Controller
             'dateTo',
             'statusBreakdown',
             'etdHealth',
+            'supplierEtdHealth',
             'supplierRiskChart',
             'statusDetailItems',
             'statusDetailGroups',
