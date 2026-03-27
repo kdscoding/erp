@@ -625,29 +625,50 @@
                 default => 'Tanpa Role',
             };
 
-            $shipmentMenuOpen = request()->routeIs('shipments.*');
-            $receivingMenuOpen = request()->routeIs('receiving.*');
+            $currentRouteName = request()->route()?->getName() ?? '';
+            $shipmentView = (string) (request()->route()?->defaults['view'] ?? request('view', 'worklist'));
+            $receivingMode = (string) (request()->route()?->defaults['mode'] ?? request('mode', 'process'));
+
+            $shipmentStatus = null;
+            if (request()->routeIs('shipments.show') || request()->routeIs('shipments.edit')) {
+                $shipmentId = (int) request()->route('id');
+                if ($shipmentId > 0) {
+                    $shipmentStatus = \Illuminate\Support\Facades\DB::table('shipments')
+                        ->where('id', $shipmentId)
+                        ->value('status');
+                }
+            }
+
+            $shipmentMenuOpen = str_starts_with($currentRouteName, 'shipments.');
+            $receivingMenuOpen = str_starts_with($currentRouteName, 'receiving.');
 
             $shipmentWorklistActive =
-                request()->routeIs('shipments.process') ||
-                (request()->routeIs('shipments.index') && request('view') !== 'draft' && request('view') !== 'history');
+                (($currentRouteName === 'shipments.index' || $currentRouteName === 'shipments.process') && $shipmentView === 'worklist') ||
+                (request()->routeIs('shipments.show') && in_array($shipmentStatus, [
+                    \App\Support\DocumentTermCodes::SHIPMENT_SHIPPED,
+                    \App\Support\DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED,
+                ], true));
 
             $shipmentDraftActive =
-                request()->routeIs('shipments.create') ||
+                $currentRouteName === 'shipments.create' ||
                 request()->routeIs('shipments.edit') ||
-                (request()->routeIs('shipments.index') && request('view') === 'draft');
+                (($currentRouteName === 'shipments.index' || $currentRouteName === 'shipments.process') && $shipmentView === 'draft') ||
+                (request()->routeIs('shipments.show') && $shipmentStatus === \App\Support\DocumentTermCodes::SHIPMENT_DRAFT);
 
             $shipmentArchiveActive =
-                request()->routeIs('shipments.history') ||
-                request()->routeIs('shipments.show') ||
-                (request()->routeIs('shipments.index') && request('view') === 'history');
+                $currentRouteName === 'shipments.history' ||
+                (($currentRouteName === 'shipments.index' || $currentRouteName === 'shipments.process') && $shipmentView === 'history') ||
+                (request()->routeIs('shipments.show') && in_array($shipmentStatus, [
+                    \App\Support\DocumentTermCodes::SHIPMENT_RECEIVED,
+                    \App\Support\DocumentTermCodes::SHIPMENT_CANCELLED,
+                ], true));
 
             $receivingProcessActive =
-                request()->routeIs('receiving.process') ||
-                request()->routeIs('receiving.index');
+                ($currentRouteName === 'receiving.index' || $currentRouteName === 'receiving.process') && $receivingMode === 'process';
 
             $receivingHistoryActive =
-                request()->routeIs('receiving.history') ||
+                $currentRouteName === 'receiving.history' ||
+                (request()->routeIs('receiving.index') && $receivingMode === 'history') ||
                 request()->routeIs('receiving.show');
         @endphp
 

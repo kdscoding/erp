@@ -2,37 +2,58 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function __invoke(): View
+    public function __invoke(Request $request): View
     {
         $currentDateSql = $this->currentDateExpression();
+        $supplierId = $request->integer('supplier_id');
+        $dateFrom = $request->date('date_from')?->format('Y-m-d');
+        $dateTo = $request->date('date_to')?->format('Y-m-d');
+
+        $suppliers = DB::table('suppliers')
+            ->orderBy('supplier_name')
+            ->get(['id', 'supplier_name']);
 
         $metrics = [
             'open_po' => DB::table('purchase_orders')
+                ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
+                ->when($dateFrom, fn ($query) => $query->whereDate('po_date', '>=', $dateFrom))
+                ->when($dateTo, fn ($query) => $query->whereDate('po_date', '<=', $dateTo))
                 ->whereNotIn('status', ['Closed', 'Cancelled'])
                 ->count(),
 
             'overdue_po' => DB::table('purchase_order_items')
+                ->join('purchase_orders as po', 'po.id', '=', 'purchase_order_items.purchase_order_id')
+                ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+                ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+                ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
                 ->whereNotNull('etd_date')
                 ->whereRaw("DATE(etd_date) < {$currentDateSql}")
                 ->where('outstanding_qty', '>', 0)
-                ->where('item_status', '!=', 'Cancelled')
+                ->where('purchase_order_items.item_status', '!=', 'Cancelled')
                 ->count(),
 
             'shipped_today' => DB::table('shipments')
+                ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
                 ->whereRaw("DATE(shipment_date) = {$currentDateSql}")
                 ->count(),
 
             'received_today' => DB::table('goods_receipts')
+                ->join('purchase_orders as po', 'po.id', '=', 'goods_receipts.purchase_order_id')
+                ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
                 ->whereRaw("DATE(receipt_date) = {$currentDateSql}")
                 ->count(),
 
             'late_po' => DB::table('purchase_orders')
+                ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
+                ->when($dateFrom, fn ($query) => $query->whereDate('po_date', '>=', $dateFrom))
+                ->when($dateTo, fn ($query) => $query->whereDate('po_date', '<=', $dateTo))
                 ->where('status', 'Late')
                 ->count(),
 
@@ -42,6 +63,9 @@ class DashboardController extends Controller
 
             'at_risk_items' => DB::table('purchase_order_items as poi')
                 ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+                ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+                ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+                ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
                 ->where('poi.outstanding_qty', '>', 0)
                 ->whereNotNull('poi.etd_date')
                 ->whereRaw("DATE(poi.etd_date) < {$currentDateSql}")
@@ -52,6 +76,9 @@ class DashboardController extends Controller
         $supplierDelay = DB::table('purchase_order_items as poi')
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
             ->select('s.supplier_name')
             ->selectRaw('COUNT(poi.id) as late_item_count')
             ->selectRaw('COUNT(DISTINCT po.id) as late_po_count')
@@ -71,6 +98,9 @@ class DashboardController extends Controller
         $poMonitoringSummary = DB::table('purchase_orders as po')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->leftJoin('purchase_order_items as poi', 'poi.purchase_order_id', '=', 'po.id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
             ->select('po.id as po_id', 'po.po_number', 'po.status as po_status', 's.supplier_name')
             ->selectRaw("SUM(CASE WHEN COALESCE(poi.item_status, '') != 'Cancelled' AND poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NULL THEN 1 ELSE 0 END) as waiting_items")
             ->selectRaw("SUM(CASE WHEN COALESCE(poi.item_status, '') != 'Cancelled' AND poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) >= {$currentDateSql} THEN 1 ELSE 0 END) as confirmed_items")
@@ -86,6 +116,9 @@ class DashboardController extends Controller
         $openPoList = DB::table('purchase_orders as po')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->leftJoin('purchase_order_items as poi', 'poi.purchase_order_id', '=', 'po.id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
             ->select(
                 'po.id',
                 'po.po_number',
@@ -109,6 +142,9 @@ class DashboardController extends Controller
         $recentReceivings = DB::table('goods_receipts as gr')
             ->join('purchase_orders as po', 'po.id', '=', 'gr.purchase_order_id')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('gr.receipt_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('gr.receipt_date', '<=', $dateTo))
             ->select('gr.id', 'gr.gr_number', 'gr.receipt_date', 'po.po_number', 's.supplier_name')
             ->orderByDesc('gr.id')
             ->limit(8)
@@ -118,6 +154,9 @@ class DashboardController extends Controller
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
             ->join('items as i', 'i.id', '=', 'poi.item_id')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
             ->select('po.po_number', 'i.item_code', 'i.item_name', 'poi.etd_date', 'poi.outstanding_qty', 's.supplier_name')
             ->where('poi.outstanding_qty', '>', 0)
             ->whereNotNull('poi.etd_date')
@@ -131,6 +170,9 @@ class DashboardController extends Controller
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
             ->join('items as i', 'i.id', '=', 'poi.item_id')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
             ->select('po.po_number', 'i.item_code', 'i.item_name', 'poi.etd_date', 'poi.outstanding_qty', 's.supplier_name')
             ->where('poi.outstanding_qty', '>', 0)
             ->whereNotNull('poi.etd_date')
@@ -144,6 +186,9 @@ class DashboardController extends Controller
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
             ->join('items as i', 'i.id', '=', 'poi.item_id')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
             ->select(
                 'poi.id',
                 'po.id as po_id',
@@ -185,8 +230,34 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
+        $statusBreakdown = [
+            'Waiting' => (int) $poMonitoringSummary->sum('waiting_items'),
+            'Confirmed' => (int) $poMonitoringSummary->sum('confirmed_items'),
+            'Late' => (int) $poMonitoringSummary->sum('late_items'),
+            'Partial' => (int) $poMonitoringSummary->sum('partial_items'),
+            'Closed' => (int) $poMonitoringSummary->sum('closed_items'),
+        ];
+
+        $etdHealth = [
+            'At-Risk' => (int) $atRiskItems->count(),
+            'On-Time' => (int) $onTimeItems->count(),
+        ];
+
+        $supplierRiskChart = [
+            'labels' => $supplierDelay->pluck('supplier_name')->values()->all(),
+            'late_items' => $supplierDelay->pluck('late_item_count')->map(fn ($value) => (int) $value)->values()->all(),
+            'late_pos' => $supplierDelay->pluck('late_po_count')->map(fn ($value) => (int) $value)->values()->all(),
+        ];
+
         return view('dashboard', compact(
             'metrics',
+            'suppliers',
+            'supplierId',
+            'dateFrom',
+            'dateTo',
+            'statusBreakdown',
+            'etdHealth',
+            'supplierRiskChart',
             'supplierDelay',
             'poMonitoringSummary',
             'openPoList',

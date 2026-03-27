@@ -68,4 +68,19 @@ class ShipmentWorklist
     }
 
     public static function activeStatuses(): array
+    {
+        return [
+            DocumentTermCodes::SHIPMENT_DRAFT,
+            DocumentTermCodes::SHIPMENT_SHIPPED,
+            DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED,
+        ];
+    }
+
+    public static function archiveStatuses(): array
+    {
+        return [
+            DocumentTermCodes::SHIPMENT_RECEIVED,
+            DocumentTermCodes::SHIPMENT_CANCELLED,
+        ];
+    }
 }
