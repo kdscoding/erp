@@ -1,8 +1,8 @@
 @extends('layouts.erp')
 
-@php($title = 'Dashboard Lemon')
-@php($header = 'Dashboard Monitoring PO')
-@php($headerSubtitle = 'Ringkasan operasional untuk membaca risiko, aliran dokumen, dan prioritas tindak lanjut.')
+@php($title = 'Dashboard Outstanding PO')
+@php($header = 'Dashboard Summary Outstanding')
+@php($headerSubtitle = 'Ringkasan operasional untuk membaca outstanding, risiko ETD, dan prioritas tindak lanjut.')
 
 @section('content')
     @php($etdTotal = max(array_sum($etdHealth), 1))
@@ -73,7 +73,7 @@
         <section class="main">
             <article class="box">
                 <div class="head">
-                    <div><h3>Komposisi Status Item</h3><div class="sub">Distribusi monitoring agar beban kerja langsung terlihat.</div></div>
+                    <div><h3>Komposisi Status Item</h3><div class="sub">Distribusi status outstanding agar beban kerja langsung terlihat.</div></div>
                     <div class="actions"><button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#statusDetailModal">Detail</button></div>
                 </div>
                 <div class="body">
@@ -201,7 +201,7 @@
 
             <article class="box">
                 <div class="head">
-                    <div><h3>Item Prioritas</h3><div class="sub">Snapshot cepat item yang paling perlu dilihat dulu.</div></div>
+                    <div><h3>Item Prioritas</h3><div class="sub">Snapshot cepat item outstanding yang paling perlu dilihat dulu.</div></div>
                     <div class="actions">
                         <button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#itemPriorityDetailModal">Detail</button>
                         <a href="{{ route('summary.po') }}" class="btn btn-sm btn-primary">Buka Summary PO</a>
@@ -215,13 +215,13 @@
                                 @php($etdStatus = $item->etd_date ? (\Carbon\Carbon::parse($item->etd_date)->isBefore(now()) ? 'At-Risk' : 'On-Time') : 'N/A')
                                 <tr>
                                     <td><a href="{{ route('po.show', $item->po_id) }}" class="ttl text-decoration-none">{{ $item->po_number }}</a><div class="meta">{{ $item->item_code }} - {{ $item->item_name }}</div><div class="meta">{{ $item->supplier_name }}</div></td>
-                                    <td><span class="badge {{ match ($item->monitoring_status) {'Closed' => 'bg-success','Partial', 'Confirmed', 'Waiting' => 'bg-warning text-dark','Late', 'Cancelled' => 'bg-danger',default => 'bg-secondary',} }}">{{ \App\Support\TermCatalog::label('po_item_status', $item->monitoring_status, $item->monitoring_status) }}</span></td>
+                                    <td><span class="badge {{ match ($item->item_status_label) {'Closed' => 'bg-success','Partial', 'Confirmed', 'Waiting' => 'bg-warning text-dark','Late', 'Cancelled' => 'bg-danger',default => 'bg-secondary',} }}">{{ \App\Support\TermCatalog::label('po_item_status', $item->item_status_label, $item->item_status_label) }}</span></td>
                                     <td>@if ($etdStatus === 'At-Risk')<span class="badge bg-danger">At-Risk</span>@elseif ($etdStatus === 'On-Time')<span class="badge bg-success">On-Time</span>@else<span class="badge bg-secondary">N/A</span>@endif<div class="meta mt-1">{{ $item->etd_date ? \Carbon\Carbon::parse($item->etd_date)->format('d-m-Y') : '-' }}</div></td>
-                                    <td>{{ $item->monitoring_note }}</td>
+                                    <td>{{ $item->item_status_note }}</td>
                                     <td>{{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="text-center text-muted">Tidak ada item monitoring.</td></tr>
+                                <tr><td colspan="5" class="text-center text-muted">Tidak ada item outstanding.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -244,7 +244,7 @@
                                 <tr><td>Late PO</td><td>{{ $metrics['late_po'] }}</td><td>Header PO yang sudah masuk kondisi terlambat</td></tr>
                                 <tr><td>Shipment Hari Ini</td><td>{{ $metrics['shipped_today'] }}</td><td>Dokumen shipment yang diproses hari ini</td></tr>
                                 <tr><td>Receiving Hari Ini</td><td>{{ $metrics['received_today'] }}</td><td>GR yang sudah diposting hari ini</td></tr>
-                                <tr><td>At-Risk Item</td><td>{{ $metrics['at_risk_items'] }}</td><td>Outstanding dengan ETD yang sudah lewat</td></tr>
+                                <tr><td>At-Risk Item</td><td>{{ $metrics['at_risk_items'] }}</td><td>Item outstanding dengan ETD yang sudah lewat</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -471,7 +471,7 @@
                                         <td>{{ $item->po_number }}</td>
                                         <td>{{ $item->item_code }} - {{ $item->item_name }}</td>
                                         <td>{{ $item->supplier_name }}</td>
-                                        <td>{{ $item->monitoring_status }}</td>
+                                        <td>{{ $item->item_status_label }}</td>
                                         <td>{{ $item->etd_date ? \Carbon\Carbon::parse($item->etd_date)->format('d-m-Y') : '-' }}</td>
                                         <td>{{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }}</td>
                                     </tr>
@@ -617,7 +617,7 @@
     <div class="modal fade" id="itemPriorityDetailModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
-                <div class="modal-header"><h5 class="modal-title">Detail Item Prioritas</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+                <div class="modal-header"><h5 class="modal-title">Detail Item Prioritas Outstanding</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
                 <div class="modal-body">
                     <div class="table-responsive">
                         <table class="table table-hover">
@@ -628,12 +628,12 @@
                                         <td>{{ $item->po_number }}</td>
                                         <td>{{ $item->item_code }} - {{ $item->item_name }}</td>
                                         <td>{{ $item->supplier_name }}</td>
-                                        <td>{{ $item->monitoring_status }}</td>
+                                        <td>{{ $item->item_status_label }}</td>
                                         <td>{{ $item->etd_date ? \Carbon\Carbon::parse($item->etd_date)->format('d-m-Y') : '-' }}</td>
                                         <td>{{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }}</td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="6" class="text-center text-muted">Tidak ada item prioritas.</td></tr>
+                                    <tr><td colspan="6" class="text-center text-muted">Tidak ada item prioritas outstanding.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>

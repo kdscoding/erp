@@ -209,14 +209,14 @@ class DashboardController extends Controller
                 WHEN poi.etd_date IS NULL THEN 'Waiting'
                 WHEN DATE(poi.etd_date) < {$currentDateSql} THEN 'Late'
                 ELSE 'Confirmed'
-            END as monitoring_status")
+            END as item_status_label")
             ->selectRaw("CASE
                 WHEN poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 'Sudah diterima sebagian'
                 WHEN poi.outstanding_qty <= 0 THEN 'Selesai'
                 WHEN poi.etd_date IS NULL THEN 'Belum ada konfirmasi supplier'
                 WHEN DATE(poi.etd_date) < {$currentDateSql} THEN 'Terlambat dari ETD'
                 ELSE 'Sudah dikonfirmasi supplier'
-            END as monitoring_note")
+            END as item_status_note")
             ->whereNotIn('po.status', ['Closed', 'Cancelled'])
             ->where('poi.item_status', '!=', 'Cancelled')
             ->orderByRaw("CASE
@@ -272,7 +272,7 @@ class DashboardController extends Controller
                 WHEN poi.etd_date IS NULL THEN 'Waiting'
                 WHEN DATE(poi.etd_date) < {$currentDateSql} THEN 'Late'
                 ELSE 'Confirmed'
-            END as monitoring_status")
+            END as item_status_label")
             ->where('poi.item_status', '!=', 'Cancelled')
             ->whereNotIn('po.status', ['Closed', 'Cancelled'])
             ->orderByRaw("CASE
@@ -357,7 +357,7 @@ class DashboardController extends Controller
             ->limit(20)
             ->get();
 
-        $statusDetailGroups = $statusDetailItems->groupBy('monitoring_status');
+        $statusDetailGroups = $statusDetailItems->groupBy('item_status_label');
         $latePoRows = $openPoList->filter(fn ($row) => (int) ($row->late_items ?? 0) > 0)->values();
 
         $shipmentTodayRows = DB::table('shipments as sh')

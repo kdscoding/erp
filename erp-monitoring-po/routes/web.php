@@ -7,7 +7,6 @@ use App\Http\Controllers\ItemCategoryController;
 use App\Http\Controllers\PlantController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseOrderController;
-use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\SupplierController;
@@ -27,7 +26,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/summary/item/export-excel', [DashboardController::class, 'exportSummaryItemExcel'])->name('summary.item.export-excel');
     Route::get('/po', [PurchaseOrderController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('po.index');
     Route::get('/po/export-excel', [PurchaseOrderController::class, 'exportIndexExcel'])->middleware('role:administrator|staff|supervisor')->name('po.export-excel');
-    Route::get('/reports/outstanding', [ReportController::class, 'outstanding'])->middleware('role:administrator|staff|supervisor')->name('reports.outstanding');
     Route::get('/traceability', [TraceabilityController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('traceability.index');
 
     Route::middleware('role:administrator|staff')->group(function () {

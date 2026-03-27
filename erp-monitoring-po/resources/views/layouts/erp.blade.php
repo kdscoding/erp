@@ -878,14 +878,6 @@
                                 </a>
                             </li>
 
-                            <li class="nav-item">
-                                <a href="{{ route('reports.outstanding') }}"
-                                    class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-chart-bar"></i>
-                                    <p>Outstanding Report</p>
-                                </a>
-                            </li>
-
                         @endif
 
                         @if ($currentUser?->hasRole('administrator'))
