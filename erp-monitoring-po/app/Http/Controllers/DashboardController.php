@@ -110,7 +110,6 @@ class DashboardController extends Controller
             ->whereNotIn('po.status', ['Closed', 'Cancelled'])
             ->groupBy('po.id', 'po.po_number', 'po.status', 's.supplier_name')
             ->orderBy('po.po_number')
-            ->limit(8)
             ->get();
 
         $openPoList = DB::table('purchase_orders as po')
@@ -230,12 +229,26 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
+        $statusBreakdownRow = DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
+            ->where('poi.item_status', '!=', 'Cancelled')
+            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
+            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NULL THEN 1 ELSE 0 END) as waiting_items")
+            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) >= {$currentDateSql} THEN 1 ELSE 0 END) as confirmed_items")
+            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) < {$currentDateSql} THEN 1 ELSE 0 END) as late_items")
+            ->selectRaw("SUM(CASE WHEN poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 1 ELSE 0 END) as partial_items")
+            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty <= 0 THEN 1 ELSE 0 END) as closed_items")
+            ->first();
+
         $statusBreakdown = [
-            'Waiting' => (int) $poMonitoringSummary->sum('waiting_items'),
-            'Confirmed' => (int) $poMonitoringSummary->sum('confirmed_items'),
-            'Late' => (int) $poMonitoringSummary->sum('late_items'),
-            'Partial' => (int) $poMonitoringSummary->sum('partial_items'),
-            'Closed' => (int) $poMonitoringSummary->sum('closed_items'),
+            'Waiting' => (int) ($statusBreakdownRow->waiting_items ?? 0),
+            'Confirmed' => (int) ($statusBreakdownRow->confirmed_items ?? 0),
+            'Late' => (int) ($statusBreakdownRow->late_items ?? 0),
+            'Partial' => (int) ($statusBreakdownRow->partial_items ?? 0),
+            'Closed' => (int) ($statusBreakdownRow->closed_items ?? 0),
         ];
 
         $etdHealth = [
@@ -262,6 +275,8 @@ class DashboardController extends Controller
                 's.supplier_name',
                 'i.item_code',
                 'i.item_name',
+                'poi.ordered_qty',
+                'poi.received_qty',
                 'poi.outstanding_qty',
                 'poi.etd_date'
             )
@@ -283,7 +298,6 @@ class DashboardController extends Controller
                 ELSE 4
             END")
             ->orderBy('po.po_number')
-            ->limit(40)
             ->get();
 
         $supplierFollowupDetails = DB::table('purchase_order_items as poi')

@@ -18,6 +18,7 @@
         .meter{height:16px;display:flex;overflow:hidden;border-radius:999px;background:#edf2d5;margin-bottom:1rem}.risk{background:linear-gradient(90deg,#efaa8d,#d66848)}.safe{background:linear-gradient(90deg,#bfd86d,#86b83d)}.stack,.list{display:grid;gap:.75rem}.item,.list-card,.receipt{padding:.9rem;border-radius:16px;border:1px solid rgba(111,150,40,.1);background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(247,248,234,.96))}.receipt{text-decoration:none;display:block}.top{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start}.rank{width:30px;height:30px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800;background:#f4f7d8;color:#5d7425;flex:0 0 auto}.pill{padding:.38rem .65rem;border-radius:999px;background:#fff1eb;color:#b04835;font-size:.8rem;font-weight:800;white-space:nowrap}.ttl{font-weight:700;color:#314216}.table-wrap{padding:1rem}.qty{display:inline-flex;min-width:34px;justify-content:center;padding:.18rem .5rem;border-radius:999px;font-size:.76rem;font-weight:700;background:#f4f7d8;color:#5d7425}
         .modal-list{display:grid;gap:.75rem}.modal-item{padding:.8rem .9rem;border-radius:14px;border:1px solid #e4eabc;background:#fbfcf3}.modal-kpi{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.modal-stat{padding:.8rem .9rem;border-radius:14px;background:#f7f9e7;border:1px solid #dbe5b0}.modal-stat-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7b42}.modal-stat-value{font-size:1.2rem;font-weight:800;color:#314216}.modal-subtable{margin-top:.65rem}.modal-subtable th{font-size:.68rem;text-transform:uppercase;color:#6d7c44}.kpi-actions{position:relative;z-index:1;display:flex;justify-content:flex-end;margin-top:.65rem}
         .modal-summary th,.modal-summary td{font-size:.84rem}.modal-subtable th,.modal-subtable td{font-size:.8rem}.kpi-actions{position:relative;z-index:1;display:flex;justify-content:flex-end;margin-top:.65rem}
+        .modal-filters{display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr auto;gap:.75rem;align-items:end;margin-bottom:1rem}.filter-result{font-size:.8rem;color:#728058}
         @media (max-width:1199.98px){.filters,.main,.secondary{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:767.98px){.kpis{grid-template-columns:1fr}.top{flex-direction:column}.hero h2{font-size:1.3rem}}
     </style>
 
@@ -372,29 +373,70 @@
             <div class="modal-content">
                 <div class="modal-header"><h5 class="modal-title">Detail Komposisi Status Item</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
                 <div class="modal-body">
-                    @foreach ($statusBreakdown as $label => $value)
-                        <div class="mb-4">
-                            <h6 class="mb-2">{{ $label }} - {{ $value }} item</h6>
-                            <div class="table-responsive modal-subtable">
-                                <table class="table table-sm table-hover mb-0">
-                                    <thead><tr><th>PO</th><th>Item</th><th>Supplier</th><th>ETD</th><th>Outstanding</th></tr></thead>
-                                    <tbody>
-                                        @forelse(($statusDetailGroups->get($label) ?? collect())->take(8) as $row)
-                                            <tr>
-                                                <td>{{ $row->po_number }}</td>
-                                                <td>{{ $row->item_code }} - {{ $row->item_name }}</td>
-                                                <td>{{ $row->supplier_name }}</td>
-                                                <td>{{ $row->etd_date ? \Carbon\Carbon::parse($row->etd_date)->format('d-m-Y') : '-' }}</td>
-                                                <td>{{ \App\Support\NumberFormatter::trim($row->outstanding_qty) }}</td>
-                                            </tr>
-                                        @empty
-                                            <tr><td colspan="5" class="text-center text-muted">Tidak ada item.</td></tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
+                    <div class="modal-filters">
+                        <div>
+                            <label class="label">Cari PO / Item / Supplier</label>
+                            <input type="text" id="statusDetailKeyword" class="form-control form-control-sm" placeholder="Ketik PO, item code, nama item, atau supplier">
                         </div>
-                    @endforeach
+                        <div>
+                            <label class="label">Status</label>
+                            <select id="statusDetailStatus" class="form-control form-control-sm">
+                                <option value="">Semua Status</option>
+                                @foreach (array_keys($statusBreakdown) as $label)
+                                    <option value="{{ $label }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="label">ETD</label>
+                            <select id="statusDetailEtd" class="form-control form-control-sm">
+                                <option value="">Semua ETD</option>
+                                <option value="at-risk">At-Risk</option>
+                                <option value="on-time">On-Time</option>
+                                <option value="waiting-date">Belum Ada ETD</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="label">Supplier</label>
+                            <select id="statusDetailSupplier" class="form-control form-control-sm">
+                                <option value="">Semua Supplier</option>
+                                @foreach ($suppliers as $supplier)
+                                    <option value="{{ strtolower($supplier->supplier_name) }}">{{ $supplier->supplier_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <button type="button" id="statusDetailReset" class="btn btn-light btn-sm w-100">Reset</button>
+                        </div>
+                    </div>
+                    <div class="filter-result mb-2" id="statusDetailCount"></div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0" id="statusDetailTable">
+                            <thead><tr><th>PO</th><th>Item Code</th><th>Nama Item</th><th>Supplier</th><th>Status</th><th>ETD</th><th>Total Order</th><th>Sudah Dikirim</th><th>Outstanding</th></tr></thead>
+                            <tbody>
+                                @forelse($statusDetailItems as $row)
+                                    @php($etdBucket = !$row->etd_date ? 'waiting-date' : (\Carbon\Carbon::parse($row->etd_date)->isBefore(now()) ? 'at-risk' : 'on-time'))
+                                    <tr
+                                        data-status="{{ strtolower($row->item_status_label) }}"
+                                        data-supplier="{{ strtolower($row->supplier_name) }}"
+                                        data-etd="{{ $etdBucket }}"
+                                        data-search="{{ strtolower($row->po_number . ' ' . $row->item_code . ' ' . $row->item_name . ' ' . $row->supplier_name) }}">
+                                        <td>{{ $row->po_number }}</td>
+                                        <td>{{ $row->item_code }}</td>
+                                        <td>{{ $row->item_name }}</td>
+                                        <td>{{ $row->supplier_name }}</td>
+                                        <td>{{ $row->item_status_label }}</td>
+                                        <td>{{ $row->etd_date ? \Carbon\Carbon::parse($row->etd_date)->format('d-m-Y') : '-' }}</td>
+                                        <td>{{ \App\Support\NumberFormatter::trim($row->ordered_qty) }}</td>
+                                        <td>{{ \App\Support\NumberFormatter::trim($row->received_qty) }}</td>
+                                        <td>{{ \App\Support\NumberFormatter::trim($row->outstanding_qty) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="9" class="text-center text-muted">Tidak ada item.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -648,6 +690,14 @@
         document.addEventListener('DOMContentLoaded', function() {
             const statusCanvas = document.getElementById('statusBreakdownChart');
             const supplierCanvas = document.getElementById('supplierRiskChart');
+            const statusDetailKeyword = document.getElementById('statusDetailKeyword');
+            const statusDetailStatus = document.getElementById('statusDetailStatus');
+            const statusDetailSupplier = document.getElementById('statusDetailSupplier');
+            const statusDetailEtd = document.getElementById('statusDetailEtd');
+            const statusDetailReset = document.getElementById('statusDetailReset');
+            const statusDetailTable = document.getElementById('statusDetailTable');
+            const statusDetailCount = document.getElementById('statusDetailCount');
+
             if (statusCanvas) {
                 new Chart(statusCanvas, {
                     type: 'doughnut',
@@ -661,6 +711,54 @@
                     data: { labels: @json($supplierRiskChart['labels']), datasets: [{ label: 'Late Item', data: @json($supplierRiskChart['late_items']), backgroundColor: '#d66848', borderRadius: 8, barThickness: 18 }, { label: 'Late PO', data: @json($supplierRiskChart['late_pos']), backgroundColor: '#9ecb3c', borderRadius: 8, barThickness: 18 }] },
                     options: { indexAxis: 'y', maintainAspectRatio: false, scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { grid: { display: false } } }, plugins: { legend: { position: 'top', align: 'start' } } }
                 });
+            }
+
+            if (statusDetailTable) {
+                const rows = Array.from(statusDetailTable.querySelectorAll('tbody tr'));
+
+                const applyStatusDetailFilters = function() {
+                    const keyword = (statusDetailKeyword?.value || '').trim().toLowerCase();
+                    const status = (statusDetailStatus?.value || '').trim().toLowerCase();
+                    const supplier = (statusDetailSupplier?.value || '').trim().toLowerCase();
+                    const etd = (statusDetailEtd?.value || '').trim().toLowerCase();
+                    let visibleCount = 0;
+
+                    rows.forEach(function(row) {
+                        const matchesKeyword = !keyword || row.dataset.search.includes(keyword);
+                        const matchesStatus = !status || row.dataset.status === status;
+                        const matchesSupplier = !supplier || row.dataset.supplier === supplier;
+                        const matchesEtd = !etd || row.dataset.etd === etd;
+                        const visible = matchesKeyword && matchesStatus && matchesSupplier && matchesEtd;
+
+                        row.style.display = visible ? '' : 'none';
+                        if (visible) {
+                            visibleCount += 1;
+                        }
+                    });
+
+                    if (statusDetailCount) {
+                        statusDetailCount.textContent = visibleCount + ' item ditampilkan';
+                    }
+                };
+
+                [statusDetailKeyword, statusDetailStatus, statusDetailSupplier, statusDetailEtd].forEach(function(el) {
+                    if (el) {
+                        el.addEventListener('input', applyStatusDetailFilters);
+                        el.addEventListener('change', applyStatusDetailFilters);
+                    }
+                });
+
+                if (statusDetailReset) {
+                    statusDetailReset.addEventListener('click', function() {
+                        if (statusDetailKeyword) statusDetailKeyword.value = '';
+                        if (statusDetailStatus) statusDetailStatus.value = '';
+                        if (statusDetailSupplier) statusDetailSupplier.value = '';
+                        if (statusDetailEtd) statusDetailEtd.value = '';
+                        applyStatusDetailFilters();
+                    });
+                }
+
+                applyStatusDetailFilters();
             }
         });
     </script>
