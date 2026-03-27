@@ -2,22 +2,10 @@
 
 @php($title = 'Items')
 @php($header = 'Items')
-@php($headerSubtitle = 'Master barang dan material yang dipakai di purchase order dan shipment.')
-
+{{-- @php($headerSubtitle = 'Master barang dan material yang dipakai di purchase order dan shipment.') --}}
+@php($headerSubtitle = '')
 @section('content')
     <div class="page-shell">
-        <section class="page-head">
-            <div class="page-head-main">
-                <h2 class="page-section-title">Item List</h2>
-                <p class="page-section-subtitle">Master data barang dengan filter, input cepat, dan tabel utama yang konsisten.</p>
-            </div>
-
-            <div class="page-actions">
-                @if ($supportsCategoryMaster)
-                    <a href="{{ route('item-categories.index') }}" class="btn btn-outline-primary btn-sm">Kelola Kategori</a>
-                @endif
-            </div>
-        </section>
 
         <section class="ui-surface">
             <div class="ui-surface-head">

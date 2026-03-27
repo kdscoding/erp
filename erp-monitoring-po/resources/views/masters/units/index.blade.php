@@ -2,17 +2,11 @@
 
 @php($title='Units')
 @php($header='Units')
-@php($headerSubtitle='Master unit of measure yang dipakai pada item dan transaksi operasional.')
+{{-- @php($headerSubtitle='Master unit of measure yang dipakai pada item dan transaksi operasional.') --}}
+@php($headerSubtitle = '')
 
 @section('content')
     <div class="page-shell">
-        <section class="page-head">
-            <div class="page-head-main">
-                <h2 class="page-section-title">Unit List</h2>
-                <p class="page-section-subtitle">Master data ringan dengan filter, form tambah, dan tabel utama.</p>
-            </div>
-        </section>
-
         <section class="ui-surface">
             <div class="ui-surface-head">
                 <div>

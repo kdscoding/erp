@@ -1,17 +1,11 @@
 @extends('layouts.erp')
 @php($title='Plants')
 @php($header='Plants')
-@php($headerSubtitle='Master plant yang terhubung ke dokumen purchase order.')
+{{-- @php($headerSubtitle='Master plant yang terhubung ke dokumen purchase order.') --}}
+@php($headerSubtitle = '')
 
 @section('content')
     <div class="page-shell">
-        <section class="page-head">
-            <div class="page-head-main">
-                <h2 class="page-section-title">Plant List</h2>
-                <p class="page-section-subtitle">Master plant menggunakan pola ringan yang sama dengan master data lain.</p>
-            </div>
-        </section>
-
         <section class="ui-surface">
             <div class="ui-surface-head"><div><h3 class="ui-surface-title">Filter Plant</h3><div class="ui-surface-subtitle">Cari berdasarkan kode atau nama plant.</div></div></div>
             <form method="GET" class="filter-grid">

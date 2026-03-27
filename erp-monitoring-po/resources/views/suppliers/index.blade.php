@@ -2,17 +2,11 @@
 
 @php($title = 'Suppliers')
 @php($header = 'Suppliers')
-@php($headerSubtitle = 'Master data supplier yang dipakai pada purchase order, shipment, dan receiving.')
+{{-- @php($headerSubtitle = 'Master data supplier yang dipakai pada purchase order, shipment, dan receiving.') --}}
+@php($headerSubtitle = '')
 
 @section('content')
     <div class="page-shell">
-        <section class="page-head">
-            <div class="page-head-main">
-                <h2 class="page-section-title">Supplier List</h2>
-                <p class="page-section-subtitle">Halaman master data yang ringan: filter, form input, dan tabel utama.</p>
-            </div>
-        </section>
-
         <section class="ui-surface">
             <div class="ui-surface-head">
                 <div>

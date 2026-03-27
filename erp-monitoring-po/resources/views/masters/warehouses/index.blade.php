@@ -1,17 +1,11 @@
 @extends('layouts.erp')
 @php($title='Warehouses')
 @php($header='Warehouses')
-@php($headerSubtitle='Master gudang untuk transaksi purchase order dan goods receipt.')
+{{-- @php($headerSubtitle='Master gudang untuk transaksi purchase order dan goods receipt.') --}}
+@php($headerSubtitle = '')
 
 @section('content')
     <div class="page-shell">
-        <section class="page-head">
-            <div class="page-head-main">
-                <h2 class="page-section-title">Warehouse List</h2>
-                <p class="page-section-subtitle">Master gudang dengan filter cepat, form tambah, dan tabel utama yang bersih.</p>
-            </div>
-        </section>
-
         <section class="ui-surface">
             <div class="ui-surface-head"><div><h3 class="ui-surface-title">Filter Gudang</h3><div class="ui-surface-subtitle">Cari berdasarkan kode, nama, atau lokasi gudang.</div></div></div>
             <form method="GET" class="filter-grid">

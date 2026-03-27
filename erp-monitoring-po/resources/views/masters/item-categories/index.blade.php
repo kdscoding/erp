@@ -1,17 +1,10 @@
 @extends('layouts.erp')
 @php($title = 'Item Categories')
 @php($header = 'Item Categories')
-@php($headerSubtitle = 'Master kategori barang untuk klasifikasi item dan monitoring yang lebih rapi.')
-
+{{-- @php($headerSubtitle = 'Master kategori barang untuk klasifikasi item dan monitoring yang lebih rapi.') --}}
+@php($headerSubtitle = '')
 @section('content')
     <div class="page-shell">
-        <section class="page-head">
-            <div class="page-head-main">
-                <h2 class="page-section-title">Category List</h2>
-                <p class="page-section-subtitle">Filter, form tambah, dan tabel kategori mengikuti baseline global yang sama.</p>
-            </div>
-        </section>
-
         <section class="ui-surface">
             <div class="ui-surface-head"><div><h3 class="ui-surface-title">Filter Kategori</h3><div class="ui-surface-subtitle">Cari berdasarkan kode, nama, deskripsi, atau status kategori.</div></div></div>
             <form method="GET" class="filter-grid">
