@@ -126,14 +126,29 @@
         }
 
         .nav-sidebar .nav-treeview>.nav-item>.nav-link {
-            padding-left: 2.15rem;
-            font-size: 12px;
+            padding-left: 2.45rem;
+            font-size: 12.25px;
+            color: rgba(233, 241, 255, .88) !important;
+            background: transparent !important;
         }
 
         .nav-sidebar .nav-treeview>.nav-item>.nav-link.active {
-            background: rgba(232, 241, 138, .92) !important;
-            color: #21300b !important;
+            background: rgba(255, 255, 255, .12) !important;
+            color: #fff !important;
             font-weight: 700;
+        }
+
+        .nav-sidebar .nav-treeview>.nav-item>.nav-link:hover {
+            background: rgba(255, 255, 255, .08) !important;
+        }
+
+        .nav-sidebar .nav-treeview>.nav-item>.nav-link .nav-icon {
+            font-size: .7rem;
+            margin-right: .35rem;
+        }
+
+        .nav-sidebar .menu-open>.nav-link {
+            border-radius: .25rem;
         }
 
         .nav-header {

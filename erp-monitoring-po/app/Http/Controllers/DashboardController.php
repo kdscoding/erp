@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
@@ -13,8 +14,7 @@ class DashboardController extends Controller
     {
         $currentDateSql = $this->currentDateExpression();
         $supplierId = $request->integer('supplier_id');
-        $dateFrom = $request->date('date_from')?->format('Y-m-d');
-        $dateTo = $request->date('date_to')?->format('Y-m-d');
+        ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
 
         $suppliers = DB::table('suppliers')
             ->orderBy('supplier_name')
@@ -472,8 +472,7 @@ class DashboardController extends Controller
     public function summaryPo(Request $request): View
     {
         $supplierId = $request->integer('supplier_id');
-        $dateFrom = $request->date('date_from')?->format('Y-m-d');
-        $dateTo = $request->date('date_to')?->format('Y-m-d');
+        ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
 
         $suppliers = DB::table('suppliers')
             ->orderBy('supplier_name')
@@ -512,8 +511,7 @@ class DashboardController extends Controller
     public function exportSummaryPoExcel(Request $request): Response
     {
         $supplierId = $request->integer('supplier_id');
-        $dateFrom = $request->date('date_from')?->format('Y-m-d');
-        $dateTo = $request->date('date_to')?->format('Y-m-d');
+        ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
 
         $summaryMetrics = $this->summaryMetrics($supplierId, $dateFrom, $dateTo);
 
@@ -550,8 +548,7 @@ class DashboardController extends Controller
     public function summaryItem(Request $request): View
     {
         $supplierId = $request->integer('supplier_id');
-        $dateFrom = $request->date('date_from')?->format('Y-m-d');
-        $dateTo = $request->date('date_to')?->format('Y-m-d');
+        ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
 
         $suppliers = DB::table('suppliers')
             ->orderBy('supplier_name')
@@ -591,8 +588,7 @@ class DashboardController extends Controller
     public function exportSummaryItemExcel(Request $request): Response
     {
         $supplierId = $request->integer('supplier_id');
-        $dateFrom = $request->date('date_from')?->format('Y-m-d');
-        $dateTo = $request->date('date_to')?->format('Y-m-d');
+        ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
 
         $summaryMetrics = $this->summaryMetrics($supplierId, $dateFrom, $dateTo);
 
@@ -650,6 +646,16 @@ class DashboardController extends Controller
             ->whereNotIn('po.status', ['Closed', 'Cancelled'])
             ->where('poi.item_status', '!=', 'Cancelled')
             ->where('poi.outstanding_qty', '>', 0);
+    }
+
+    private function resolveDateRange(Request $request): array
+    {
+        $today = Carbon::today();
+
+        return [
+            'date_from' => $request->date('date_from')?->format('Y-m-d') ?? $today->copy()->subMonth()->format('Y-m-d'),
+            'date_to' => $request->date('date_to')?->format('Y-m-d') ?? $today->format('Y-m-d'),
+        ];
     }
 
     private function currentDateExpression(): string
