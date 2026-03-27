@@ -24,8 +24,7 @@ class PlantController extends Controller
             })
             ->groupBy('p.id', 'p.plant_code', 'p.plant_name', 'p.created_at', 'p.updated_at')
             ->orderBy('p.plant_name')
-            ->paginate(20)
-            ->withQueryString();
+            ->get();
 
         $stats = [
             'total' => DB::table('plants')->count(),

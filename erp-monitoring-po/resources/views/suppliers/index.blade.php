@@ -104,7 +104,7 @@
             </div>
 
             <div class="table-wrap table-responsive">
-                <table class="table table-hover ui-table">
+                <table class="table table-hover ui-table data-table-advanced">
                     <thead>
                         <tr>
                             <th>Kode</th>
@@ -151,6 +151,4 @@
             </div>
         </section>
     </div>
-
-    <div class="mt-2">{{ $suppliers->links() }}</div>
 @endsection

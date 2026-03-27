@@ -52,7 +52,7 @@
             </div>
         </div>
         <div class="table-wrap table-responsive">
-            <table class="table table-hover ui-table data-table">
+            <table class="table table-hover ui-table data-table-advanced">
                 <thead>
                     <tr>
                         <th>PO</th>
@@ -95,7 +95,5 @@
             </table>
         </div>
     </section>
-
-    <div class="mt-2">{{ $rows->links() }}</div>
 </div>
 @endsection

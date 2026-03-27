@@ -44,8 +44,7 @@ class ItemController extends Controller
             ->when($request->filled('unit_id'), fn ($query) => $query->where('i.unit_id', (int) $request->input('unit_id')))
             ->when($request->filled('status'), fn ($query) => $query->where('i.active', (int) $request->input('status')))
             ->orderBy('i.item_name')
-            ->paginate(20)
-            ->withQueryString();
+            ->get();
 
         $units = DB::table('units')->orderBy('unit_name')->get();
         $categories = $hasCategoryTable ? DB::table('item_categories')->orderBy('category_name')->get() : collect();

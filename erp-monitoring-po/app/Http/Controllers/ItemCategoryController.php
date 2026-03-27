@@ -29,8 +29,7 @@ class ItemCategoryController extends Controller
             ->when($request->filled('status'), fn ($query) => $query->where('c.is_active', (int) $request->input('status')))
             ->groupBy('c.id', 'c.category_code', 'c.category_name', 'c.description', 'c.is_active', 'c.created_at', 'c.updated_at')
             ->orderBy('c.category_name')
-            ->paginate(15)
-            ->withQueryString();
+            ->get();
 
         return view('masters.item-categories.index', compact('rows'));
     }

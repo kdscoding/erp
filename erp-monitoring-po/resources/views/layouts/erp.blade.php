@@ -990,6 +990,34 @@
                     });
                 }
             });
+
+            $('table.data-table-advanced').each(function() {
+                if (!$.fn.DataTable.isDataTable(this)) {
+                    $(this).DataTable({
+                        paging: true,
+                        pageLength: 10,
+                        lengthMenu: [
+                            [10, 25, 50, 100],
+                            [10, 25, 50, 100]
+                        ],
+                        ordering: true,
+                        autoWidth: false,
+                        responsive: false,
+                        language: {
+                            search: "Cari cepat:",
+                            zeroRecords: "Data tidak ditemukan",
+                            lengthMenu: "Tampilkan _MENU_ baris",
+                            info: "Menampilkan _START_ - _END_ dari _TOTAL_ data",
+                            infoEmpty: "Belum ada data",
+                            infoFiltered: "(difilter dari _MAX_ data)",
+                            paginate: {
+                                previous: "Sebelumnya",
+                                next: "Berikutnya"
+                            }
+                        }
+                    });
+                }
+            });
         });
     </script>
 </body>

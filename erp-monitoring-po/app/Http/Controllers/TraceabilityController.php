@@ -35,8 +35,7 @@ class TraceabilityController extends Controller
             ->when($request->filled('po_number'), fn ($q) => $q->where('po.po_number', 'like', '%' . $request->po_number . '%'))
             ->groupBy('po.po_number', 'po.po_date', 'po.status', 's.supplier_name', 'i.item_code', 'i.item_name', 'poi.ordered_qty', 'poi.received_qty', 'poi.outstanding_qty', 'poi.etd_date', 'poi.item_status', 'poi.cancel_reason')
             ->orderByDesc('po.po_date')
-            ->paginate(30)
-            ->withQueryString();
+            ->get();
 
         return view('traceability.index', compact('rows'));
     }

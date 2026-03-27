@@ -25,8 +25,7 @@ class SupplierController extends Controller
             })
             ->when($request->filled('status'), fn ($query) => $query->where('status', (int) $request->input('status')))
             ->orderBy('supplier_name')
-            ->paginate(20)
-            ->withQueryString();
+            ->get();
 
         $stats = [
             'total' => DB::table('suppliers')->count(),

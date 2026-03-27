@@ -24,8 +24,7 @@ class UnitController extends Controller
             })
             ->groupBy('u.id', 'u.unit_code', 'u.unit_name', 'u.created_at', 'u.updated_at')
             ->orderBy('u.unit_name')
-            ->paginate(20)
-            ->withQueryString();
+            ->get();
 
         $stats = [
             'total' => DB::table('units')->count(),

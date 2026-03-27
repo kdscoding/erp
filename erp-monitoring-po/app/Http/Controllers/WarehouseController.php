@@ -30,8 +30,7 @@ class WarehouseController extends Controller
             })
             ->orderBy('w.warehouse_name')
             ->groupBy('w.id', 'w.warehouse_code', 'w.warehouse_name', 'w.location', 'w.created_at', 'w.updated_at')
-            ->paginate(20)
-            ->withQueryString();
+            ->get();
 
         $stats = [
             'total' => DB::table('warehouses')->count(),

@@ -31,7 +31,7 @@
         <section class="ui-surface">
             <div class="ui-surface-head"><div><h3 class="ui-surface-title">Daftar Gudang</h3><div class="ui-surface-subtitle">Jumlah pemakaian pada PO dan GR diringkas di tabel utama.</div></div></div>
             <div class="table-wrap table-responsive">
-                <table class="table table-hover ui-table">
+                <table class="table table-hover ui-table data-table-advanced">
                     <thead><tr><th>Kode</th><th>Nama</th><th>Lokasi</th><th>PO</th><th>GR</th><th class="text-end">Aksi</th></tr></thead>
                     <tbody>
                         @forelse($rows as $row)
@@ -51,6 +51,4 @@
             </div>
         </section>
     </div>
-
-    <div class="mt-2">{{ $rows->links() }}</div>
 @endsection
