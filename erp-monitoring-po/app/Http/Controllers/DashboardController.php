@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -202,7 +202,7 @@ class DashboardController extends Controller
                 'poi.outstanding_qty',
                 'poi.etd_date'
             )
-            ->selectRaw("CASE 
+            ->selectRaw("CASE
                 WHEN poi.item_status = 'Cancelled' THEN 'Cancelled'
                 WHEN poi.outstanding_qty <= 0 THEN 'Closed'
                 WHEN poi.received_qty > 0 THEN 'Partial'
@@ -210,7 +210,7 @@ class DashboardController extends Controller
                 WHEN DATE(poi.etd_date) < {$currentDateSql} THEN 'Late'
                 ELSE 'Confirmed'
             END as monitoring_status")
-            ->selectRaw("CASE 
+            ->selectRaw("CASE
                 WHEN poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 'Sudah diterima sebagian'
                 WHEN poi.outstanding_qty <= 0 THEN 'Selesai'
                 WHEN poi.etd_date IS NULL THEN 'Belum ada konfirmasi supplier'
@@ -219,7 +219,7 @@ class DashboardController extends Controller
             END as monitoring_note")
             ->whereNotIn('po.status', ['Closed', 'Cancelled'])
             ->where('poi.item_status', '!=', 'Cancelled')
-            ->orderByRaw("CASE 
+            ->orderByRaw("CASE
                 WHEN poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 1
                 WHEN poi.etd_date IS NULL THEN 2
                 WHEN DATE(poi.etd_date) < {$currentDateSql} THEN 3
@@ -265,7 +265,7 @@ class DashboardController extends Controller
                 'poi.outstanding_qty',
                 'poi.etd_date'
             )
-            ->selectRaw("CASE 
+            ->selectRaw("CASE
                 WHEN poi.item_status = 'Cancelled' THEN 'Cancelled'
                 WHEN poi.outstanding_qty <= 0 THEN 'Closed'
                 WHEN poi.received_qty > 0 THEN 'Partial'
@@ -275,7 +275,7 @@ class DashboardController extends Controller
             END as monitoring_status")
             ->where('poi.item_status', '!=', 'Cancelled')
             ->whereNotIn('po.status', ['Closed', 'Cancelled'])
-            ->orderByRaw("CASE 
+            ->orderByRaw("CASE
                 WHEN poi.outstanding_qty <= 0 THEN 5
                 WHEN poi.received_qty > 0 THEN 3
                 WHEN poi.etd_date IS NULL THEN 2
@@ -421,57 +421,101 @@ class DashboardController extends Controller
         ));
     }
 
-    public function monitoring(): View
+    public function summaryPo(Request $request): View
     {
-        [$poMonitoringSummary, $itemMonitoringList] = $this->monitoringData();
+        $supplierId = $request->integer('supplier_id');
+        $dateFrom = $request->date('date_from')?->format('Y-m-d');
+        $dateTo = $request->date('date_to')?->format('Y-m-d');
 
-        return view('monitoring', compact('itemMonitoringList', 'poMonitoringSummary'));
+        $suppliers = DB::table('suppliers')
+            ->orderBy('supplier_name')
+            ->get(['id', 'supplier_name']);
+
+        $summaryMetrics = $this->summaryMetrics($supplierId, $dateFrom, $dateTo);
+
+        $outstandingPoRows = $this->baseOutstandingQuery($supplierId, $dateFrom, $dateTo)
+            ->select(
+                'po.id as po_id',
+                'po.po_number',
+                'po.po_date',
+                'po.status as po_status',
+                's.supplier_name',
+                DB::raw('COALESCE(po.eta_date, MIN(COALESCE(poi.eta_date, poi.etd_date))) as eta_date')
+            )
+            ->selectRaw('COUNT(poi.id) as outstanding_item_count')
+            ->selectRaw('SUM(poi.ordered_qty) as total_order_qty')
+            ->selectRaw('SUM(poi.received_qty) as total_shipped_qty')
+            ->selectRaw('SUM(poi.outstanding_qty) as total_outstanding_qty')
+            ->groupBy('po.id', 'po.po_number', 'po.po_date', 'po.status', 's.supplier_name', 'po.eta_date')
+            ->orderByDesc('total_outstanding_qty')
+            ->orderBy('po.po_number')
+            ->get();
+
+        return view('summary-po', compact(
+            'suppliers',
+            'supplierId',
+            'dateFrom',
+            'dateTo',
+            'summaryMetrics',
+            'outstandingPoRows'
+        ));
     }
 
-    public function exportMonitoringExcel(): Response
+    public function exportSummaryPoExcel(Request $request): Response
     {
-        [$poMonitoringSummary, $itemMonitoringList] = $this->monitoringData();
+        $supplierId = $request->integer('supplier_id');
+        $dateFrom = $request->date('date_from')?->format('Y-m-d');
+        $dateTo = $request->date('date_to')?->format('Y-m-d');
 
-        $content = view('monitoring-export', [
-            'poMonitoringSummary' => $poMonitoringSummary,
-            'itemMonitoringList' => $itemMonitoringList,
+        $summaryMetrics = $this->summaryMetrics($supplierId, $dateFrom, $dateTo);
+
+        $outstandingPoRows = $this->baseOutstandingQuery($supplierId, $dateFrom, $dateTo)
+            ->select(
+                'po.id as po_id',
+                'po.po_number',
+                'po.po_date',
+                'po.status as po_status',
+                's.supplier_name',
+                DB::raw('COALESCE(po.eta_date, MIN(COALESCE(poi.eta_date, poi.etd_date))) as eta_date')
+            )
+            ->selectRaw('COUNT(poi.id) as outstanding_item_count')
+            ->selectRaw('SUM(poi.ordered_qty) as total_order_qty')
+            ->selectRaw('SUM(poi.received_qty) as total_shipped_qty')
+            ->selectRaw('SUM(poi.outstanding_qty) as total_outstanding_qty')
+            ->groupBy('po.id', 'po.po_number', 'po.po_date', 'po.status', 's.supplier_name', 'po.eta_date')
+            ->orderByDesc('total_outstanding_qty')
+            ->orderBy('po.po_number')
+            ->get();
+
+        $content = view('summary-po-export', [
+            'summaryMetrics' => $summaryMetrics,
+            'outstandingPoRows' => $outstandingPoRows,
             'generatedAt' => now(),
         ])->render();
 
         return response($content, 200, [
             'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="monitoring-po-item-' . now()->format('Ymd-His') . '.xls"',
+            'Content-Disposition' => 'attachment; filename="summary-po-' . now()->format('Ymd-His') . '.xls"',
         ]);
     }
 
-    private function monitoringData(): array
+    public function summaryItem(Request $request): View
     {
-        $currentDateSql = $this->currentDateExpression();
+        $supplierId = $request->integer('supplier_id');
+        $dateFrom = $request->date('date_from')?->format('Y-m-d');
+        $dateTo = $request->date('date_to')?->format('Y-m-d');
 
-        $poMonitoringSummary = DB::table('purchase_orders as po')
-            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
-            ->leftJoin('purchase_order_items as poi', 'poi.purchase_order_id', '=', 'po.id')
-            ->select('po.id as po_id', 'po.po_number', 'po.status as po_status', 's.supplier_name')
-            ->selectRaw("SUM(CASE WHEN COALESCE(poi.item_status, '') != 'Cancelled' AND poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NULL THEN 1 ELSE 0 END) as waiting_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(poi.item_status, '') != 'Cancelled' AND poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) >= {$currentDateSql} THEN 1 ELSE 0 END) as confirmed_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(poi.item_status, '') != 'Cancelled' AND poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) < {$currentDateSql} THEN 1 ELSE 0 END) as late_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(poi.item_status, '') != 'Cancelled' AND poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 1 ELSE 0 END) as partial_items")
-            ->selectRaw("SUM(CASE WHEN poi.item_status = '" . \App\Support\DocumentTermCodes::ITEM_CLOSED . "' THEN 1 ELSE 0 END) as closed_items")
-            ->selectRaw("SUM(CASE WHEN poi.item_status = '" . \App\Support\DocumentTermCodes::ITEM_FORCE_CLOSED . "' THEN 1 ELSE 0 END) as force_closed_items")
-            ->where('po.status', '!=', 'Cancelled')
-            ->groupBy('po.id', 'po.po_number', 'po.status', 's.supplier_name')
-            ->orderBy('po.po_number')
-            ->get();
+        $suppliers = DB::table('suppliers')
+            ->orderBy('supplier_name')
+            ->get(['id', 'supplier_name']);
 
-        $itemMonitoringList = DB::table('purchase_order_items as poi')
-            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+        $summaryMetrics = $this->summaryMetrics($supplierId, $dateFrom, $dateTo);
+
+        $outstandingItemRows = $this->baseOutstandingQuery($supplierId, $dateFrom, $dateTo)
             ->join('items as i', 'i.id', '=', 'poi.item_id')
-            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->select(
-                'poi.id',
                 'po.id as po_id',
                 'po.po_number',
-                'po.status as po_status',
                 's.supplier_name',
                 'i.item_code',
                 'i.item_name',
@@ -480,38 +524,84 @@ class DashboardController extends Controller
                 'poi.outstanding_qty',
                 'poi.etd_date'
             )
-            ->selectRaw("CASE 
-                WHEN poi.item_status = 'Cancelled' THEN 'Cancelled'
-                WHEN poi.item_status = '" . \App\Support\DocumentTermCodes::ITEM_FORCE_CLOSED . "' THEN '" . \App\Support\DocumentTermCodes::ITEM_FORCE_CLOSED . "'
-                WHEN poi.outstanding_qty <= 0 THEN 'Closed'
-                WHEN poi.received_qty > 0 THEN 'Partial'
-                WHEN poi.etd_date IS NULL THEN 'Waiting'
-                WHEN DATE(poi.etd_date) < {$currentDateSql} THEN 'Late'
-                ELSE 'Confirmed'
-            END as monitoring_status")
-            ->selectRaw("CASE 
-                WHEN poi.item_status = '" . \App\Support\DocumentTermCodes::ITEM_FORCE_CLOSED . "' THEN 'Outstanding dihentikan secara manual'
-                WHEN poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 'Sudah diterima sebagian'
-                WHEN poi.outstanding_qty <= 0 THEN 'Selesai'
-                WHEN poi.etd_date IS NULL THEN 'Belum ada konfirmasi supplier'
-                WHEN DATE(poi.etd_date) < {$currentDateSql} THEN 'Terlambat dari ETD'
-                ELSE 'Sudah dikonfirmasi supplier'
-            END as monitoring_note")
-            ->where('po.status', '!=', 'Cancelled')
-            ->where('poi.item_status', '!=', 'Cancelled')
-            ->orderByRaw("CASE 
-                WHEN poi.item_status = '" . \App\Support\DocumentTermCodes::ITEM_FORCE_CLOSED . "' THEN 1
-                WHEN poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 1
-                WHEN DATE(poi.etd_date) < {$currentDateSql} THEN 2
-                WHEN poi.etd_date IS NULL THEN 3
-                ELSE 4
-            END")
+            ->orderByDesc('poi.outstanding_qty')
             ->orderBy('po.po_number')
             ->orderBy('i.item_code')
-            ->limit(15)
+            ->paginate(50)
+            ->withQueryString();
+
+        return view('summary-item', compact(
+            'suppliers',
+            'supplierId',
+            'dateFrom',
+            'dateTo',
+            'summaryMetrics',
+            'outstandingItemRows'
+        ));
+    }
+
+    public function exportSummaryItemExcel(Request $request): Response
+    {
+        $supplierId = $request->integer('supplier_id');
+        $dateFrom = $request->date('date_from')?->format('Y-m-d');
+        $dateTo = $request->date('date_to')?->format('Y-m-d');
+
+        $summaryMetrics = $this->summaryMetrics($supplierId, $dateFrom, $dateTo);
+
+        $outstandingItemRows = $this->baseOutstandingQuery($supplierId, $dateFrom, $dateTo)
+            ->join('items as i', 'i.id', '=', 'poi.item_id')
+            ->select(
+                'po.id as po_id',
+                'po.po_number',
+                's.supplier_name',
+                'i.item_code',
+                'i.item_name',
+                'poi.ordered_qty',
+                'poi.received_qty',
+                'poi.outstanding_qty',
+                'poi.etd_date'
+            )
+            ->orderByDesc('poi.outstanding_qty')
+            ->orderBy('po.po_number')
+            ->orderBy('i.item_code')
             ->get();
 
-        return [$poMonitoringSummary, $itemMonitoringList];
+        $content = view('summary-item-export', [
+            'summaryMetrics' => $summaryMetrics,
+            'outstandingItemRows' => $outstandingItemRows,
+            'generatedAt' => now(),
+        ])->render();
+
+        return response($content, 200, [
+            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="summary-item-' . now()->format('Ymd-His') . '.xls"',
+        ]);
+    }
+
+    private function summaryMetrics(?int $supplierId, ?string $dateFrom, ?string $dateTo): array
+    {
+        $baseQuery = $this->baseOutstandingQuery($supplierId, $dateFrom, $dateTo);
+
+        return (array) $baseQuery
+            ->selectRaw('COUNT(DISTINCT po.id) as outstanding_po')
+            ->selectRaw('COUNT(poi.id) as outstanding_item')
+            ->selectRaw('COALESCE(SUM(poi.ordered_qty), 0) as total_order_qty')
+            ->selectRaw('COALESCE(SUM(poi.received_qty), 0) as total_shipped_qty')
+            ->selectRaw('COALESCE(SUM(poi.outstanding_qty), 0) as total_outstanding_qty')
+            ->first();
+    }
+
+    private function baseOutstandingQuery(?int $supplierId, ?string $dateFrom, ?string $dateTo)
+    {
+        return DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
+            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
+            ->where('poi.item_status', '!=', 'Cancelled')
+            ->where('poi.outstanding_qty', '>', 0);
     }
 
     private function currentDateExpression(): string
@@ -520,5 +610,4 @@ class DashboardController extends Controller
             ? "date('now')"
             : 'CURDATE()';
     }
-
 }

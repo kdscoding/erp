@@ -204,7 +204,7 @@
                     <div><h3>Item Prioritas</h3><div class="sub">Snapshot cepat item yang paling perlu dilihat dulu.</div></div>
                     <div class="actions">
                         <button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#itemPriorityDetailModal">Detail</button>
-                        <a href="{{ route('monitoring') }}" class="btn btn-sm btn-primary">Monitoring Lengkap</a>
+                        <a href="{{ route('summary.po') }}" class="btn btn-sm btn-primary">Buka Summary PO</a>
                     </div>
                 </div>
                 <div class="table-wrap table-responsive">

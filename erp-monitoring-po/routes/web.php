@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\AuditTrailController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\ItemController;
@@ -22,13 +21,14 @@ Route::get('/', fn() => redirect()->route('dashboard'));
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
-    Route::get('/monitoring', [DashboardController::class, 'monitoring'])->name('monitoring');
-    Route::get('/monitoring/export-excel', [DashboardController::class, 'exportMonitoringExcel'])->name('monitoring.export-excel');
+    Route::get('/summary/po', [DashboardController::class, 'summaryPo'])->name('summary.po');
+    Route::get('/summary/po/export-excel', [DashboardController::class, 'exportSummaryPoExcel'])->name('summary.po.export-excel');
+    Route::get('/summary/item', [DashboardController::class, 'summaryItem'])->name('summary.item');
+    Route::get('/summary/item/export-excel', [DashboardController::class, 'exportSummaryItemExcel'])->name('summary.item.export-excel');
     Route::get('/po', [PurchaseOrderController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('po.index');
     Route::get('/po/export-excel', [PurchaseOrderController::class, 'exportIndexExcel'])->middleware('role:administrator|staff|supervisor')->name('po.export-excel');
     Route::get('/reports/outstanding', [ReportController::class, 'outstanding'])->middleware('role:administrator|staff|supervisor')->name('reports.outstanding');
     Route::get('/traceability', [TraceabilityController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('traceability.index');
-    Route::get('/audit-trail', [AuditTrailController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('audit.index');
 
     Route::middleware('role:administrator|staff')->group(function () {
         Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');

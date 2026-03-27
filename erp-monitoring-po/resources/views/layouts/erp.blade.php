@@ -852,13 +852,21 @@
                         @endif
 
                         @if ($currentUser?->hasAnyRole(['administrator', 'staff', 'supervisor']))
-                            <li class="nav-header">Monitoring & Audit</li>
+                            <li class="nav-header">Summary & Reports</li>
 
                             <li class="nav-item">
-                                <a href="{{ route('monitoring') }}"
-                                    class="nav-link {{ request()->routeIs('monitoring') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-eye"></i>
-                                    <p>Item Monitoring</p>
+                                <a href="{{ route('summary.po') }}"
+                                    class="nav-link {{ request()->routeIs('summary.po') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-file-invoice"></i>
+                                    <p>Summary PO</p>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a href="{{ route('summary.item') }}"
+                                    class="nav-link {{ request()->routeIs('summary.item') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-boxes-stacked"></i>
+                                    <p>Summary Item</p>
                                 </a>
                             </li>
 
@@ -878,13 +886,6 @@
                                 </a>
                             </li>
 
-                            <li class="nav-item">
-                                <a href="{{ route('audit.index') }}"
-                                    class="nav-link {{ request()->routeIs('audit.*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-history"></i>
-                                    <p>Audit Trail</p>
-                                </a>
-                            </li>
                         @endif
 
                         @if ($currentUser?->hasRole('administrator'))
