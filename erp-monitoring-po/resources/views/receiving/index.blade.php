@@ -1,5 +1,12 @@
 @extends('layouts.erp')
 
+@php($mode = $mode ?? 'process')
+@php($rows = $rows ?? collect())
+@php($shipmentDocuments = $shipmentDocuments ?? collect())
+@php($shipmentItems = $shipmentItems ?? collect())
+@php($selectedShipment = $selectedShipment ?? null)
+@php($suppliers = $suppliers ?? collect())
+
 @php($title = $mode === 'history' ? 'Receiving History' : 'Open Receiving')
 @php($header = $mode === 'history' ? 'Receiving History' : 'Open Receiving')
 @php($headerSubtitle = $mode === 'history' ? 'Riwayat goods receipt yang sudah diposting.' : 'Proses receiving untuk shipment yang siap diterima gudang.')

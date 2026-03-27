@@ -12,18 +12,27 @@
     <style>
         .dash{display:grid;gap:1rem}.box{background:rgba(255,255,255,.96);border:1px solid rgba(111,150,40,.12);border-radius:20px;box-shadow:0 14px 32px rgba(111,150,40,.05)}.head{display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding:1rem 1rem 0}.head h3{margin:0;font-size:1rem;color:#314216}.sub{font-size:.8rem;color:#7a8660}.body{padding:1rem}
         .hero{padding:1.2rem;background:radial-gradient(circle at top right,rgba(241,217,59,.34),transparent 24%),radial-gradient(circle at bottom left,rgba(158,203,60,.18),transparent 24%),linear-gradient(135deg,rgba(255,255,255,.98),rgba(244,248,219,.98))}.eyebrow{display:inline-flex;gap:.45rem;padding:.35rem .7rem;border-radius:999px;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5f7331;border:1px solid rgba(111,150,40,.16);background:rgba(255,255,255,.7)}.hero h2{margin:.75rem 0 .45rem;font-size:1.55rem;line-height:1.1;color:#2d3d15}.muted,.meta,.note{font-size:.82rem;color:#728058}
-        .filters{display:grid;grid-template-columns:2fr 1fr 1fr auto auto;gap:.75rem;align-items:end;margin-top:1rem}.chips{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.85rem}.chip{padding:.32rem .65rem;border-radius:999px;background:#f7f9e7;border:1px solid #dbe5b0;font-size:.76rem;color:#62743a}
+        .filters{display:grid;grid-template-columns:2fr 1fr 1fr auto auto;gap:.75rem;align-items:end;margin-top:1rem}.chips{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.85rem}.chip{padding:.32rem .65rem;border-radius:999px;background:#f7f9e7;border:1px solid #dbe5b0;font-size:.76rem;color:#62743a}.actions{display:flex;gap:.5rem;flex-wrap:wrap}
         .kpis,.main,.secondary{display:grid;gap:1rem}.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.main{grid-template-columns:1.15fr 1fr .85fr}.secondary{grid-template-columns:1fr 1fr}.kpi{position:relative;overflow:hidden;padding:1rem;border-radius:18px;border:1px solid rgba(111,150,40,.12);box-shadow:0 12px 24px rgba(111,150,40,.04)}.kpi:after{content:"";position:absolute;right:-18px;bottom:-24px;width:80px;height:80px;border-radius:999px;background:rgba(255,255,255,.35)}.k1{background:linear-gradient(135deg,#fff,#eef7d2)}.k2{background:linear-gradient(135deg,#fffef8,#fff0d5)}.k3{background:linear-gradient(135deg,#fff,#e6f4d8)}.k4{background:linear-gradient(135deg,#fff,#edf7cf)}
         .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#7a8660}.value{font-size:1.8rem;font-weight:800;color:#314216;line-height:1;margin-top:.25rem}.chart{position:relative;min-height:280px}.legend{display:grid;gap:.55rem;margin-top:.8rem}.legend-row{display:grid;grid-template-columns:auto 1fr auto;gap:.6rem;align-items:center;font-size:.82rem;color:#647248}.sw{width:12px;height:12px;border-radius:999px}.lv{font-weight:800;color:#314216}
         .meter{height:16px;display:flex;overflow:hidden;border-radius:999px;background:#edf2d5;margin-bottom:1rem}.risk{background:linear-gradient(90deg,#efaa8d,#d66848)}.safe{background:linear-gradient(90deg,#bfd86d,#86b83d)}.stack,.list{display:grid;gap:.75rem}.item,.list-card,.receipt{padding:.9rem;border-radius:16px;border:1px solid rgba(111,150,40,.1);background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(247,248,234,.96))}.receipt{text-decoration:none;display:block}.top{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start}.rank{width:30px;height:30px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800;background:#f4f7d8;color:#5d7425;flex:0 0 auto}.pill{padding:.38rem .65rem;border-radius:999px;background:#fff1eb;color:#b04835;font-size:.8rem;font-weight:800;white-space:nowrap}.ttl{font-weight:700;color:#314216}.table-wrap{padding:1rem}.qty{display:inline-flex;min-width:34px;justify-content:center;padding:.18rem .5rem;border-radius:999px;font-size:.76rem;font-weight:700;background:#f4f7d8;color:#5d7425}
+        .modal-list{display:grid;gap:.75rem}.modal-item{padding:.8rem .9rem;border-radius:14px;border:1px solid #e4eabc;background:#fbfcf3}.modal-kpi{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.modal-stat{padding:.8rem .9rem;border-radius:14px;background:#f7f9e7;border:1px solid #dbe5b0}.modal-stat-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7b42}.modal-stat-value{font-size:1.2rem;font-weight:800;color:#314216}.modal-subtable{margin-top:.65rem}.modal-subtable th{font-size:.68rem;text-transform:uppercase;color:#6d7c44}.kpi-actions{position:relative;z-index:1;display:flex;justify-content:flex-end;margin-top:.65rem}
+        .modal-summary th,.modal-summary td{font-size:.84rem}.modal-subtable th,.modal-subtable td{font-size:.8rem}.kpi-actions{position:relative;z-index:1;display:flex;justify-content:flex-end;margin-top:.65rem}
         @media (max-width:1199.98px){.filters,.main,.secondary{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:767.98px){.kpis{grid-template-columns:1fr}.top{flex-direction:column}.hero h2{font-size:1.3rem}}
     </style>
 
     <div class="dash">
         <section class="box hero">
-            <div class="eyebrow"><i class="fas fa-chart-line"></i> Procurement Control Room</div>
-            <h2>Dashboard dibuat ulang untuk satu tujuan: tahu apa yang perlu ditindak lebih dulu tanpa membaca terlalu banyak layar.</h2>
-            <div class="muted">Gunakan filter untuk mempersempit konteks, lalu baca KPI, chart, dan daftar prioritas dari atas ke bawah.</div>
+            <div class="d-flex justify-content-between align-items-start flex-wrap" style="gap:.75rem;">
+                <div>
+                    <div class="eyebrow"><i class="fas fa-chart-line"></i> Procurement Control Room</div>
+                    <h2>Dashboard dibuat ulang untuk satu tujuan: tahu apa yang perlu ditindak lebih dulu tanpa membaca terlalu banyak layar.</h2>
+                    <div class="muted">Gunakan filter untuk mempersempit konteks, lalu baca KPI, chart, dan daftar prioritas dari atas ke bawah.</div>
+                </div>
+                <div class="actions">
+                    <button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#heroDetailModal">Detail Ringkasan</button>
+                </div>
+            </div>
 
             <form method="GET" class="filters">
                 <div>
@@ -55,15 +64,18 @@
         </section>
 
         <section class="kpis">
-            <article class="kpi k1"><div class="label">Open PO</div><div class="value">{{ $metrics['open_po'] }}</div><div class="note">Dokumen aktif yang masih berjalan.</div></article>
-            <article class="kpi k2"><div class="label">Late PO</div><div class="value">{{ $metrics['late_po'] }}</div><div class="note">Header PO yang sudah masuk kondisi terlambat.</div></article>
-            <article class="kpi k3"><div class="label">Shipment Hari Ini</div><div class="value">{{ $metrics['shipped_today'] }}</div><div class="note">Dokumen shipment yang diproses hari ini.</div></article>
-            <article class="kpi k4"><div class="label">Receiving Hari Ini</div><div class="value">{{ $metrics['received_today'] }}</div><div class="note">GR yang sudah diposting. At-risk item: {{ $metrics['at_risk_items'] }}</div></article>
+            <article class="kpi k1"><div class="label">Open PO</div><div class="value">{{ $metrics['open_po'] }}</div><div class="note">Dokumen aktif yang masih berjalan.</div><div class="kpi-actions"><button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#openPoKpiModal">Detail</button></div></article>
+            <article class="kpi k2"><div class="label">Late PO</div><div class="value">{{ $metrics['late_po'] }}</div><div class="note">Header PO yang sudah masuk kondisi terlambat.</div><div class="kpi-actions"><button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#latePoKpiModal">Detail</button></div></article>
+            <article class="kpi k3"><div class="label">Shipment Hari Ini</div><div class="value">{{ $metrics['shipped_today'] }}</div><div class="note">Dokumen shipment yang diproses hari ini.</div><div class="kpi-actions"><button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#shipmentTodayKpiModal">Detail</button></div></article>
+            <article class="kpi k4"><div class="label">Receiving Hari Ini</div><div class="value">{{ $metrics['received_today'] }}</div><div class="note">GR yang sudah diposting. At-risk item: {{ $metrics['at_risk_items'] }}</div><div class="kpi-actions"><button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#receivingTodayKpiModal">Detail</button></div></article>
         </section>
 
         <section class="main">
             <article class="box">
-                <div class="head"><div><h3>Komposisi Status Item</h3><div class="sub">Distribusi monitoring agar beban kerja langsung terlihat.</div></div></div>
+                <div class="head">
+                    <div><h3>Komposisi Status Item</h3><div class="sub">Distribusi monitoring agar beban kerja langsung terlihat.</div></div>
+                    <div class="actions"><button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#statusDetailModal">Detail</button></div>
+                </div>
                 <div class="body">
                     <div class="chart"><canvas id="statusBreakdownChart"></canvas></div>
                     <div class="legend">
@@ -85,12 +97,18 @@
             </article>
 
             <article class="box">
-                <div class="head"><div><h3>Supplier Risk Compare</h3><div class="sub">Bandingkan jumlah item terlambat dengan jumlah PO terdampak.</div></div></div>
+                <div class="head">
+                    <div><h3>Supplier Risk Compare</h3><div class="sub">Bandingkan jumlah item terlambat dengan jumlah PO terdampak.</div></div>
+                    <div class="actions"><button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#supplierRiskDetailModal">Detail</button></div>
+                </div>
                 <div class="body"><div class="chart"><canvas id="supplierRiskChart"></canvas></div></div>
             </article>
 
             <article class="box">
-                <div class="head"><div><h3>ETD Health</h3><div class="sub">Ringkas, langsung, dan fokus ke kondisi pengiriman.</div></div></div>
+                <div class="head">
+                    <div><h3>ETD Health</h3><div class="sub">Ringkas, langsung, dan fokus ke kondisi pengiriman.</div></div>
+                    <div class="actions"><button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#etdHealthDetailModal">Detail</button></div>
+                </div>
                 <div class="body">
                     <div class="meter"><div class="risk" style="width: {{ $atRiskPercent }}%"></div><div class="safe" style="width: {{ $onTimePercent }}%"></div></div>
                     <div class="stack">
@@ -112,7 +130,10 @@
 
         <section class="secondary">
             <article class="box">
-                <div class="head"><div><h3>Supplier Paling Perlu Follow Up</h3><div class="sub">Urut dari item terlambat terbanyak.</div></div></div>
+                <div class="head">
+                    <div><h3>Supplier Paling Perlu Follow Up</h3><div class="sub">Urut dari item terlambat terbanyak.</div></div>
+                    <div class="actions"><button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#supplierFollowupModal">Detail</button></div>
+                </div>
                 <div class="body"><div class="list">
                     @forelse($supplierDelay as $index => $row)
                         <div class="list-card">
@@ -135,7 +156,10 @@
             </article>
 
             <article class="box">
-                <div class="head"><div><h3>PO Terdekat Ke ETA</h3><div class="sub">Prioritas follow up supplier dan kesiapan shipment.</div></div></div>
+                <div class="head">
+                    <div><h3>PO Terdekat Ke ETA</h3><div class="sub">Prioritas follow up supplier dan kesiapan shipment.</div></div>
+                    <div class="actions"><button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#etaDetailModal">Detail</button></div>
+                </div>
                 <div class="body"><div class="list">
                     @forelse($openPoList->take(5) as $row)
                         <div class="list-card">
@@ -158,14 +182,17 @@
 
         <section class="secondary">
             <article class="box">
-                <div class="head"><div><h3>Receiving Terbaru</h3><div class="sub">Dokumen GR yang baru diposting untuk membaca pergerakan akhir proses.</div></div></div>
+                <div class="head">
+                    <div><h3>Receiving Terbaru</h3><div class="sub">Dokumen GR yang baru diposting untuk membaca pergerakan akhir proses.</div></div>
+                    <div class="actions"><button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#receivingDetailModal">Detail</button></div>
+                </div>
                 <div class="body"><div class="list">
                     @forelse($recentReceivings as $row)
-                        <a href="{{ route('receiving.show', $row->id) }}" class="receipt">
+                        <button type="button" class="receipt text-left w-100 border-0" data-toggle="modal" data-target="#receivingDetailModal">
                             <div class="top"><div class="ttl">{{ $row->gr_number }}</div><div class="meta">{{ \Carbon\Carbon::parse($row->receipt_date)->format('d-m-Y') }}</div></div>
                             <div class="meta">PO {{ $row->po_number }}</div>
                             <div class="meta">{{ $row->supplier_name }}</div>
-                        </a>
+                        </button>
                     @empty
                         <div class="text-muted">Belum ada data receiving.</div>
                     @endforelse
@@ -173,7 +200,13 @@
             </article>
 
             <article class="box">
-                <div class="head"><div><h3>Item Prioritas</h3><div class="sub">Snapshot cepat item yang paling perlu dilihat dulu.</div></div><a href="{{ route('monitoring') }}" class="btn btn-sm btn-primary">Monitoring Lengkap</a></div>
+                <div class="head">
+                    <div><h3>Item Prioritas</h3><div class="sub">Snapshot cepat item yang paling perlu dilihat dulu.</div></div>
+                    <div class="actions">
+                        <button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#itemPriorityDetailModal">Detail</button>
+                        <a href="{{ route('monitoring') }}" class="btn btn-sm btn-primary">Monitoring Lengkap</a>
+                    </div>
+                </div>
                 <div class="table-wrap table-responsive">
                     <table class="table table-hover">
                         <thead><tr><th>Dokumen</th><th>Status</th><th>ETD</th><th>Catatan</th><th>Outstanding</th></tr></thead>
@@ -196,29 +229,418 @@
             </article>
         </section>
 
-        <section class="box">
-            <div class="head"><div><h3>Komposisi Item per PO</h3><div class="sub">Ringkasan yang tetap informatif untuk membaca struktur item aktif per dokumen.</div></div><a href="{{ route('monitoring') }}" class="btn btn-sm btn-outline-primary">Lihat Monitoring</a></div>
-            <div class="table-wrap table-responsive">
-                <table class="table table-hover">
-                    <thead><tr><th>PO</th><th>Header</th><th>Waiting</th><th>Confirmed</th><th>Late</th><th>Partial</th><th>Closed</th></tr></thead>
-                    <tbody>
-                        @forelse($poMonitoringSummary as $summary)
-                            <tr>
-                                <td><a href="{{ route('po.show', $summary->po_id) }}" class="ttl text-decoration-none">{{ $summary->po_number }}</a><div class="meta">{{ $summary->supplier_name }}</div></td>
-                                <td><span class="badge bg-light text-dark">{{ \App\Support\TermCatalog::label('po_status', $summary->po_status, $summary->po_status) }}</span></td>
-                                <td><span class="qty">{{ $summary->waiting_items }}</span></td>
-                                <td><span class="qty">{{ $summary->confirmed_items }}</span></td>
-                                <td><span class="qty">{{ $summary->late_items }}</span></td>
-                                <td><span class="qty">{{ $summary->partial_items }}</span></td>
-                                <td><span class="qty">{{ $summary->closed_items }}</span></td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="7" class="text-center text-muted">Belum ada ringkasan monitoring.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
+    </div>
+
+    <div class="modal fade" id="heroDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Ringkasan Dashboard</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover modal-summary mb-0">
+                            <thead><tr><th>Ringkasan</th><th>Nilai</th><th>Keterangan</th></tr></thead>
+                            <tbody>
+                                <tr><td>Open PO</td><td>{{ $metrics['open_po'] }}</td><td>Dokumen aktif yang masih berjalan</td></tr>
+                                <tr><td>Late PO</td><td>{{ $metrics['late_po'] }}</td><td>Header PO yang sudah masuk kondisi terlambat</td></tr>
+                                <tr><td>Shipment Hari Ini</td><td>{{ $metrics['shipped_today'] }}</td><td>Dokumen shipment yang diproses hari ini</td></tr>
+                                <tr><td>Receiving Hari Ini</td><td>{{ $metrics['received_today'] }}</td><td>GR yang sudah diposting hari ini</td></tr>
+                                <tr><td>At-Risk Item</td><td>{{ $metrics['at_risk_items'] }}</td><td>Outstanding dengan ETD yang sudah lewat</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-        </section>
+        </div>
+    </div>
+
+    <div class="modal fade" id="openPoKpiModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Detail KPI Open PO</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead><tr><th>PO</th><th>Supplier</th><th>ETA</th><th>Waiting</th><th>Confirmed</th><th>Late</th></tr></thead>
+                            <tbody>
+                                @forelse($openPoList as $row)
+                                    <tr>
+                                        <td>{{ $row->po_number }}</td>
+                                        <td>{{ $row->supplier_name }}</td>
+                                        <td>{{ $row->po_eta_date ? \Carbon\Carbon::parse($row->po_eta_date)->format('d-m-Y') : '-' }}</td>
+                                        <td>{{ $row->waiting_items }}</td>
+                                        <td>{{ $row->confirmed_items }}</td>
+                                        <td>{{ $row->late_items }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="6" class="text-center text-muted">Tidak ada open PO.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="latePoKpiModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Detail KPI Late PO</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead><tr><th>PO</th><th>Supplier</th><th>Late</th><th>Waiting</th><th>Confirmed</th></tr></thead>
+                            <tbody>
+                                @forelse($latePoRows as $row)
+                                    <tr>
+                                        <td>{{ $row->po_number }}</td>
+                                        <td>{{ $row->supplier_name }}</td>
+                                        <td>{{ $row->late_items }}</td>
+                                        <td>{{ $row->waiting_items }}</td>
+                                        <td>{{ $row->confirmed_items }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="5" class="text-center text-muted">Tidak ada late PO pada filter ini.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="shipmentTodayKpiModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Detail KPI Shipment Hari Ini</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead><tr><th>Shipment</th><th>Tanggal</th><th>Supplier</th><th>Status</th><th>Delivery Note</th></tr></thead>
+                            <tbody>
+                                @forelse($shipmentTodayRows as $row)
+                                    <tr>
+                                        <td>{{ $row->shipment_number }}</td>
+                                        <td>{{ \Carbon\Carbon::parse($row->shipment_date)->format('d-m-Y') }}</td>
+                                        <td>{{ $row->supplier_name ?: '-' }}</td>
+                                        <td>{{ $row->status }}</td>
+                                        <td>{{ $row->delivery_note_number ?: '-' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="5" class="text-center text-muted">Tidak ada shipment hari ini.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="receivingTodayKpiModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Detail KPI Receiving Hari Ini</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+                <div class="modal-body">
+                    <div class="actions mb-3"><a href="{{ route('receiving.history') }}" class="btn btn-sm btn-outline-primary">Buka Halaman Receiving History</a></div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead><tr><th>GR</th><th>PO</th><th>Supplier</th><th>Tanggal</th><th>Shipment</th></tr></thead>
+                            <tbody>
+                                @forelse($receivingTodayRows as $row)
+                                    <tr>
+                                        <td>{{ $row->gr_number }}</td>
+                                        <td>{{ $row->po_number }}</td>
+                                        <td>{{ $row->supplier_name }}</td>
+                                        <td>{{ \Carbon\Carbon::parse($row->receipt_date)->format('d-m-Y') }}</td>
+                                        <td>{{ $row->shipment_number ?: '-' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="5" class="text-center text-muted">Tidak ada receiving hari ini.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="statusDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Detail Komposisi Status Item</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+                <div class="modal-body">
+                    @foreach ($statusBreakdown as $label => $value)
+                        <div class="mb-4">
+                            <h6 class="mb-2">{{ $label }} - {{ $value }} item</h6>
+                            <div class="table-responsive modal-subtable">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead><tr><th>PO</th><th>Item</th><th>Supplier</th><th>ETD</th><th>Outstanding</th></tr></thead>
+                                    <tbody>
+                                        @forelse(($statusDetailGroups->get($label) ?? collect())->take(8) as $row)
+                                            <tr>
+                                                <td>{{ $row->po_number }}</td>
+                                                <td>{{ $row->item_code }} - {{ $row->item_name }}</td>
+                                                <td>{{ $row->supplier_name }}</td>
+                                                <td>{{ $row->etd_date ? \Carbon\Carbon::parse($row->etd_date)->format('d-m-Y') : '-' }}</td>
+                                                <td>{{ \App\Support\NumberFormatter::trim($row->outstanding_qty) }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="5" class="text-center text-muted">Tidak ada item.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="supplierRiskDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Detail Supplier Risk</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead><tr><th>Supplier</th><th>Late Item</th><th>PO Terdampak</th><th>ETD Tertua</th></tr></thead>
+                            <tbody>
+                                @forelse($supplierDelay as $row)
+                                    <tr>
+                                        <td>{{ $row->supplier_name }}</td>
+                                        <td>{{ $row->late_item_count }}</td>
+                                        <td>{{ $row->late_po_count }}</td>
+                                        <td>{{ $row->oldest_late_etd ? \Carbon\Carbon::parse($row->oldest_late_etd)->format('d-m-Y') : '-' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="4" class="p-0">
+                                            <div class="table-responsive modal-subtable px-2 pb-2">
+                                                <table class="table table-sm table-hover mb-0">
+                                                    <thead><tr><th>PO</th><th>Item</th><th>ETD</th><th>Outstanding</th></tr></thead>
+                                                    <tbody>
+                                                        @forelse(($supplierFollowupDetails->get($row->supplier_name) ?? collect())->take(8) as $detail)
+                                                            <tr>
+                                                                <td>{{ $detail->po_number }}</td>
+                                                                <td>{{ $detail->item_code }} - {{ $detail->item_name }}</td>
+                                                                <td>{{ $detail->etd_date ? \Carbon\Carbon::parse($detail->etd_date)->format('d-m-Y') : '-' }}</td>
+                                                                <td>{{ \App\Support\NumberFormatter::trim($detail->outstanding_qty) }}</td>
+                                                            </tr>
+                                                        @empty
+                                                            <tr><td colspan="4" class="text-center text-muted">Tidak ada item detail.</td></tr>
+                                                        @endforelse
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="4" class="text-center text-muted">Belum ada supplier berisiko.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="etdHealthDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Detail ETD Health</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+                <div class="modal-body">
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-hover modal-summary mb-0">
+                            <thead><tr><th>Status</th><th>Jumlah</th><th>Persentase</th></tr></thead>
+                            <tbody>
+                                <tr><td>At-Risk</td><td>{{ $etdHealth['At-Risk'] }}</td><td>{{ $atRiskPercent }}%</td></tr>
+                                <tr><td>On-Time</td><td>{{ $etdHealth['On-Time'] }}</td><td>{{ $onTimePercent }}%</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead><tr><th>PO</th><th>Item</th><th>Supplier</th><th>Status</th><th>ETD</th><th>Outstanding</th></tr></thead>
+                            <tbody>
+                                @forelse(($statusDetailGroups->get('Late') ?? collect())->take(10) as $item)
+                                    <tr>
+                                        <td>{{ $item->po_number }}</td>
+                                        <td>{{ $item->item_code }} - {{ $item->item_name }}</td>
+                                        <td>{{ $item->supplier_name }}</td>
+                                        <td>{{ $item->monitoring_status }}</td>
+                                        <td>{{ $item->etd_date ? \Carbon\Carbon::parse($item->etd_date)->format('d-m-Y') : '-' }}</td>
+                                        <td>{{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="6" class="text-center text-muted">Belum ada item late.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="supplierFollowupModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Detail Supplier Follow Up</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead><tr><th>Rank</th><th>Supplier</th><th>Late Item</th><th>PO Terdampak</th></tr></thead>
+                            <tbody>
+                                @forelse($supplierDelay as $index => $row)
+                                    <tr>
+                                        <td>{{ $index + 1 }}</td>
+                                        <td>{{ $row->supplier_name }}</td>
+                                        <td>{{ $row->late_item_count }}</td>
+                                        <td>{{ $row->late_po_count }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="4" class="p-0">
+                                            <div class="table-responsive modal-subtable px-2 pb-2">
+                                                <table class="table table-sm table-hover mb-0">
+                                                    <thead><tr><th>PO</th><th>Item</th><th>ETD</th><th>Outstanding</th></tr></thead>
+                                                    <tbody>
+                                                        @forelse(($supplierFollowupDetails->get($row->supplier_name) ?? collect())->take(8) as $detail)
+                                                            <tr>
+                                                                <td>{{ $detail->po_number }}</td>
+                                                                <td>{{ $detail->item_code }} - {{ $detail->item_name }}</td>
+                                                                <td>{{ $detail->etd_date ? \Carbon\Carbon::parse($detail->etd_date)->format('d-m-Y') : '-' }}</td>
+                                                                <td>{{ \App\Support\NumberFormatter::trim($detail->outstanding_qty) }}</td>
+                                                            </tr>
+                                                        @empty
+                                                            <tr><td colspan="4" class="text-center text-muted">Tidak ada item detail.</td></tr>
+                                                        @endforelse
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="4" class="text-center text-muted">Belum ada data follow up.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="etaDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Detail PO Terdekat ETA</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead><tr><th>PO</th><th>Supplier</th><th>ETA</th><th>Waiting</th><th>Confirmed</th><th>Late</th><th>Partial</th></tr></thead>
+                            <tbody>
+                                @forelse($openPoList as $row)
+                                    <tr>
+                                        <td>{{ $row->po_number }}</td>
+                                        <td>{{ $row->supplier_name }}</td>
+                                        <td>{{ $row->po_eta_date ? \Carbon\Carbon::parse($row->po_eta_date)->format('d-m-Y') : '-' }}</td>
+                                        <td>{{ $row->waiting_items }}</td>
+                                        <td>{{ $row->confirmed_items }}</td>
+                                        <td>{{ $row->late_items }}</td>
+                                        <td>{{ $row->partial_items }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="7" class="p-0">
+                                            <div class="table-responsive modal-subtable px-2 pb-2">
+                                                <table class="table table-sm table-hover mb-0">
+                                                    <thead><tr><th>Item</th><th>Promise Date</th><th>Outstanding</th></tr></thead>
+                                                    <tbody>
+                                                        @forelse(($etaDetailRows->get($row->po_number) ?? collect())->take(8) as $detail)
+                                                            <tr>
+                                                                <td>{{ $detail->item_code }} - {{ $detail->item_name }}</td>
+                                                                <td>{{ $detail->promise_date ? \Carbon\Carbon::parse($detail->promise_date)->format('d-m-Y') : '-' }}</td>
+                                                                <td>{{ \App\Support\NumberFormatter::trim($detail->outstanding_qty) }}</td>
+                                                            </tr>
+                                                        @empty
+                                                            <tr><td colspan="3" class="text-center text-muted">Tidak ada item detail.</td></tr>
+                                                        @endforelse
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="7" class="text-center text-muted">Belum ada PO aktif.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="receivingDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Detail Receiving Terbaru</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+                <div class="modal-body">
+                    <div class="actions mb-3"><a href="{{ route('receiving.history') }}" class="btn btn-sm btn-outline-primary">Buka Halaman Receiving History</a></div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead><tr><th>GR</th><th>Tanggal</th><th>PO</th><th>Supplier</th><th>Shipment</th><th>Delivery Note</th></tr></thead>
+                            <tbody>
+                                @forelse($receivingDetailRows as $row)
+                                    <tr>
+                                        <td>{{ $row->gr_number }}</td>
+                                        <td>{{ \Carbon\Carbon::parse($row->receipt_date)->format('d-m-Y') }}</td>
+                                        <td>{{ $row->po_number }}</td>
+                                        <td>{{ $row->supplier_name }}</td>
+                                        <td>{{ $row->shipment_number ?: '-' }}</td>
+                                        <td>{{ $row->delivery_note_number ?: '-' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="6" class="text-center text-muted">Belum ada receiving.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="itemPriorityDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Detail Item Prioritas</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead><tr><th>PO</th><th>Item</th><th>Supplier</th><th>Status</th><th>ETD</th><th>Outstanding</th></tr></thead>
+                            <tbody>
+                                @forelse($itemMonitoringList as $item)
+                                    <tr>
+                                        <td>{{ $item->po_number }}</td>
+                                        <td>{{ $item->item_code }} - {{ $item->item_name }}</td>
+                                        <td>{{ $item->supplier_name }}</td>
+                                        <td>{{ $item->monitoring_status }}</td>
+                                        <td>{{ $item->etd_date ? \Carbon\Carbon::parse($item->etd_date)->format('d-m-Y') : '-' }}</td>
+                                        <td>{{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="6" class="text-center text-muted">Tidak ada item prioritas.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>

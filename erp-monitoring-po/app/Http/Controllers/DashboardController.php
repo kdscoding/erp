@@ -249,6 +249,151 @@ class DashboardController extends Controller
             'late_pos' => $supplierDelay->pluck('late_po_count')->map(fn ($value) => (int) $value)->values()->all(),
         ];
 
+        $statusDetailItems = DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->join('items as i', 'i.id', '=', 'poi.item_id')
+            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
+            ->select(
+                'po.id as po_id',
+                'po.po_number',
+                's.supplier_name',
+                'i.item_code',
+                'i.item_name',
+                'poi.outstanding_qty',
+                'poi.etd_date'
+            )
+            ->selectRaw("CASE 
+                WHEN poi.item_status = 'Cancelled' THEN 'Cancelled'
+                WHEN poi.outstanding_qty <= 0 THEN 'Closed'
+                WHEN poi.received_qty > 0 THEN 'Partial'
+                WHEN poi.etd_date IS NULL THEN 'Waiting'
+                WHEN DATE(poi.etd_date) < {$currentDateSql} THEN 'Late'
+                ELSE 'Confirmed'
+            END as monitoring_status")
+            ->where('poi.item_status', '!=', 'Cancelled')
+            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
+            ->orderByRaw("CASE 
+                WHEN poi.outstanding_qty <= 0 THEN 5
+                WHEN poi.received_qty > 0 THEN 3
+                WHEN poi.etd_date IS NULL THEN 2
+                WHEN DATE(poi.etd_date) < {$currentDateSql} THEN 1
+                ELSE 4
+            END")
+            ->orderBy('po.po_number')
+            ->limit(40)
+            ->get();
+
+        $supplierFollowupDetails = DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->join('items as i', 'i.id', '=', 'poi.item_id')
+            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
+            ->select(
+                's.supplier_name',
+                'po.id as po_id',
+                'po.po_number',
+                'i.item_code',
+                'i.item_name',
+                'poi.outstanding_qty',
+                'poi.etd_date'
+            )
+            ->where('poi.item_status', '!=', 'Cancelled')
+            ->where('poi.outstanding_qty', '>', 0)
+            ->whereNotNull('poi.etd_date')
+            ->whereRaw("DATE(poi.etd_date) < {$currentDateSql}")
+            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
+            ->orderBy('s.supplier_name')
+            ->orderBy('poi.etd_date')
+            ->limit(60)
+            ->get()
+            ->groupBy('supplier_name');
+
+        $etaDetailRows = DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->join('items as i', 'i.id', '=', 'poi.item_id')
+            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
+            ->select(
+                'po.id as po_id',
+                'po.po_number',
+                's.supplier_name',
+                'i.item_code',
+                'i.item_name',
+                'poi.outstanding_qty',
+                DB::raw('COALESCE(poi.eta_date, poi.etd_date) as promise_date')
+            )
+            ->where('poi.item_status', '!=', 'Cancelled')
+            ->where('poi.outstanding_qty', '>', 0)
+            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
+            ->orderBy('promise_date')
+            ->limit(40)
+            ->get()
+            ->groupBy('po_number');
+
+        $receivingDetailRows = DB::table('goods_receipts as gr')
+            ->join('purchase_orders as po', 'po.id', '=', 'gr.purchase_order_id')
+            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->leftJoin('shipments as sh', 'sh.id', '=', 'gr.shipment_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('gr.receipt_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('gr.receipt_date', '<=', $dateTo))
+            ->select(
+                'gr.id',
+                'gr.gr_number',
+                'gr.receipt_date',
+                'po.po_number',
+                's.supplier_name',
+                'sh.shipment_number',
+                'sh.delivery_note_number'
+            )
+            ->orderByDesc('gr.id')
+            ->limit(20)
+            ->get();
+
+        $statusDetailGroups = $statusDetailItems->groupBy('monitoring_status');
+        $latePoRows = $openPoList->filter(fn ($row) => (int) ($row->late_items ?? 0) > 0)->values();
+
+        $shipmentTodayRows = DB::table('shipments as sh')
+            ->leftJoin('suppliers as s', 's.id', '=', 'sh.supplier_id')
+            ->when($supplierId, fn ($query) => $query->where('sh.supplier_id', $supplierId))
+            ->select(
+                'sh.id',
+                'sh.shipment_number',
+                'sh.shipment_date',
+                'sh.delivery_note_number',
+                'sh.status',
+                's.supplier_name'
+            )
+            ->whereRaw("DATE(sh.shipment_date) = {$currentDateSql}")
+            ->orderByDesc('sh.id')
+            ->limit(20)
+            ->get();
+
+        $receivingTodayRows = DB::table('goods_receipts as gr')
+            ->join('purchase_orders as po', 'po.id', '=', 'gr.purchase_order_id')
+            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->leftJoin('shipments as sh', 'sh.id', '=', 'gr.shipment_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->select(
+                'gr.id',
+                'gr.gr_number',
+                'gr.receipt_date',
+                'po.po_number',
+                's.supplier_name',
+                'sh.shipment_number'
+            )
+            ->whereRaw("DATE(gr.receipt_date) = {$currentDateSql}")
+            ->orderByDesc('gr.id')
+            ->limit(20)
+            ->get();
+
         return view('dashboard', compact(
             'metrics',
             'suppliers',
@@ -258,6 +403,14 @@ class DashboardController extends Controller
             'statusBreakdown',
             'etdHealth',
             'supplierRiskChart',
+            'statusDetailItems',
+            'statusDetailGroups',
+            'supplierFollowupDetails',
+            'etaDetailRows',
+            'receivingDetailRows',
+            'latePoRows',
+            'shipmentTodayRows',
+            'receivingTodayRows',
             'supplierDelay',
             'poMonitoringSummary',
             'openPoList',
