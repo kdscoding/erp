@@ -3,17 +3,6 @@
 @php($header='Traceability')
 @php($headerSubtitle='Laporan jejak PO, ETD, dan receiving untuk membaca timeline dokumen secara ringkas.')
 
-@php
-    $statusBadge = static function ($status) {
-        return match ($status) {
-            'Closed' => 'success',
-            'Open', 'Partial', 'Confirmed', 'Waiting', 'PO Issued' => 'warning text-dark',
-            'Late', 'Cancelled' => 'danger',
-            default => 'secondary',
-        };
-    };
-@endphp
-
 @section('content')
 <div class="page-shell">
     <section class="page-head">
@@ -77,7 +66,7 @@
                             </td>
                             <td>{{ $r->etd_date ? \Carbon\Carbon::parse($r->etd_date)->format('d-m-Y') : '-' }}</td>
                             <td>{{ \App\Support\NumberFormatter::trim($r->received_qty) }} / {{ \App\Support\NumberFormatter::trim($r->ordered_qty) }}<br><span class="doc-meta">Parsial: {{ $r->receipt_count }}x</span></td>
-                            <td><span class="badge bg-{{ $statusBadge($r->item_status) }}">{{ \App\Support\TermCatalog::label('po_item_status', $r->item_status, $r->item_status) }}</span></td>
+                            <td><x-status-badge :status="$r->item_status" scope="item" /></td>
                             <td>
                                 Dibuat: {{ \Carbon\Carbon::parse($r->po_date)->format('d-m-Y') }}<br>
                                 ETD: {{ $r->etd_date ? \Carbon\Carbon::parse($r->etd_date)->format('d-m-Y') : '-' }}<br>
