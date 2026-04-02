@@ -2,6 +2,8 @@
 @php($title='Traceability')
 @php($header='Traceability')
 @php($headerSubtitle='Laporan jejak PO, ETD, dan receiving untuk membaca timeline dokumen secara ringkas.')
+@php($suppliers = $suppliers ?? collect())
+@php($itemStatuses = $itemStatuses ?? [])
 
 @section('content')
 <div class="page-shell">
@@ -20,9 +22,31 @@
             </div>
         </div>
         <form method="GET" class="filter-grid">
+            <div class="span-3">
+                <label class="field-label">Supplier</label>
+                <select name="supplier_id" class="form-control form-control-sm">
+                    <option value="">Semua Supplier</option>
+                    @foreach($suppliers as $supplier)
+                        <option value="{{ $supplier->id }}" @selected((int) request('supplier_id') === (int) $supplier->id)>{{ $supplier->supplier_name }}</option>
+                    @endforeach
+                </select>
+            </div>
             <div class="span-4">
                 <label class="field-label">Nomor PO</label>
                 <input name="po_number" class="form-control form-control-sm" placeholder="Cari Nomor PO" value="{{ request('po_number') }}">
+            </div>
+            <div class="span-3">
+                <label class="field-label">Item</label>
+                <input name="item_keyword" class="form-control form-control-sm" placeholder="Kode atau nama item" value="{{ request('item_keyword') }}">
+            </div>
+            <div class="span-2">
+                <label class="field-label">Status Item</label>
+                <select name="item_status" class="form-control form-control-sm">
+                    <option value="">Semua Status</option>
+                    @foreach($itemStatuses as $status)
+                        <option value="{{ $status }}" @selected(request('item_status') === $status)>{{ \App\Support\TermCatalog::label('po_item_status', $status, $status) }}</option>
+                    @endforeach
+                </select>
             </div>
             <div class="span-2">
                 <button class="btn btn-primary btn-sm w-100">Cari</button>
@@ -70,6 +94,16 @@
                             <td>
                                 Dibuat: {{ \Carbon\Carbon::parse($r->po_date)->format('d-m-Y') }}<br>
                                 ETD: {{ $r->etd_date ? \Carbon\Carbon::parse($r->etd_date)->format('d-m-Y') : '-' }}<br>
+                                Shipment #1: {{ $r->first_shipment_date ? \Carbon\Carbon::parse($r->first_shipment_date)->format('d-m-Y') : '-' }}<br>
+                                Shipment Terakhir: {{ $r->last_shipment_date ? \Carbon\Carbon::parse($r->last_shipment_date)->format('d-m-Y') : '-' }}<br>
+                                Shipment: {{ $r->shipment_count }}x
+                                @if($r->shipment_numbers)
+                                    <br><span class="doc-meta">No Shipment: {{ $r->shipment_numbers }}</span>
+                                @endif
+                                @if($r->delivery_note_numbers)
+                                    <br><span class="doc-meta">Delivery Note: {{ $r->delivery_note_numbers }}</span>
+                                @endif
+                                <br>
                                 Datang #1: {{ $r->first_receipt_date ? \Carbon\Carbon::parse($r->first_receipt_date)->format('d-m-Y') : '-' }}<br>
                                 Datang Terakhir: {{ $r->last_receipt_date ? \Carbon\Carbon::parse($r->last_receipt_date)->format('d-m-Y') : '-' }}
                                 @if($r->cancel_reason)
