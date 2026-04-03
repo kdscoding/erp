@@ -55,7 +55,7 @@ Gunakan grid modular yang responsif:
 
 - **Bento Baris 2 (Risk & Flow):**
   - `At-Risk Items Panel` (soft amber highlight)
-  - `Item Journey Funnel` (Confirmed → Shipped → Received)
+  - `Item Journey Funnel` (Confirmed -> Shipped -> Received)
   - `Top Delayed Suppliers`
 
 - **Bento Baris 3 (Execution Queue):**
@@ -114,7 +114,7 @@ Gunakan grid modular yang responsif:
 ## A. Efficient ETD Input Modes
 1. **Inline Editing in Table**
    - Kolom ETD/ETA editable langsung.
-   - Auto-save dengan indikator “Saved / Failed”.
+   - Auto-save dengan indikator "Saved / Failed".
 
 2. **Bulk Update Panel**
    - Multi-select item lines.
@@ -125,14 +125,14 @@ Gunakan grid modular yang responsif:
    - ETD terisi otomatis, user tinggal koreksi.
 
 ## B. Micro-Interactions
-- Hover row → quick actions (Update ETD, Add Note, Mark Confirmed).
+- Hover row -> quick actions (Update ETD, Add Note, Mark Confirmed).
 - Snackbar feedback non-blocking setelah save.
 - Status transition animation ringan (chip morph).
 
 ## C. Validation UX
 - Hard validation untuk tanggal tidak logis.
 - Soft warning untuk ETD melewati tolerance.
-- “Explain why” note wajib jika ETD mundur.
+- "Explain why" note wajib jika ETD mundur.
 
 ---
 
@@ -151,7 +151,7 @@ Gunakan grid modular yang responsif:
    - PO status aggregate mengikuti item completion matrix.
 
 4. **Mini Progress Bar per Item**
-   - Confirmed → Shipped → Arrived → Received.
+   - Confirmed -> Shipped -> Arrived -> Received.
    - Membantu melihat progres tanpa baca teks panjang.
 
 ---
@@ -170,7 +170,7 @@ Gunakan grid modular yang responsif:
 ## 8) Additional High-Impact Features
 
 1. **Command Palette** (Ctrl/Cmd + K): cari PO/item/supplier super cepat.
-2. **Saved Views** per role (mis. “At-Risk Hari Ini”, “Incoming Minggu Ini”).
+2. **Saved Views** per role (mis. "At-Risk Hari Ini", "Incoming Minggu Ini").
 3. **Action Center**: semua pending task lintas modul dalam satu inbox.
 4. **Explainable Audit Trail**: siapa ubah ETD dari A ke B, kenapa, kapan.
 5. **Mobile Companion View (read-first)** untuk supervisor on-the-go.
@@ -184,7 +184,7 @@ Gunakan grid modular yang responsif:
 - Item-level ETD inline edit
 - Receiving item checklist
 
-### Phase 2 (2–3 minggu)
+### Phase 2 (2-3 minggu)
 - Split shipment board
 - Bulk ETD update
 - At-risk rule engine + notifications
@@ -199,4 +199,4 @@ Gunakan grid modular yang responsif:
 - Supervisor bisa mengidentifikasi item risiko < 10 detik dari dashboard.
 - Staff bisa update ETD 20 item < 2 menit via bulk/inline.
 - Receiving item-by-item tanpa kehilangan konteks PO.
-- Tidak ada “hidden status”; semua milestone terlihat di level item.
+- Tidak ada "hidden status"; semua milestone terlihat di level item.

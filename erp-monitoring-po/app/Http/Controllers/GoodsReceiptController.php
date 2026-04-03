@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Queries\Receiving\ReceivingHistoryQuery;
+use App\Queries\Receiving\ShipmentReceivingQuery;
 use App\Support\DocumentTermCodes;
 use App\Support\ErpFlow;
+use App\Support\PurchaseOrderItemStatusResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,74 +16,17 @@ use Illuminate\View\View;
 
 class GoodsReceiptController extends Controller
 {
-    public function index(Request $request): View
+    public function index(
+        Request $request,
+        ReceivingHistoryQuery $receivingHistoryQuery,
+        ShipmentReceivingQuery $shipmentReceivingQuery
+    ): View
     {
         $mode = $request->route('mode', 'process');
         $clearSelection = $request->boolean('clear_selection');
 
-        $rows = DB::table('goods_receipts as gr')
-            ->join('purchase_orders as po', 'po.id', '=', 'gr.purchase_order_id')
-            ->leftJoin('shipments as sh', 'sh.id', '=', 'gr.shipment_id')
-            ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
-            ->select(
-                'gr.*',
-                'po.po_number',
-                's.supplier_name',
-                'sh.shipment_number',
-                'sh.delivery_note_number',
-                'sh.invoice_number'
-            )
-            ->when($request->filled('document_number'), fn($q) => $q->where('gr.document_number', 'like', '%' . $request->string('document_number') . '%'))
-            ->orderByDesc('gr.id')
-            ->paginate(20);
-
-        $shipmentDocuments = DB::table('shipments as sh')
-            ->join('suppliers as s', 's.id', '=', 'sh.supplier_id')
-            ->join('shipment_items as si', 'si.shipment_id', '=', 'sh.id')
-            ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
-            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
-            ->whereIn('sh.status', [
-                DocumentTermCodes::SHIPMENT_SHIPPED,
-                DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED,
-            ])
-            ->whereRaw('(si.shipped_qty - si.received_qty) > 0')
-            ->when($request->filled('supplier_id'), fn($q) => $q->where('sh.supplier_id', $request->integer('supplier_id')))
-            ->when($request->filled('document_number'), fn($q) => $q->where('sh.delivery_note_number', 'like', '%' . $request->string('document_number') . '%'))
-            ->when($request->filled('keyword'), function ($q) use ($request) {
-                $keyword = '%' . $request->string('keyword') . '%';
-                $q->where(function ($inner) use ($keyword) {
-                    $inner->where('sh.shipment_number', 'like', $keyword)
-                        ->orWhere('sh.delivery_note_number', 'like', $keyword)
-                        ->orWhere('sh.invoice_number', 'like', $keyword)
-                        ->orWhere('po.po_number', 'like', $keyword)
-                        ->orWhere('s.supplier_name', 'like', $keyword);
-                });
-            })
-            ->select(
-                'sh.id',
-                'sh.shipment_number',
-                'sh.delivery_note_number',
-                'sh.invoice_number',
-                'sh.shipment_date',
-                'sh.status',
-                'sh.supplier_id',
-                's.supplier_name'
-            )
-            ->selectRaw('COUNT(DISTINCT si.id) as line_count')
-            ->selectRaw('COUNT(DISTINCT po.id) as po_count')
-            ->selectRaw('SUM(si.shipped_qty - si.received_qty) as outstanding_qty')
-            ->groupBy(
-                'sh.id',
-                'sh.shipment_number',
-                'sh.delivery_note_number',
-                'sh.invoice_number',
-                'sh.shipment_date',
-                'sh.status',
-                'sh.supplier_id',
-                's.supplier_name'
-            )
-            ->orderByDesc('sh.id')
-            ->get();
+        $rows = $receivingHistoryQuery->paginate($request);
+        $shipmentDocuments = $shipmentReceivingQuery->documents($request);
 
         $selectedShipmentId = $request->integer('shipment_id');
         if ($mode === 'process' && ! $selectedShipmentId && ! $clearSelection && $shipmentDocuments->isNotEmpty()) {
@@ -98,11 +44,7 @@ class GoodsReceiptController extends Controller
         }
 
         $shipmentItems = $mode === 'process' && $selectedShipmentId
-            ? $this->shipmentItemsQuery()
-            ->where('sh.id', $selectedShipmentId)
-            ->orderBy('po.po_number')
-            ->orderBy('i.item_code')
-            ->get()
+            ? $shipmentReceivingQuery->itemsForShipment($selectedShipmentId)
             : collect();
 
         $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name']);
@@ -167,7 +109,11 @@ class GoodsReceiptController extends Controller
         return view('receiving.show', compact('receipt', 'items'));
     }
 
-    public function cancel(string $id, Request $request): RedirectResponse
+    public function cancel(
+        string $id,
+        Request $request,
+        PurchaseOrderItemStatusResolver $purchaseOrderItemStatusResolver
+    ): RedirectResponse
     {
         $validated = $request->validate([
             'cancel_reason' => 'required|string|max:1000',
@@ -200,7 +146,11 @@ class GoodsReceiptController extends Controller
 
                 $newPoReceived = max(0, (float) $poItem->received_qty - (float) $receiptItem->received_qty);
                 $newOutstanding = max(0, (float) $poItem->ordered_qty - $newPoReceived);
-                $newItemStatus = $this->resolvePoItemStatus($poItem, $newPoReceived, $newOutstanding);
+                $newItemStatus = $purchaseOrderItemStatusResolver->resolve(
+                    $newPoReceived,
+                    $newOutstanding,
+                    $poItem->etd_date
+                );
 
                 DB::table('purchase_order_items')->where('id', $poItem->id)->update([
                     'received_qty' => $newPoReceived,
@@ -254,16 +204,31 @@ class GoodsReceiptController extends Controller
         return redirect()->route('receiving.show', $id)->with('success', 'Goods Receipt berhasil dibatalkan dan qty receiving telah dikembalikan.');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(
+        Request $request,
+        ShipmentReceivingQuery $shipmentReceivingQuery,
+        PurchaseOrderItemStatusResolver $purchaseOrderItemStatusResolver
+    ): RedirectResponse
     {
         if ($request->filled('shipment_id')) {
-            return $this->storeDocumentReceiving($request);
+            return $this->storeDocumentReceiving(
+                $request,
+                $shipmentReceivingQuery,
+                $purchaseOrderItemStatusResolver
+            );
         }
 
-        return $this->storeSingleLineReceiving($request);
+        return $this->storeSingleLineReceiving(
+            $request,
+            $purchaseOrderItemStatusResolver
+        );
     }
 
-    private function storeDocumentReceiving(Request $request): RedirectResponse
+    private function storeDocumentReceiving(
+        Request $request,
+        ShipmentReceivingQuery $shipmentReceivingQuery,
+        PurchaseOrderItemStatusResolver $purchaseOrderItemStatusResolver
+    ): RedirectResponse
     {
         $v = $request->validate([
             'shipment_id' => 'required|integer|exists:shipments,id',
@@ -299,10 +264,11 @@ class GoodsReceiptController extends Controller
                 throw new \RuntimeException('Receiving hanya bisa diproses untuk shipment yang sudah berstatus Shipped atau Partial Received.');
             }
 
-            $shipmentItems = $this->shipmentItemsQuery()
-                ->where('sh.id', $shipment->id)
+            $shipmentItems = $shipmentReceivingQuery->itemsForShipmentBuilder((int) $shipment->id)
                 ->whereIn('si.id', $lineInputs->keys()->all())
                 ->lockForUpdate()
+                ->orderBy('po.po_number')
+                ->orderBy('i.item_code')
                 ->get()
                 ->keyBy('shipment_item_id');
 
@@ -361,7 +327,11 @@ class GoodsReceiptController extends Controller
                 DB::table('purchase_order_items')->where('id', $poItem->id)->update([
                     'received_qty' => $newReceived,
                     'outstanding_qty' => $newOutstanding,
-                    'item_status' => $newOutstanding > 0 ? DocumentTermCodes::ITEM_PARTIAL : DocumentTermCodes::ITEM_CLOSED,
+                    'item_status' => $purchaseOrderItemStatusResolver->resolve(
+                        $newReceived,
+                        $newOutstanding,
+                        $poItem->etd_date
+                    ),
                     'updated_at' => now(),
                 ]);
 
@@ -406,7 +376,10 @@ class GoodsReceiptController extends Controller
         ])->with('success', 'Goods Receipt berhasil diposting untuk dokumen shipment terpilih.');
     }
 
-    private function storeSingleLineReceiving(Request $request): RedirectResponse
+    private function storeSingleLineReceiving(
+        Request $request,
+        PurchaseOrderItemStatusResolver $purchaseOrderItemStatusResolver
+    ): RedirectResponse
     {
         $v = $request->validate([
             'shipment_item_id' => 'required|integer|exists:shipment_items,id',
@@ -507,7 +480,11 @@ class GoodsReceiptController extends Controller
             DB::table('purchase_order_items')->where('id', $poItem->id)->update([
                 'received_qty' => $newReceived,
                 'outstanding_qty' => $newOutstanding,
-                'item_status' => $newOutstanding > 0 ? DocumentTermCodes::ITEM_PARTIAL : DocumentTermCodes::ITEM_CLOSED,
+                'item_status' => $purchaseOrderItemStatusResolver->resolve(
+                    $newReceived,
+                    $newOutstanding,
+                    $poItem->etd_date
+                ),
                 'updated_at' => now(),
             ]);
 
@@ -532,108 +509,6 @@ class GoodsReceiptController extends Controller
         }
 
         return back()->with('success', 'Goods Receipt item berhasil diposting.');
-    }
-
-    private function shipmentItemsQuery()
-    {
-        $currentDateSql = $this->currentDateExpression();
-
-        return DB::table('shipment_items as si')
-            ->join('shipments as sh', 'sh.id', '=', 'si.shipment_id')
-            ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
-            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
-            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
-            ->join('items as i', 'i.id', '=', 'poi.item_id')
-            ->leftJoin('goods_receipt_items as gri', 'gri.shipment_item_id', '=', 'si.id')
-            ->select(
-                'si.id as shipment_item_id',
-                'si.shipment_id',
-                'si.shipped_qty',
-                'si.received_qty as shipment_received_qty',
-                'si.invoice_unit_price',
-                'si.invoice_line_total',
-                'poi.id as purchase_order_item_id',
-                'poi.purchase_order_id',
-                'poi.ordered_qty',
-                'poi.unit_price',
-                'poi.received_qty',
-                'poi.outstanding_qty',
-                'poi.etd_date',
-                'po.po_number',
-                'po.status as po_status',
-                's.supplier_name',
-                'i.item_code',
-                'i.item_name',
-                'sh.shipment_number',
-                'sh.delivery_note_number',
-                'sh.invoice_number',
-                'sh.invoice_date',
-                'sh.invoice_currency',
-                'sh.status as shipment_status',
-                DB::raw('COALESCE(MAX(gri.created_at), NULL) as last_receipt_at')
-            )
-            ->selectRaw('(si.shipped_qty - si.received_qty) as shipment_outstanding_qty')
-            ->selectRaw("CASE
-                WHEN (si.shipped_qty - si.received_qty) <= 0 THEN '" . DocumentTermCodes::SHIPMENT_RECEIVED . "'
-                WHEN si.received_qty > 0 THEN '" . DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED . "'
-                WHEN poi.etd_date IS NULL THEN '" . DocumentTermCodes::ITEM_WAITING . "'
-                WHEN DATE(poi.etd_date) < {$currentDateSql} THEN '" . DocumentTermCodes::ITEM_LATE . "'
-                ELSE '" . DocumentTermCodes::SHIPMENT_SHIPPED . "'
-            END as monitoring_status")
-            ->whereIn('sh.status', [
-                DocumentTermCodes::SHIPMENT_SHIPPED,
-                DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED,
-            ])
-            ->whereRaw('(si.shipped_qty - si.received_qty) > 0')
-            ->where('poi.item_status', '!=', DocumentTermCodes::ITEM_CANCELLED)
-            ->groupBy(
-                'si.id',
-                'si.shipment_id',
-                'si.shipped_qty',
-                'si.received_qty',
-                'si.invoice_unit_price',
-                'si.invoice_line_total',
-                'poi.id',
-                'poi.purchase_order_id',
-                'poi.ordered_qty',
-                'poi.unit_price',
-                'poi.received_qty',
-                'poi.outstanding_qty',
-                'poi.etd_date',
-                'po.po_number',
-                'po.status',
-                's.supplier_name',
-                'i.item_code',
-                'i.item_name',
-                'sh.shipment_number',
-                'sh.delivery_note_number',
-                'sh.invoice_number',
-                'sh.invoice_date',
-                'sh.invoice_currency',
-                'sh.status'
-            );
-    }
-
-    private function resolvePoItemStatus(object $poItem, float $newReceived, float $newOutstanding): string
-    {
-        if ($newOutstanding <= 0) {
-            return DocumentTermCodes::ITEM_CLOSED;
-        }
-
-        if ($newReceived > 0) {
-            return DocumentTermCodes::ITEM_PARTIAL;
-        }
-
-        return $poItem->etd_date
-            ? DocumentTermCodes::ITEM_CONFIRMED
-            : DocumentTermCodes::ITEM_WAITING;
-    }
-
-    private function currentDateExpression(): string
-    {
-        return DB::connection()->getDriverName() === 'sqlite'
-            ? "date('now')"
-            : 'CURDATE()';
     }
 
     private function refreshShipmentStatus(int $shipmentId): void

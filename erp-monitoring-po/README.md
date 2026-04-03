@@ -2,6 +2,8 @@
 
 Dokumen ini disusun ulang dari implementasi aktif di kode saat ini pada folder `app`, `routes`, `database`, `resources`, dan `tests`. Tujuannya adalah menjadikan README sebagai dasar dokumentasi operasional, acuan pengembangan, dan bahan turunan untuk SOP.
 
+Dokumen pendukung sekarang dikumpulkan di folder [docs](./docs/README.md) agar tidak tersebar di root aplikasi.
+
 ## Ringkasan Sistem
 
 Sistem ini adalah aplikasi internal berbasis Laravel untuk mengelola dan memonitor alur:

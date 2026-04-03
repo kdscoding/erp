@@ -1,6 +1,6 @@
 # Action Plan Pengembangan Lanjutan
 
-Dokumen ini adalah turunan praktis dari [GAP_ANALYSIS.md](d:/server/laragon/www/erp/erp-monitoring-po/GAP_ANALYSIS.md) dan [README.md](d:/server/laragon/www/erp/erp-monitoring-po/README.md). Fokusnya adalah apa yang perlu dilakukan secara bertahap agar pengembangan lebih terarah.
+Dokumen ini adalah turunan praktis dari [GAP_ANALYSIS.md](./GAP_ANALYSIS.md) dan [README.md](../README.md). Fokusnya adalah apa yang perlu dilakukan secara bertahap agar pengembangan lebih terarah.
 
 ## Tujuan
 

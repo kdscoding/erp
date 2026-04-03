@@ -6,6 +6,7 @@ use App\Actions\CreatePurchaseOrder;
 use App\Queries\PurchaseOrders\PurchaseOrderDetailQuery;
 use App\Queries\PurchaseOrders\PurchaseOrderIndexQuery;
 use App\Support\DocumentTermCodes;
+use App\Support\PurchaseOrderItemStatusResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -105,7 +106,11 @@ class PurchaseOrderController extends Controller
             ->with('success', 'PO berhasil dibuat dengan status ' . DocumentTermCodes::PO_ISSUED . '.');
     }
 
-    public function updateItemSchedule(Request $request, string $itemId): RedirectResponse
+    public function updateItemSchedule(
+        Request $request,
+        string $itemId,
+        PurchaseOrderItemStatusResolver $purchaseOrderItemStatusResolver
+    ): RedirectResponse
     {
         $item = DB::table('purchase_order_items')->where('id', $itemId)->firstOrFail();
         $poStatus = DB::table('purchase_orders')->where('id', $item->purchase_order_id)->value('status');
@@ -119,13 +124,11 @@ class PurchaseOrderController extends Controller
             return back()->with('error', 'ETD hanya bisa diubah untuk item aktif pada PO yang belum final.');
         }
 
-        $newStatus = $item->outstanding_qty <= 0
-            ? DocumentTermCodes::ITEM_CLOSED
-            : (($item->received_qty > 0)
-                ? DocumentTermCodes::ITEM_PARTIAL
-                : (($v['etd_date'] ?? null)
-                    ? DocumentTermCodes::ITEM_CONFIRMED
-                    : DocumentTermCodes::ITEM_WAITING));
+        $newStatus = $purchaseOrderItemStatusResolver->resolve(
+            (float) $item->received_qty,
+            (float) $item->outstanding_qty,
+            $v['etd_date'] ?? null
+        );
 
         DB::table('purchase_order_items')->where('id', $itemId)->update([
             'etd_date' => $v['etd_date'] ?? null,

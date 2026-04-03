@@ -4,11 +4,11 @@ Dokumen ini adalah panduan teknis untuk developer yang akan memelihara, merefact
 
 Dokumen acuan utama:
 
-- [README.md](d:/server/laragon/www/erp/erp-monitoring-po/README.md)
-- [SOP_OPERASIONAL.md](d:/server/laragon/www/erp/erp-monitoring-po/SOP_OPERASIONAL.md)
-- [STATUS_DICTIONARY.md](d:/server/laragon/www/erp/erp-monitoring-po/STATUS_DICTIONARY.md)
-- [GAP_ANALYSIS.md](d:/server/laragon/www/erp/erp-monitoring-po/GAP_ANALYSIS.md)
-- [ACTION_PLAN.md](d:/server/laragon/www/erp/erp-monitoring-po/ACTION_PLAN.md)
+- [README.md](../README.md)
+- [SOP_OPERASIONAL.md](./SOP_OPERASIONAL.md)
+- [STATUS_DICTIONARY.md](./STATUS_DICTIONARY.md)
+- [GAP_ANALYSIS.md](./GAP_ANALYSIS.md)
+- [ACTION_PLAN.md](./ACTION_PLAN.md)
 
 ## Tujuan
 

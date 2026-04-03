@@ -1,6 +1,6 @@
 # SOP Operasional
 
-Dokumen ini adalah turunan operasional dari [README.md](d:/server/laragon/www/erp/erp-monitoring-po/README.md). Fokusnya adalah cara menggunakan sistem sehari-hari berdasarkan role dan menu.
+Dokumen ini adalah turunan operasional dari [README.md](../README.md). Fokusnya adalah cara menggunakan sistem sehari-hari berdasarkan role dan menu.
 
 ## Tujuan
 

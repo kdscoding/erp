@@ -1,6 +1,6 @@
 # GAP Analysis dan Rekomendasi Pengembangan
 
-Dokumen ini ditulis menggunakan [README.md](d:/server/laragon/www/erp/erp-monitoring-po/README.md) sebagai acuan perilaku sistem saat ini. Tujuannya adalah memetakan kelebihan, kekurangan, gap operasional, dan prioritas pengembangan lanjutan untuk project ERP Monitoring PO, Shipment, dan Receiving.
+Dokumen ini ditulis menggunakan [README.md](../README.md) sebagai acuan perilaku sistem saat ini. Tujuannya adalah memetakan kelebihan, kekurangan, gap operasional, dan prioritas pengembangan lanjutan untuk project ERP Monitoring PO, Shipment, dan Receiving.
 
 ## Ringkasan Eksekutif
 
