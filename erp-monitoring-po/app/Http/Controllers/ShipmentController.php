@@ -201,6 +201,10 @@ class ShipmentController extends Controller
             ->get()
             : collect();
 
+        $splitShipmentBoard = $selectedItems->isNotEmpty()
+            ? $this->shipmentAllocationBoardQuery($selectedItems->pluck('purchase_order_item_id')->all())->get()->groupBy('purchase_order_item_id')
+            : collect();
+
         $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name']);
 
         return view('shipments.index', compact(
@@ -214,6 +218,7 @@ class ShipmentController extends Controller
             'selectedSupplierId',
             'draftQuantities',
             'draftInvoicePrices',
+            'splitShipmentBoard',
             'viewMode'
         ));
     }
@@ -238,8 +243,11 @@ class ShipmentController extends Controller
         abort_if($shipment->status !== DocumentTermCodes::SHIPMENT_DRAFT, 404);
 
         $lines = $this->shipmentLineQuery((int) $shipment->id)->get();
+        $splitShipmentBoard = $lines->isNotEmpty()
+            ? $this->shipmentAllocationBoardQuery($lines->pluck('purchase_order_item_id')->all(), (int) $shipment->id)->get()->groupBy('purchase_order_item_id')
+            : collect();
 
-        return view('shipments.edit', compact('shipment', 'lines'));
+        return view('shipments.edit', compact('shipment', 'lines', 'splitShipmentBoard'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -1271,6 +1279,35 @@ class ShipmentController extends Controller
                 'i.item_name'
             )
             ->selectRaw('(poi.outstanding_qty - COALESCE(SUM(CASE WHEN other_sh.id IS NOT NULL THEN other_si.shipped_qty - other_si.received_qty ELSE 0 END), 0)) as available_to_ship_qty');
+    }
+
+    private function shipmentAllocationBoardQuery(array $purchaseOrderItemIds, ?int $excludeShipmentId = null)
+    {
+        return DB::table('shipment_items as si')
+            ->join('shipments as sh', 'sh.id', '=', 'si.shipment_id')
+            ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->join('items as i', 'i.id', '=', 'poi.item_id')
+            ->whereIn('si.purchase_order_item_id', $purchaseOrderItemIds)
+            ->where('sh.status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
+            ->when($excludeShipmentId, fn($query) => $query->where('si.shipment_id', '!=', $excludeShipmentId))
+            ->select(
+                'si.purchase_order_item_id',
+                'si.shipment_id',
+                'sh.shipment_number',
+                'sh.shipment_date',
+                'sh.delivery_note_number',
+                'sh.status',
+                'po.po_number',
+                'i.item_code',
+                'i.item_name',
+                'poi.outstanding_qty',
+                'si.shipped_qty',
+                'si.received_qty'
+            )
+            ->selectRaw('(si.shipped_qty - si.received_qty) as open_qty')
+            ->orderBy('sh.shipment_date')
+            ->orderBy('sh.id');
     }
 
     private function parseShipmentDraftSpreadsheet(string $filePath): array

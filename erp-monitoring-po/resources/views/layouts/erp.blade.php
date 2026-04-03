@@ -426,6 +426,58 @@
             word-break: break-word;
         }
 
+        .shipment-progress-track {
+            display: grid;
+            gap: .65rem;
+        }
+
+        .shipment-progress-card {
+            border: 1px solid #e6ead4;
+            background: #fcfdf7;
+            border-radius: 12px;
+            padding: .75rem .85rem;
+        }
+
+        .shipment-progress-card-current {
+            border-color: #cddf8a;
+            background: linear-gradient(135deg, #f9fcd9 0%, #fdfef3 100%);
+        }
+
+        .shipment-progress-header {
+            display: flex;
+            justify-content: space-between;
+            gap: .75rem;
+            align-items: flex-start;
+            margin-bottom: .45rem;
+        }
+
+        .shipment-progress-bar {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: #edf1df;
+            overflow: hidden;
+        }
+
+        .shipment-progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #91bf3c 0%, #5f9831 100%);
+        }
+
+        .shipment-progress-fill-current {
+            background: linear-gradient(90deg, #f0cf42 0%, #d7a926 100%);
+        }
+
+        .shipment-progress-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .75rem;
+            margin-top: .45rem;
+            font-size: .78rem;
+            color: #697556;
+        }
+
         .btn {
             font-size: 12px;
             padding: .36rem .62rem;

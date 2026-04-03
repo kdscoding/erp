@@ -13,6 +13,7 @@
     @php($archiveRowsData = $archiveRows ?? null)
     @php($activeCollection = $activeRowsData ? collect($activeRowsData->items()) : collect())
     @php($archiveCollection = $archiveRowsData ? collect($archiveRowsData->items()) : collect())
+    @php($splitShipmentBoard = $splitShipmentBoard ?? collect())
 
     <div class="page-shell">
 
@@ -330,6 +331,7 @@
             </section>
 
             <section class="ui-surface">
+                @php($draftQtyMap = collect(old('shipped_qty', []))->mapWithKeys(fn($qty, $itemId) => [(int) $itemId => (float) $qty])->union($draftQuantities))
                 <div class="ui-surface-head">
                     <div>
                         <h3 class="ui-surface-title">Review Draft Shipment</h3>
@@ -346,6 +348,100 @@
                         </div>
                     @else
                         <div class="alert alert-warning">Pilih minimal satu item dari tabel kandidat sebelum membuat draft shipment.</div>
+                    @endif
+
+                    @if ($selectedItems->isNotEmpty())
+                        <div class="ui-surface mb-3">
+                            <div class="ui-surface-head">
+                                <div>
+                                    <h3 class="ui-surface-title">Split Shipment Board</h3>
+                                    <div class="ui-surface-subtitle">Lihat alokasi shipment per item sebelum draft baru disimpan.</div>
+                                </div>
+                            </div>
+
+                            <div class="ui-surface-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered ui-table mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Item</th>
+                                                <th>PO Outstanding</th>
+                                                <th>Dialokasikan di Shipment Lain</th>
+                                                <th>Draft Saat Ini</th>
+                                                <th>Sisa Setelah Draft</th>
+                                                <th>Milestone</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($selectedItems as $item)
+                                                @php($currentDraftQty = (float) ($draftQtyMap[$item->purchase_order_item_id] ?? $item->available_to_ship_qty))
+                                                @php($remainingAfterDraft = max(0, (float) $item->available_to_ship_qty - $currentDraftQty))
+                                                @php($shipmentEvents = collect($splitShipmentBoard->get($item->purchase_order_item_id, [])))
+                                                <tr>
+                                                    <td>
+                                                        <div class="doc-number">{{ $item->item_code }}</div>
+                                                        <div class="doc-meta">{{ $item->item_name }}</div>
+                                                        <div class="doc-meta">{{ $item->po_number }}</div>
+                                                    </td>
+                                                    <td>{{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }}</td>
+                                                    <td>{{ \App\Support\NumberFormatter::trim($item->open_shipment_qty) }}</td>
+                                                    <td>{{ \App\Support\NumberFormatter::trim($currentDraftQty) }}</td>
+                                                    <td>{{ \App\Support\NumberFormatter::trim($remainingAfterDraft) }}</td>
+                                                    <td style="min-width: 360px;">
+                                                        <div class="shipment-progress-track">
+                                                            @if ($shipmentEvents->isEmpty())
+                                                                <div class="doc-meta">Belum ada shipment event lain untuk item ini.</div>
+                                                            @else
+                                                                @foreach ($shipmentEvents as $event)
+                                                                    @php($progressTotal = max((float) $event->shipped_qty, 0.01))
+                                                                    @php($receivedPercent = min(100, round(((float) $event->received_qty / $progressTotal) * 100, 1)))
+                                                                    <div class="shipment-progress-card">
+                                                                        <div class="shipment-progress-header">
+                                                                            <div>
+                                                                                <div class="doc-number">{{ $event->shipment_number }}</div>
+                                                                                <div class="doc-meta">{{ \Carbon\Carbon::parse($event->shipment_date)->format('d-m-Y') }} | DN {{ $event->delivery_note_number ?: '-' }}</div>
+                                                                            </div>
+                                                                            <x-status-badge :status="$event->status" scope="shipment" />
+                                                                        </div>
+                                                                        <div class="shipment-progress-bar">
+                                                                            <div class="shipment-progress-fill" style="width: {{ $receivedPercent }}%"></div>
+                                                                        </div>
+                                                                        <div class="shipment-progress-meta">
+                                                                            <span>Shipped {{ \App\Support\NumberFormatter::trim($event->shipped_qty) }}</span>
+                                                                            <span>Received {{ \App\Support\NumberFormatter::trim($event->received_qty) }}</span>
+                                                                            <span>Open {{ \App\Support\NumberFormatter::trim($event->open_qty) }}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                @endforeach
+                                                            @endif
+
+                                                            <div class="shipment-progress-card shipment-progress-card-current">
+                                                                <div class="shipment-progress-header">
+                                                                    <div>
+                                                                        <div class="doc-number">Draft Saat Ini</div>
+                                                                        <div class="doc-meta">Qty yang sedang disiapkan di builder shipment.</div>
+                                                                    </div>
+                                                                    <span class="badge bg-primary">Planned</span>
+                                                                </div>
+                                                                <div class="shipment-progress-bar">
+                                                                    @php($draftPercent = (float) $item->outstanding_qty > 0 ? min(100, round(($currentDraftQty / (float) $item->outstanding_qty) * 100, 1)) : 0)
+                                                                    <div class="shipment-progress-fill shipment-progress-fill-current" style="width: {{ $draftPercent }}%"></div>
+                                                                </div>
+                                                                <div class="shipment-progress-meta">
+                                                                    <span>Draft {{ \App\Support\NumberFormatter::trim($currentDraftQty) }}</span>
+                                                                    <span>Outstanding {{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }}</span>
+                                                                    <span>Sisa {{ \App\Support\NumberFormatter::trim($remainingAfterDraft) }}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     @endif
 
                     <form method="POST" action="{{ route('shipments.store') }}">

@@ -375,6 +375,96 @@ class PoReceivingFlowTest extends TestCase
             ->assertDontSee('Keluarkan Item');
     }
 
+    public function test_split_shipment_board_is_visible_in_builder_and_edit_pages(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-SPLIT-BOARD-01',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $poItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemId,
+            'ordered_qty' => 100,
+            'received_qty' => 0,
+            'outstanding_qty' => 100,
+            'item_status' => 'Confirmed',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $currentShipmentId = DB::table('shipments')->insertGetId([
+            'purchase_order_id' => $poId,
+            'supplier_id' => $supplierId,
+            'shipment_number' => 'SHP-SPLIT-CURRENT-01',
+            'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'SJ-SPLIT-CURRENT-01',
+            'status' => 'Draft',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('shipment_items')->insert([
+            'shipment_id' => $currentShipmentId,
+            'purchase_order_item_id' => $poItemId,
+            'shipped_qty' => 35,
+            'received_qty' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('shipments')->insert([
+            'purchase_order_id' => $poId,
+            'supplier_id' => $supplierId,
+            'shipment_number' => 'SHP-SPLIT-OTHER-01',
+            'shipment_date' => now()->subDay()->toDateString(),
+            'delivery_note_number' => 'SJ-SPLIT-OTHER-01',
+            'status' => 'Shipped',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $otherShipmentId = DB::table('shipments')->where('shipment_number', 'SHP-SPLIT-OTHER-01')->value('id');
+
+        DB::table('shipment_items')->insert([
+            'shipment_id' => $otherShipmentId,
+            'purchase_order_item_id' => $poItemId,
+            'shipped_qty' => 20,
+            'received_qty' => 5,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->withSession([
+            'shipment_selected_items' => [$poItemId],
+            'shipment_shipped_qty' => [$poItemId => 35],
+            'shipment_invoice_unit_price' => [],
+        ]);
+
+        $this->actingAs($user)
+            ->get('/shipments/create?view=draft')
+            ->assertOk()
+            ->assertSee('Split Shipment Board')
+            ->assertSee('SHP-SPLIT-OTHER-01')
+            ->assertSee('Draft Saat Ini')
+            ->assertSee('Received 5');
+
+        $this->actingAs($user)
+            ->get("/shipments/{$currentShipmentId}/edit")
+            ->assertOk()
+            ->assertSee('SHP-SPLIT-OTHER-01')
+            ->assertSee('Draft Ini')
+            ->assertSee('Open 15');
+    }
+
     public function test_same_delivery_note_for_same_supplier_cannot_be_processed_twice(): void
     {
         $firstUser = $this->makeUserWithRole('administrator');
