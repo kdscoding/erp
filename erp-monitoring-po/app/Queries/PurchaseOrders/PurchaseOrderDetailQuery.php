@@ -3,7 +3,9 @@
 namespace App\Queries\PurchaseOrders;
 
 use App\Support\DocumentTermCodes;
+use App\Support\DomainStatus;
 use App\Support\ErpFlow;
+use App\Support\StatusQuery;
 use Illuminate\Support\Facades\DB;
 
 class PurchaseOrderDetailQuery
@@ -25,8 +27,8 @@ class PurchaseOrderDetailQuery
             ->leftJoin('units as u', 'u.id', '=', 'i.unit_id')
             ->select('poi.*', 'i.item_code', 'i.item_name', 'u.unit_name')
             ->selectRaw("CASE
-                WHEN poi.item_status = '" . DocumentTermCodes::ITEM_CANCELLED . "' THEN '" . DocumentTermCodes::ITEM_CANCELLED . "'
-                WHEN poi.item_status = '" . DocumentTermCodes::ITEM_FORCE_CLOSED . "' THEN '" . DocumentTermCodes::ITEM_FORCE_CLOSED . "'
+                WHEN " . StatusQuery::sqlEquals('poi.item_status', DomainStatus::GROUP_PO_ITEM_STATUS, DocumentTermCodes::ITEM_CANCELLED) . " THEN '" . DocumentTermCodes::ITEM_CANCELLED . "'
+                WHEN " . StatusQuery::sqlEquals('poi.item_status', DomainStatus::GROUP_PO_ITEM_STATUS, DocumentTermCodes::ITEM_FORCE_CLOSED) . " THEN '" . DocumentTermCodes::ITEM_FORCE_CLOSED . "'
                 WHEN poi.outstanding_qty <= 0 THEN '" . DocumentTermCodes::ITEM_CLOSED . "'
                 WHEN poi.received_qty > 0 THEN '" . DocumentTermCodes::ITEM_PARTIAL . "'
                 WHEN poi.etd_date IS NULL THEN '" . DocumentTermCodes::ITEM_WAITING . "'

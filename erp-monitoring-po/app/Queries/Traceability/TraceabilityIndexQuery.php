@@ -2,6 +2,8 @@
 
 namespace App\Queries\Traceability;
 
+use App\Support\DomainStatus;
+use App\Support\StatusQuery;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -33,7 +35,12 @@ class TraceabilityIndexQuery
             )
             ->when(
                 $request->filled('item_status'),
-                fn (Builder $query) => $query->where('poi.item_status', trim((string) $request->input('item_status')))
+                fn (Builder $query) => StatusQuery::whereEquals(
+                    $query,
+                    'poi.item_status',
+                    DomainStatus::GROUP_PO_ITEM_STATUS,
+                    trim((string) $request->input('item_status'))
+                )
             )
             ->orderByDesc('po.po_date')
             ->orderByDesc('poi.id')

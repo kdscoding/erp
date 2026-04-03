@@ -3,6 +3,8 @@
 namespace App\Queries\Receiving;
 
 use App\Support\DocumentTermCodes;
+use App\Support\DomainStatus;
+use App\Support\StatusQuery;
 use Illuminate\Http\Request;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
@@ -17,10 +19,15 @@ class ShipmentReceivingQuery
             ->join('shipment_items as si', 'si.shipment_id', '=', 'sh.id')
             ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
-            ->whereIn('sh.status', [
-                DocumentTermCodes::SHIPMENT_SHIPPED,
-                DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED,
-            ])
+            ->when(true, fn (Builder $query) => StatusQuery::whereIn(
+                $query,
+                'sh.status',
+                DomainStatus::GROUP_SHIPMENT_STATUS,
+                [
+                    DocumentTermCodes::SHIPMENT_SHIPPED,
+                    DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED,
+                ]
+            ))
             ->whereRaw('(si.shipped_qty - si.received_qty) > 0')
             ->when($request->filled('supplier_id'), fn ($query) => $query->where('sh.supplier_id', $request->integer('supplier_id')))
             ->when(
@@ -127,12 +134,22 @@ class ShipmentReceivingQuery
                 WHEN DATE(poi.etd_date) < {$currentDateSql} THEN '" . DocumentTermCodes::ITEM_LATE . "'
                 ELSE '" . DocumentTermCodes::SHIPMENT_SHIPPED . "'
             END as monitoring_status")
-            ->whereIn('sh.status', [
-                DocumentTermCodes::SHIPMENT_SHIPPED,
-                DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED,
-            ])
+            ->when(true, fn (Builder $query) => StatusQuery::whereIn(
+                $query,
+                'sh.status',
+                DomainStatus::GROUP_SHIPMENT_STATUS,
+                [
+                    DocumentTermCodes::SHIPMENT_SHIPPED,
+                    DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED,
+                ]
+            ))
             ->whereRaw('(si.shipped_qty - si.received_qty) > 0')
-            ->where('poi.item_status', '!=', DocumentTermCodes::ITEM_CANCELLED)
+            ->when(true, fn (Builder $query) => StatusQuery::whereNotEquals(
+                $query,
+                'poi.item_status',
+                DomainStatus::GROUP_PO_ITEM_STATUS,
+                DocumentTermCodes::ITEM_CANCELLED
+            ))
             ->groupBy(
                 'si.id',
                 'si.shipment_id',

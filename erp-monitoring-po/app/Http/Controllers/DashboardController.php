@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DocumentTermCodes;
+use App\Support\DomainStatus;
+use App\Support\StatusQuery;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,7 +31,12 @@ class DashboardController extends Controller
                 ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
                 ->when($dateFrom, fn ($query) => $query->whereDate('po_date', '>=', $dateFrom))
                 ->when($dateTo, fn ($query) => $query->whereDate('po_date', '<=', $dateTo))
-                ->whereNotIn('status', ['Closed', 'Cancelled'])
+                ->when(true, fn ($query) => StatusQuery::whereNotIn(
+                    $query,
+                    'status',
+                    DomainStatus::GROUP_PO_STATUS,
+                    [DocumentTermCodes::PO_CLOSED, DocumentTermCodes::PO_CANCELLED]
+                ))
                 ->count(),
 
             'overdue_po' => DB::table('purchase_order_items')
@@ -39,7 +47,12 @@ class DashboardController extends Controller
                 ->whereNotNull('etd_date')
                 ->whereRaw("DATE(etd_date) < {$currentDateSql}")
                 ->where('outstanding_qty', '>', 0)
-                ->where('purchase_order_items.item_status', '!=', 'Cancelled')
+                ->when(true, fn ($query) => StatusQuery::whereNotEquals(
+                    $query,
+                    'purchase_order_items.item_status',
+                    DomainStatus::GROUP_PO_ITEM_STATUS,
+                    DocumentTermCodes::ITEM_CANCELLED
+                ))
                 ->count(),
 
             'shipped_today' => DB::table('shipments')
@@ -57,7 +70,12 @@ class DashboardController extends Controller
                 ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
                 ->when($dateFrom, fn ($query) => $query->whereDate('po_date', '>=', $dateFrom))
                 ->when($dateTo, fn ($query) => $query->whereDate('po_date', '<=', $dateTo))
-                ->where('status', 'Late')
+                ->when(true, fn ($query) => StatusQuery::whereEquals(
+                    $query,
+                    'status',
+                    DomainStatus::GROUP_PO_STATUS,
+                    DocumentTermCodes::PO_LATE
+                ))
                 ->count(),
 
             'suppliers' => DB::table('suppliers')
@@ -72,7 +90,12 @@ class DashboardController extends Controller
                 ->where('poi.outstanding_qty', '>', 0)
                 ->whereNotNull('poi.etd_date')
                 ->whereRaw("DATE(poi.etd_date) < {$currentDateSql}")
-                ->whereNotIn('po.status', ['Closed', 'Cancelled'])
+                ->when(true, fn ($query) => StatusQuery::whereNotIn(
+                    $query,
+                    'po.status',
+                    DomainStatus::GROUP_PO_STATUS,
+                    [DocumentTermCodes::PO_CLOSED, DocumentTermCodes::PO_CANCELLED]
+                ))
                 ->count(),
         ];
 
@@ -558,7 +581,7 @@ class DashboardController extends Controller
                 's.supplier_name',
                 DB::raw('COALESCE(po.eta_date, MIN(COALESCE(poi.eta_date, poi.etd_date))) as eta_date')
             )
-            ->selectRaw('SUM(CASE WHEN poi.item_status != \'Cancelled\' AND poi.outstanding_qty > 0 THEN 1 ELSE 0 END) as outstanding_item_count')
+            ->selectRaw('SUM(CASE WHEN ' . StatusQuery::sqlNotEquals('poi.item_status', DomainStatus::GROUP_PO_ITEM_STATUS, DocumentTermCodes::ITEM_CANCELLED) . ' AND poi.outstanding_qty > 0 THEN 1 ELSE 0 END) as outstanding_item_count')
             ->selectRaw('COALESCE(SUM(poi.ordered_qty), 0) as total_order_qty')
             ->selectRaw('COALESCE(SUM(poi.received_qty), 0) as total_shipped_qty')
             ->selectRaw('COALESCE(SUM(poi.outstanding_qty), 0) as total_outstanding_qty')
@@ -631,7 +654,12 @@ class DashboardController extends Controller
             ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
             ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
             ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
-            ->where('poi.item_status', '!=', 'Cancelled')
+            ->when(true, fn ($query) => StatusQuery::whereNotEquals(
+                $query,
+                'poi.item_status',
+                DomainStatus::GROUP_PO_ITEM_STATUS,
+                DocumentTermCodes::ITEM_CANCELLED
+            ))
             ->select('po.supplier_id', 's.supplier_name')
             ->selectRaw('COUNT(DISTINCT po.id) as total_po')
             ->selectRaw('COUNT(poi.id) as total_items')
@@ -919,8 +947,18 @@ class DashboardController extends Controller
             ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
             ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
             ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
-            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
-            ->where('poi.item_status', '!=', 'Cancelled')
+            ->when(true, fn ($query) => StatusQuery::whereNotIn(
+                $query,
+                'po.status',
+                DomainStatus::GROUP_PO_STATUS,
+                [DocumentTermCodes::PO_CLOSED, DocumentTermCodes::PO_CANCELLED]
+            ))
+            ->when(true, fn ($query) => StatusQuery::whereNotEquals(
+                $query,
+                'poi.item_status',
+                DomainStatus::GROUP_PO_ITEM_STATUS,
+                DocumentTermCodes::ITEM_CANCELLED
+            ))
             ->where('poi.outstanding_qty', '>', 0);
     }
 
@@ -943,6 +981,18 @@ class DashboardController extends Controller
             ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
             ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
             ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
+            ->when(true, fn ($query) => StatusQuery::whereNotEquals(
+                $query,
+                'poi.item_status',
+                DomainStatus::GROUP_PO_ITEM_STATUS,
+                DocumentTermCodes::ITEM_CANCELLED
+            ))
+            ->when(true, fn ($query) => StatusQuery::whereNotIn(
+                $query,
+                'po.status',
+                DomainStatus::GROUP_PO_STATUS,
+                [DocumentTermCodes::PO_CLOSED, DocumentTermCodes::PO_CANCELLED]
+            ))
             ->select(
                 'po.id as po_id',
                 'po.po_number',
