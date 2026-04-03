@@ -580,6 +580,122 @@ class DashboardController extends Controller
         ));
     }
 
+    public function supplierPerformance(Request $request): View
+    {
+        $supplierId = $request->integer('supplier_id');
+        ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
+        $currentDateSql = $this->currentDateExpression();
+        $shipmentToReceivingDaysSql = $this->dateDiffExpression('gr.receipt_date', 'sh.shipment_date');
+
+        $suppliers = DB::table('suppliers')
+            ->orderBy('supplier_name')
+            ->get(['id', 'supplier_name']);
+
+        $receiptSummary = DB::table('goods_receipt_items as gri')
+            ->join('goods_receipts as gr', 'gr.id', '=', 'gri.goods_receipt_id')
+            ->select('gri.purchase_order_item_id')
+            ->selectRaw('MAX(gr.receipt_date) as last_receipt_date')
+            ->selectRaw('MIN(gr.receipt_date) as first_receipt_date')
+            ->selectRaw('COUNT(DISTINCT gr.id) as gr_count')
+            ->groupBy('gri.purchase_order_item_id');
+
+        $shipmentLeadSummary = DB::table('shipment_items as si')
+            ->join('shipments as sh', 'sh.id', '=', 'si.shipment_id')
+            ->leftJoin('goods_receipt_items as gri', 'gri.shipment_item_id', '=', 'si.id')
+            ->leftJoin('goods_receipts as gr', 'gr.id', '=', 'gri.goods_receipt_id')
+            ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
+            ->whereNotNull('gr.receipt_date')
+            ->select('po.supplier_id')
+            ->selectRaw("AVG({$shipmentToReceivingDaysSql}) as avg_shipment_to_receiving_days")
+            ->selectRaw('COUNT(DISTINCT si.id) as shipment_line_with_receipt')
+            ->groupBy('po.supplier_id');
+
+        $supplierScorecard = DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->leftJoinSub($receiptSummary, 'receipt_summary', function ($join) {
+                $join->on('receipt_summary.purchase_order_item_id', '=', 'poi.id');
+            })
+            ->leftJoinSub($shipmentLeadSummary, 'shipment_lead_summary', function ($join) {
+                $join->on('shipment_lead_summary.supplier_id', '=', 'po.supplier_id');
+            })
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
+            ->where('poi.item_status', '!=', 'Cancelled')
+            ->select('po.supplier_id', 's.supplier_name')
+            ->selectRaw('COUNT(DISTINCT po.id) as total_po')
+            ->selectRaw('COUNT(poi.id) as total_items')
+            ->selectRaw('SUM(CASE WHEN poi.received_qty > 0 THEN 1 ELSE 0 END) as received_items')
+            ->selectRaw('SUM(CASE WHEN poi.outstanding_qty <= 0 THEN 1 ELSE 0 END) as closed_items')
+            ->selectRaw("SUM(CASE
+                WHEN poi.outstanding_qty <= 0
+                    AND receipt_summary.last_receipt_date IS NOT NULL
+                    AND DATE(receipt_summary.last_receipt_date) <= COALESCE(DATE(poi.eta_date), DATE(poi.etd_date), DATE(receipt_summary.last_receipt_date))
+                THEN 1 ELSE 0 END) as on_time_full_items")
+            ->selectRaw("SUM(CASE
+                WHEN poi.outstanding_qty > 0
+                    AND poi.etd_date IS NOT NULL
+                    AND DATE(poi.etd_date) < {$currentDateSql}
+                THEN 1 ELSE 0 END) as delayed_open_items")
+            ->selectRaw('MIN(CASE WHEN poi.outstanding_qty > 0 THEN poi.etd_date ELSE NULL END) as nearest_open_etd')
+            ->selectRaw('COALESCE(MAX(shipment_lead_summary.avg_shipment_to_receiving_days), 0) as avg_shipment_to_receiving_days')
+            ->groupBy('po.supplier_id', 's.supplier_name')
+            ->orderBy('s.supplier_name')
+            ->get()
+            ->map(function ($row) {
+                $denominator = max((int) $row->received_items, 1);
+                $row->otif_percent = (int) $row->received_items > 0
+                    ? round(((int) $row->on_time_full_items / $denominator) * 100, 1)
+                    : 0.0;
+                $row->delay_rate = (int) $row->total_items > 0
+                    ? round(((int) $row->delayed_open_items / (int) $row->total_items) * 100, 1)
+                    : 0.0;
+
+                return $row;
+            })
+            ->sortByDesc('otif_percent')
+            ->values();
+
+        $performanceMetrics = [
+            'supplier_count' => (int) $supplierScorecard->count(),
+            'received_items' => (int) $supplierScorecard->sum('received_items'),
+            'on_time_full_items' => (int) $supplierScorecard->sum('on_time_full_items'),
+            'overall_otif_percent' => (int) $supplierScorecard->sum('received_items') > 0
+                ? round(((int) $supplierScorecard->sum('on_time_full_items') / (int) $supplierScorecard->sum('received_items')) * 100, 1)
+                : 0.0,
+            'avg_shipment_to_receiving_days' => $supplierScorecard->count() > 0
+                ? round((float) $supplierScorecard->avg('avg_shipment_to_receiving_days'), 1)
+                : 0.0,
+        ];
+
+        $topDelayedSuppliers = $supplierScorecard
+            ->sortByDesc('delayed_open_items')
+            ->values()
+            ->take(5);
+
+        $bestOtiFSuppliers = $supplierScorecard
+            ->filter(fn ($row) => (int) $row->received_items > 0)
+            ->sortByDesc('otif_percent')
+            ->values()
+            ->take(5);
+
+        return view('supplier-performance', compact(
+            'suppliers',
+            'supplierId',
+            'dateFrom',
+            'dateTo',
+            'performanceMetrics',
+            'supplierScorecard',
+            'topDelayedSuppliers',
+            'bestOtiFSuppliers'
+        ));
+    }
+
     public function exportMonitoringExcel(Request $request): Response
     {
         $supplierId = $request->integer('supplier_id');
@@ -888,5 +1004,12 @@ class DashboardController extends Controller
         return DB::connection()->getDriverName() === 'sqlite'
             ? "date('now')"
             : 'CURDATE()';
+    }
+
+    private function dateDiffExpression(string $endDateColumn, string $startDateColumn): string
+    {
+        return DB::connection()->getDriverName() === 'sqlite'
+            ? "CAST(julianday({$endDateColumn}) - julianday({$startDateColumn}) AS INTEGER)"
+            : "DATEDIFF({$endDateColumn}, {$startDateColumn})";
     }
 }

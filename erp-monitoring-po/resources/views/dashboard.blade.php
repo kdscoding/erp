@@ -114,7 +114,10 @@
             <article class="box">
                 <div class="head">
                     <div><h3>Supplier ETD Health</h3><div class="sub">Lihat supplier mana yang sehat dan mana yang paling perlu dikejar.</div></div>
-                    <div class="actions"><button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#etdHealthDetailModal">Detail</button></div>
+                    <div class="actions">
+                        <a href="{{ route('supplier-performance.index', request()->query()) }}" class="btn btn-sm btn-light">Supplier Performance</a>
+                        <button type="button" class="btn btn-sm btn-light" data-toggle="modal" data-target="#etdHealthDetailModal">Detail</button>
+                    </div>
                 </div>
                 <div class="body">
                     <div class="stack">

@@ -192,4 +192,119 @@ class DashboardMonitoringTest extends TestCase
             ->assertSee('PO-MON-0001')
             ->assertSee('Partial');
     }
+
+    public function test_supplier_performance_page_shows_otif_and_delay_scorecard(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemAId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+        $itemBId = DB::table('items')->where('item_code', 'ITM002')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-SUP-0001',
+            'po_date' => now()->subDays(5)->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $onTimeItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemAId,
+            'ordered_qty' => 20,
+            'received_qty' => 20,
+            'outstanding_qty' => 0,
+            'item_status' => 'Closed',
+            'etd_date' => now()->subDays(2)->toDateString(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $delayedItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemBId,
+            'ordered_qty' => 15,
+            'received_qty' => 5,
+            'outstanding_qty' => 10,
+            'item_status' => 'Partial',
+            'etd_date' => now()->subDays(1)->toDateString(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $shipmentId = DB::table('shipments')->insertGetId([
+            'purchase_order_id' => $poId,
+            'supplier_id' => $supplierId,
+            'shipment_number' => 'SHP-SUP-0001',
+            'shipment_date' => now()->subDays(3)->toDateString(),
+            'delivery_note_number' => 'SJ-SUP-0001',
+            'status' => 'Partial Received',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $shipmentItemOnTimeId = DB::table('shipment_items')->insertGetId([
+            'shipment_id' => $shipmentId,
+            'purchase_order_item_id' => $onTimeItemId,
+            'shipped_qty' => 20,
+            'received_qty' => 20,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $shipmentItemDelayedId = DB::table('shipment_items')->insertGetId([
+            'shipment_id' => $shipmentId,
+            'purchase_order_item_id' => $delayedItemId,
+            'shipped_qty' => 10,
+            'received_qty' => 5,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $grId = DB::table('goods_receipts')->insertGetId([
+            'purchase_order_id' => $poId,
+            'shipment_id' => $shipmentId,
+            'gr_number' => 'GR-SUP-0001',
+            'receipt_date' => now()->subDays(2)->toDateString(),
+            'status' => 'Posted',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('goods_receipt_items')->insert([
+            [
+                'goods_receipt_id' => $grId,
+                'shipment_item_id' => $shipmentItemOnTimeId,
+                'purchase_order_item_id' => $onTimeItemId,
+                'item_id' => $itemAId,
+                'received_qty' => 20,
+                'accepted_qty' => 20,
+                'qty_variance' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'goods_receipt_id' => $grId,
+                'shipment_item_id' => $shipmentItemDelayedId,
+                'purchase_order_item_id' => $delayedItemId,
+                'item_id' => $itemBId,
+                'received_qty' => 5,
+                'accepted_qty' => 5,
+                'qty_variance' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get('/monitoring/suppliers')
+            ->assertOk()
+            ->assertSee('Supplier Performance Scorecard')
+            ->assertSee('Top Delayed Suppliers')
+            ->assertSee('Best OTIF Suppliers')
+            ->assertSee('Supplier A')
+            ->assertSee('50%')
+            ->assertSee('1');
+    }
 }

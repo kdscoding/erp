@@ -930,6 +930,14 @@
                             </li>
 
                             <li class="nav-item">
+                                <a href="{{ route('supplier-performance.index') }}"
+                                    class="nav-link {{ request()->routeIs('supplier-performance.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-industry"></i>
+                                    <p>Supplier Performance</p>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
                                 <a href="{{ route('summary.po') }}"
                                     class="nav-link {{ request()->routeIs('summary.po') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-file-invoice"></i>
@@ -957,6 +965,14 @@
 
                         @if ($currentUser?->hasRole('administrator'))
                             <li class="nav-header">Administration</li>
+
+                            <li class="nav-item">
+                                <a href="{{ route('audit.index') }}"
+                                    class="nav-link {{ request()->routeIs('audit.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-clipboard-list"></i>
+                                    <p>Audit Viewer</p>
+                                </a>
+                            </li>
 
                             <li class="nav-item">
                                 <a href="{{ route('settings.index') }}"

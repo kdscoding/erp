@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuditController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\ItemController;
@@ -26,6 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/summary/item/export-excel', [DashboardController::class, 'exportSummaryItemExcel'])->name('summary.item.export-excel');
     Route::get('/monitoring', [DashboardController::class, 'monitoring'])->name('monitoring.index');
     Route::get('/monitoring/export-excel', [DashboardController::class, 'exportMonitoringExcel'])->name('monitoring.export-excel');
+    Route::get('/monitoring/suppliers', [DashboardController::class, 'supplierPerformance'])->name('supplier-performance.index');
     Route::get('/po', [PurchaseOrderController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('po.index');
     Route::get('/po/export-excel', [PurchaseOrderController::class, 'exportIndexExcel'])->middleware('role:administrator|staff|supervisor')->name('po.export-excel');
     Route::get('/traceability', [TraceabilityController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('traceability.index');
@@ -96,6 +98,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::middleware('role:administrator')->group(function () {
+        Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
         Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
         Route::post('/settings/document-terms', [SettingsController::class, 'updateDocumentTerms'])->name('settings.document-terms.update');
