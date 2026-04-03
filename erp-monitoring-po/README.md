@@ -19,6 +19,27 @@ Sistem ini adalah aplikasi internal berbasis Laravel untuk mengelola dan memonit
 
 Fokus sistem saat ini adalah monitoring outstanding dan jejak proses procurement, bukan approval workflow bertingkat.
 
+## Catatan UI Saat Ini
+
+Struktur UI sedang masuk fase penyederhanaan.
+
+Keputusan terbaru:
+
+- `Monitoring Hub` menjadi layar utama untuk membaca outstanding
+- mode utama di monitoring adalah:
+  - `PO View`
+  - `Item View`
+- `Summary PO` dan `Summary Item` tidak lagi diposisikan sebagai report utama yang berdiri sendiri
+- dashboard disederhanakan agar fokus ke:
+  - KPI utama
+  - top delayed suppliers
+  - action center
+
+Catatan penting:
+
+- route `summary.po` dan `summary.item` masih ada untuk kompatibilitas sementara
+- tetapi arah produk ke depan adalah mengonsolidasikan layar-layar tersebut ke `Monitoring Hub`
+
 ## Teknologi dan Dependensi Utama
 
 - PHP `^8.3`
@@ -30,10 +51,11 @@ Fokus sistem saat ini adalah monitoring outstanding dan jejak proses procurement
 ## Modul Aktif
 
 - Dashboard Outstanding
-- Summary Outstanding PO
-- Summary Outstanding Item
+- Monitoring Hub
 - Purchase Order
 - Traceability
+- Supplier Performance
+- Audit Viewer
 - Shipment Worklist, Draft Builder, Archive
 - Receiving Process dan Receiving History
 - Master Data:

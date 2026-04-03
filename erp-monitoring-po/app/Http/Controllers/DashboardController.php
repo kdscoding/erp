@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
@@ -538,6 +539,9 @@ class DashboardController extends Controller
     {
         $supplierId = $request->integer('supplier_id');
         ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
+        $monitoringMode = in_array((string) $request->query('mode', 'po'), ['po', 'item'], true)
+            ? (string) $request->query('mode', 'po')
+            : 'po';
 
         $suppliers = DB::table('suppliers')
             ->orderBy('supplier_name')
@@ -574,6 +578,7 @@ class DashboardController extends Controller
             'supplierId',
             'dateFrom',
             'dateTo',
+            'monitoringMode',
             'summaryMetrics',
             'outstandingPoRows',
             'outstandingItemRows'

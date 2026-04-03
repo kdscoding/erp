@@ -1087,34 +1087,18 @@
                             </li>
 
                             <li class="nav-item">
-                                <a href="{{ route('supplier-performance.index') }}"
-                                    class="nav-link {{ request()->routeIs('supplier-performance.*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-industry"></i>
-                                    <p>Supplier Performance</p>
-                                </a>
-                            </li>
-
-                            <li class="nav-item">
-                                <a href="{{ route('summary.po') }}"
-                                    class="nav-link {{ request()->routeIs('summary.po') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-file-invoice"></i>
-                                    <p>Summary PO</p>
-                                </a>
-                            </li>
-
-                            <li class="nav-item">
-                                <a href="{{ route('summary.item') }}"
-                                    class="nav-link {{ request()->routeIs('summary.item') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-boxes-stacked"></i>
-                                    <p>Summary Item</p>
-                                </a>
-                            </li>
-
-                            <li class="nav-item">
                                 <a href="{{ route('traceability.index') }}"
                                     class="nav-link {{ request()->routeIs('traceability.*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-search"></i>
                                     <p>Traceability</p>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a href="{{ route('supplier-performance.index') }}"
+                                    class="nav-link {{ request()->routeIs('supplier-performance.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-industry"></i>
+                                    <p>Supplier Performance</p>
                                 </a>
                             </li>
 
