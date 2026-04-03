@@ -635,6 +635,80 @@
             color: #dceca7;
         }
 
+        .command-palette-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            border: 1px solid rgba(72, 97, 22, .18);
+            background: rgba(255, 255, 255, .45);
+            color: #354817;
+            border-radius: 999px;
+            padding: .35rem .7rem;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .command-palette-trigger kbd {
+            background: #ffffff;
+            border: 1px solid #d7e1a8;
+            border-bottom-width: 2px;
+            border-radius: 6px;
+            color: #5c7130;
+            font-size: 10px;
+            padding: 1px 6px;
+        }
+
+        .command-palette-search {
+            border-radius: 14px;
+            min-height: 44px;
+            font-size: .92rem;
+        }
+
+        .command-palette-list {
+            display: grid;
+            gap: .65rem;
+        }
+
+        .command-palette-item {
+            display: flex;
+            justify-content: space-between;
+            gap: .75rem;
+            align-items: center;
+            border: 1px solid #e2e8bc;
+            background: linear-gradient(135deg, #fffef7 0%, #f6f9e6 100%);
+            border-radius: 14px;
+            padding: .8rem .9rem;
+            color: #314216;
+            text-decoration: none;
+        }
+
+        .command-palette-item:hover,
+        .command-palette-item.is-active {
+            border-color: #bfd730;
+            background: linear-gradient(135deg, #fffde8 0%, #eef7d2 100%);
+            color: #2b3a15;
+        }
+
+        .command-palette-item-label {
+            font-weight: 800;
+            color: #314216;
+        }
+
+        .command-palette-item-meta {
+            font-size: .8rem;
+            color: #728058;
+            margin-top: .2rem;
+        }
+
+        .command-palette-empty {
+            border: 1px dashed #d5ddab;
+            border-radius: 14px;
+            padding: 1rem;
+            text-align: center;
+            color: #728058;
+            background: #fafcf1;
+        }
+
         .bc-chip {
             background: rgba(255, 255, 255, .45);
             border: 1px solid rgba(72, 97, 22, .18);
@@ -691,6 +765,82 @@
                 'supervisor' => 'Supervisor',
                 default => 'Tanpa Role',
             };
+            $staticCommandPaletteItems = collect([
+                ['label' => 'Dashboard', 'description' => 'Ringkasan outstanding dan action center', 'route' => route('dashboard'), 'roles' => ['administrator', 'staff', 'supervisor']],
+                ['label' => 'Monitoring PO', 'description' => 'Monitoring summary dan detail item', 'route' => route('monitoring.index'), 'roles' => ['administrator', 'staff', 'supervisor']],
+                ['label' => 'Supplier Performance', 'description' => 'OTIF, delay supplier, dan scorecard', 'route' => route('supplier-performance.index'), 'roles' => ['administrator', 'staff', 'supervisor']],
+                ['label' => 'Traceability', 'description' => 'Timeline PO, shipment, dan receiving', 'route' => route('traceability.index'), 'roles' => ['administrator', 'staff', 'supervisor']],
+                ['label' => 'Purchase Orders', 'description' => 'List dan detail PO aktif', 'route' => route('po.index'), 'roles' => ['administrator', 'staff', 'supervisor']],
+                ['label' => 'Create Draft Shipment', 'description' => 'Susun draft shipment baru', 'route' => route('shipments.create'), 'roles' => ['administrator', 'staff']],
+                ['label' => 'Shipment Worklist', 'description' => 'Lihat draft, shipped, dan partial received', 'route' => route('shipments.index'), 'roles' => ['administrator', 'staff']],
+                ['label' => 'Open Receiving', 'description' => 'Proses receiving per shipment', 'route' => route('receiving.process'), 'roles' => ['administrator', 'staff']],
+                ['label' => 'Audit Viewer', 'description' => 'Review audit log dan before-after changes', 'route' => route('audit.index'), 'roles' => ['administrator']],
+                ['label' => 'System Parameters', 'description' => 'Pengaturan sistem dan istilah dokumen', 'route' => route('settings.index'), 'roles' => ['administrator']],
+                ['label' => 'Users', 'description' => 'Manajemen user dan akses', 'route' => route('users.index'), 'roles' => ['administrator']],
+            ])->filter(fn ($item) => $currentUser && $currentUser->hasAnyRole($item['roles']))->values();
+
+            $dynamicCommandPaletteItems = collect();
+            if ($currentUser?->hasAnyRole(['administrator', 'staff', 'supervisor'])) {
+                $recentPoPaletteItems = \Illuminate\Support\Facades\DB::table('purchase_orders as po')
+                    ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
+                    ->select('po.id', 'po.po_number', 'po.status', 's.supplier_name')
+                    ->orderByDesc('po.id')
+                    ->limit(5)
+                    ->get()
+                    ->map(fn ($po) => [
+                        'label' => 'PO · ' . $po->po_number,
+                        'description' => trim(($po->supplier_name ?: 'Tanpa Supplier') . ' | Status ' . ($po->status ?: '-')),
+                        'route' => route('po.show', $po->id),
+                    ]);
+
+                $recentShipmentPaletteItems = \Illuminate\Support\Facades\DB::table('shipments as sh')
+                    ->leftJoin('suppliers as s', 's.id', '=', 'sh.supplier_id')
+                    ->select('sh.id', 'sh.shipment_number', 'sh.delivery_note_number', 'sh.status', 's.supplier_name')
+                    ->orderByDesc('sh.id')
+                    ->limit(5)
+                    ->get()
+                    ->map(fn ($shipment) => [
+                        'label' => 'Shipment · ' . $shipment->shipment_number,
+                        'description' => trim(($shipment->supplier_name ?: 'Tanpa Supplier') . ' | DN ' . ($shipment->delivery_note_number ?: '-') . ' | Status ' . ($shipment->status ?: '-')),
+                        'route' => route('shipments.show', $shipment->id),
+                    ]);
+
+                $supplierPaletteItems = \Illuminate\Support\Facades\DB::table('suppliers')
+                    ->select('id', 'supplier_name', 'supplier_code')
+                    ->orderBy('supplier_name')
+                    ->limit(5)
+                    ->get()
+                    ->map(fn ($supplier) => [
+                        'label' => 'Supplier · ' . $supplier->supplier_name,
+                        'description' => 'Filter supplier ' . ($supplier->supplier_code ?: '-') . ' di Supplier Performance',
+                        'route' => route('supplier-performance.index', ['supplier_id' => $supplier->id]),
+                    ]);
+
+                $dynamicCommandPaletteItems = $dynamicCommandPaletteItems
+                    ->concat($recentPoPaletteItems)
+                    ->concat($recentShipmentPaletteItems)
+                    ->concat($supplierPaletteItems);
+            }
+
+            if ($currentUser?->hasAnyRole(['administrator', 'staff'])) {
+                $itemPaletteItems = \Illuminate\Support\Facades\DB::table('items')
+                    ->select('id', 'item_code', 'item_name')
+                    ->orderBy('item_name')
+                    ->limit(5)
+                    ->get()
+                    ->map(fn ($item) => [
+                        'label' => 'Item · ' . $item->item_code,
+                        'description' => $item->item_name,
+                        'route' => route('items.index', ['q' => $item->item_code]),
+                    ]);
+
+                $dynamicCommandPaletteItems = $dynamicCommandPaletteItems->concat($itemPaletteItems);
+            }
+
+            $commandPaletteItems = $staticCommandPaletteItems
+                ->concat($dynamicCommandPaletteItems)
+                ->unique('label')
+                ->values();
 
             $currentRouteName = request()->route()?->getName() ?? '';
             $shipmentView = (string) (request()->route()?->defaults['view'] ?? request('view', 'worklist'));
@@ -748,6 +898,13 @@
 
             <ul class="navbar-nav ml-auto align-items-center">
                 @auth
+                    <li class="nav-item mr-2">
+                        <button type="button" class="command-palette-trigger" data-toggle="modal" data-target="#commandPaletteModal">
+                            <i class="fas fa-terminal"></i>
+                            <span>Command Palette</span>
+                            <kbd>Ctrl+K</kbd>
+                        </button>
+                    </li>
                     <li class="nav-item mr-3"><span class="bc-chip">{{ $roleLabel }}</span></li>
                 @endauth
                 <li class="nav-item mr-3 small">{{ auth()->user()->nik ?? '-' }} | {{ auth()->user()->email ?? 'Guest' }}</li>
@@ -1045,6 +1202,49 @@
         </footer>
     </div>
 
+    <div class="modal fade" id="commandPaletteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title mb-1">Command Palette</h5>
+                        <div class="doc-meta">Cari modul lebih cepat dengan keyboard shortcut <strong>Ctrl+K</strong>.</div>
+                    </div>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input
+                        type="text"
+                        id="commandPaletteSearch"
+                        class="form-control command-palette-search mb-3"
+                        placeholder="Cari dashboard, monitoring, shipment, receiving, audit..."
+                        autocomplete="off">
+
+                    <div class="command-palette-list" id="commandPaletteList">
+                        @foreach ($commandPaletteItems as $item)
+                            <a href="{{ $item['route'] }}"
+                                class="command-palette-item"
+                                data-command-item
+                                data-keywords="{{ \Illuminate\Support\Str::lower($item['label'] . ' ' . $item['description']) }}">
+                                <div>
+                                    <div class="command-palette-item-label">{{ $item['label'] }}</div>
+                                    <div class="command-palette-item-meta">{{ $item['description'] }}</div>
+                                </div>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        @endforeach
+                    </div>
+
+                    <div class="command-palette-empty mt-3 d-none" id="commandPaletteEmpty">
+                        Tidak ada shortcut yang cocok dengan kata kunci ini.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
@@ -1092,6 +1292,53 @@
                             }
                         }
                     });
+                }
+            });
+
+            const commandPaletteModal = $('#commandPaletteModal');
+            const commandPaletteSearch = $('#commandPaletteSearch');
+            const commandPaletteItems = $('[data-command-item]');
+            const commandPaletteEmpty = $('#commandPaletteEmpty');
+
+            const filterCommandPaletteItems = () => {
+                const query = (commandPaletteSearch.val() || '').toString().trim().toLowerCase();
+                let visibleCount = 0;
+
+                commandPaletteItems.each(function(index) {
+                    const item = $(this);
+                    const keywords = item.data('keywords') || '';
+                    const visible = query === '' || keywords.includes(query);
+                    item.toggleClass('d-none', !visible);
+                    item.toggleClass('is-active', visible && visibleCount === 0);
+
+                    if (visible) {
+                        visibleCount += 1;
+                    }
+                });
+
+                commandPaletteEmpty.toggleClass('d-none', visibleCount !== 0);
+            };
+
+            commandPaletteModal.on('shown.bs.modal', function() {
+                commandPaletteSearch.trigger('focus');
+                filterCommandPaletteItems();
+            });
+
+            commandPaletteModal.on('hidden.bs.modal', function() {
+                commandPaletteSearch.val('');
+                filterCommandPaletteItems();
+            });
+
+            commandPaletteSearch.on('input', filterCommandPaletteItems);
+
+            $(document).on('keydown', function(event) {
+                if ((event.ctrlKey || event.metaKey) && String(event.key).toLowerCase() === 'k') {
+                    event.preventDefault();
+                    commandPaletteModal.modal('show');
+                }
+
+                if (event.key === 'Escape' && commandPaletteModal.hasClass('show')) {
+                    commandPaletteModal.modal('hide');
                 }
             });
         });

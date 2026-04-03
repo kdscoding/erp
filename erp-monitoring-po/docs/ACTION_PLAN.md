@@ -73,6 +73,25 @@ README harus tetap jadi baseline. Jangan biarkan dokumen tertinggal dari kode.
 
 ## Apa Yang Harus Dikerjakan Dalam 2-4 Minggu
 
+### 0. Screen Consolidation & Status Normalization
+
+Target:
+
+- putuskan `Monitoring Hub` sebagai pengganti:
+  - `summary-po`
+  - `summary-item`
+  - sebagian isi `monitoring`
+- sederhanakan `dashboard` agar kembali menjadi executive overview
+- tetapkan status internal sebagai stable code, bukan display string
+- reposisikan `document_terms` menjadi katalog display, bukan source of truth state machine
+
+Hasil yang diharapkan:
+
+- user tidak bingung memilih halaman yang mirip
+- dashboard tidak terlalu ramai
+- status bisnis lebih aman untuk jangka panjang
+- perubahan label tampilan tidak lagi bercampur dengan business logic
+
 ### 1. Refactor Traceability
 
 Target:
@@ -180,6 +199,8 @@ Isi minimum:
 
 ### Dampak tinggi, effort menengah
 
+- screen consolidation monitoring/dashboard
+- status normalization
 - refactor traceability
 - refactor status resolver
 - audit viewer dasar

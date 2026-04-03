@@ -14,6 +14,7 @@ class AuditController extends Controller
         $module = $request->string('module')->toString();
         $actorId = $request->integer('actor_id');
         $action = $request->string('action')->toString();
+        $recordId = $request->integer('record_id');
         $dateFrom = $request->date('date_from')?->format('Y-m-d');
         $dateTo = $request->date('date_to')?->format('Y-m-d');
 
@@ -31,6 +32,7 @@ class AuditController extends Controller
             ->when($module !== '', fn ($query) => $query->where('al.module', $module))
             ->when($actorId, fn ($query) => $query->where('al.user_id', $actorId))
             ->when($action !== '', fn ($query) => $query->where('al.action', $action))
+            ->when($recordId, fn ($query) => $query->where('al.record_id', $recordId))
             ->when($dateFrom, fn ($query) => $query->whereDate('al.created_at', '>=', $dateFrom))
             ->when($dateTo, fn ($query) => $query->whereDate('al.created_at', '<=', $dateTo))
             ->select(
@@ -55,8 +57,14 @@ class AuditController extends Controller
                     ->filter()
                     ->map(fn ($role) => Str::headline($role))
                     ->values();
-                $log->old_summary = $this->summarizeAuditPayload($log->old_values);
-                $log->new_summary = $this->summarizeAuditPayload($log->new_values);
+                $log->old_payload = $this->decodeAuditPayload($log->old_values);
+                $log->new_payload = $this->decodeAuditPayload($log->new_values);
+                $log->old_summary = $this->summarizeAuditPayload($log->old_payload);
+                $log->new_summary = $this->summarizeAuditPayload($log->new_payload);
+                $log->changed_fields = $this->diffAuditKeys($log->old_payload, $log->new_payload);
+                $log->changed_field_count = $log->changed_fields->count();
+                $log->old_pretty_json = $this->prettyAuditPayload($log->old_payload);
+                $log->new_pretty_json = $this->prettyAuditPayload($log->new_payload);
 
                 return $log;
             });
@@ -88,23 +96,33 @@ class AuditController extends Controller
             'module',
             'actorId',
             'action',
+            'recordId',
             'dateFrom',
             'dateTo'
         ));
     }
 
-    private function summarizeAuditPayload(?string $payload): string
+    private function decodeAuditPayload(?string $payload): array
     {
         if (! $payload) {
-            return '-';
+            return [];
         }
 
         $decoded = json_decode($payload, true);
         if (! is_array($decoded) || $decoded === []) {
-            return Str::limit((string) $payload, 100);
+            return ['value' => (string) $payload];
         }
 
-        $segments = collect($decoded)
+        return $decoded;
+    }
+
+    private function summarizeAuditPayload(array $payload): string
+    {
+        if ($payload === []) {
+            return '-';
+        }
+
+        $segments = collect($payload)
             ->map(function ($value, $key) {
                 if (is_array($value)) {
                     $value = collect($value)
@@ -124,5 +142,28 @@ class AuditController extends Controller
             ->implode(' | ');
 
         return Str::limit($segments, 140);
+    }
+
+    private function diffAuditKeys(array $oldPayload, array $newPayload)
+    {
+        $allKeys = collect(array_unique([
+            ...array_keys($oldPayload),
+            ...array_keys($newPayload),
+        ]));
+
+        return $allKeys
+            ->filter(function ($key) use ($oldPayload, $newPayload) {
+                return ($oldPayload[$key] ?? null) !== ($newPayload[$key] ?? null);
+            })
+            ->values();
+    }
+
+    private function prettyAuditPayload(array $payload): string
+    {
+        if ($payload === []) {
+            return '-';
+        }
+
+        return (string) json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 }

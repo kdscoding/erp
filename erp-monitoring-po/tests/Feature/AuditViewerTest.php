@@ -72,9 +72,38 @@ class AuditViewerTest extends TestCase
             ->assertSee('purchase_orders')
             ->assertSee('schedule_update')
             ->assertSee('#44')
+            ->assertSee('Changed Fields')
+            ->assertSee('View Detail')
             ->assertSee('etd_date: 2026-04-01')
             ->assertSee('etd_date: 2026-04-03')
             ->assertDontSee('#10');
+    }
+
+    public function test_audit_viewer_can_filter_by_record_id_and_show_pretty_payload_detail(): void
+    {
+        $admin = $this->makeUserWithRole('administrator', 'Admin Audit');
+
+        DB::table('audit_logs')->insert([
+            'module' => 'goods_receipts',
+            'record_id' => 99,
+            'action' => 'cancel',
+            'old_values' => json_encode(['status' => 'Posted', 'accepted_qty' => 10]),
+            'new_values' => json_encode(['status' => 'Cancelled', 'accepted_qty' => 0, 'cancel_reason' => 'Wrong document']),
+            'user_id' => $admin->id,
+            'ip_address' => '127.0.0.9',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/audit?record_id=99')
+            ->assertOk()
+            ->assertSee('goods_receipts')
+            ->assertSee('#99')
+            ->assertSee('cancel_reason')
+            ->assertSee('Wrong document')
+            ->assertSee('Before Payload')
+            ->assertSee('After Payload');
     }
 
     public function test_staff_cannot_access_audit_viewer(): void
