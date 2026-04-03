@@ -92,6 +92,21 @@ Hasil yang diharapkan:
 - status bisnis lebih aman untuk jangka panjang
 - perubahan label tampilan tidak lagi bercampur dengan business logic
 
+Progress saat ini:
+
+- `dashboard` sudah disederhanakan ke executive overview
+- `monitoring`, `summary-po`, dan `summary-item` sudah mulai dikonsolidasikan ke `Monitoring Hub`
+- route legacy `summary.po` dan `summary.item` masih dipertahankan sementara untuk kompatibilitas
+- `App\Support\DomainStatus` sudah mulai diperkenalkan sebagai lapisan mapping internal code <-> legacy term
+- migration dan schema dasar sekarang sudah mulai menambahkan:
+  - `status_code`
+  - `item_status_code`
+  - `from_status_code`
+  - `to_status_code`
+  - `document_terms.internal_code`
+- seeder status dan write-path transaksi utama mulai menulis legacy term + internal code sekaligus
+- normalisasi penuh query, filter, resolver, dan policy status masih belum selesai
+
 ### 1. Refactor Traceability
 
 Target:

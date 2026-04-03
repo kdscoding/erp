@@ -10,6 +10,21 @@ Dokumen ini harus dibaca bersama:
 - [ACTION_PLAN.md](./ACTION_PLAN.md) sebagai urutan kerja refactor
 - [STATUS_DICTIONARY.md](./STATUS_DICTIONARY.md) sebagai definisi status resmi yang sedang berjalan
 
+## Status Implementasi Saat Ini
+
+Per 2026-04-03, beberapa arah refactor di dokumen ini sudah mulai dieksekusi:
+
+- `dashboard` sudah dipangkas menjadi executive overview yang lebih ringan
+- `Monitoring Hub` sudah mulai menggantikan overlap `monitoring`, `summary-po`, dan `summary-item`
+- `Traceability` mulai digeser menjadi workspace investigasi
+- lapisan kompatibilitas `App\Support\DomainStatus` sudah diperkenalkan untuk memisahkan internal code dari legacy term
+
+Yang belum selesai:
+
+- tabel transaksi masih banyak menyimpan legacy term
+- resolver dan policy status belum sepenuhnya memakai internal code
+- query/report lama masih perlu dibersihkan agar benar-benar mengikuti struktur layar baru
+
 ---
 
 ## 1. Ringkasan Audit Repo

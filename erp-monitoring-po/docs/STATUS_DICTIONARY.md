@@ -8,9 +8,23 @@ Dokumen ini adalah kamus status resmi sistem. Gunakan dokumen ini untuk menyamak
 - label tampilan bisa berbeda karena diatur di `document_terms`
 - logika bisnis mengikuti `code`, bukan label display
 
+## Catatan Transisi Saat Ini
+
+- data transaksi yang aktif di repo ini masih banyak memakai legacy term seperti `Open`, `Late`, `Draft`, dan `Cancelled`
+- arah refactor resmi ke depan adalah memindahkan logika ke stable internal code, lalu memakai `document_terms` hanya untuk display
+- mapping transisi ini sekarang dipusatkan di `App\Support\DomainStatus`
+
+Format yang harus dipahami sementara:
+
+- `internal code` = target stabil untuk domain logic
+- `legacy term` = nilai string yang masih banyak tersimpan di tabel dan dipakai oleh flow lama
+- `document_terms.label` = bahasa tampilan di UI
+
 ## Purchase Order Header
 
-### `PO Issued`
+### `po_issued`
+
+Legacy term saat ini: `PO Issued`
 
 Makna:
 
@@ -26,7 +40,9 @@ Sifat:
 
 - bukan final
 
-### `Open`
+### `po_open`
+
+Legacy term saat ini: `Open`
 
 Makna:
 
@@ -44,7 +60,9 @@ Sifat:
 
 - bukan final
 
-### `Late`
+### `po_late`
+
+Legacy term saat ini: `Late`
 
 Makna:
 
@@ -54,7 +72,9 @@ Sifat:
 
 - bukan final
 
-### `Closed`
+### `po_closed`
+
+Legacy term saat ini: `Closed`
 
 Makna:
 
@@ -69,7 +89,9 @@ Sifat:
 
 - final
 
-### `Cancelled`
+### `po_cancelled`
+
+Legacy term saat ini: `Cancelled`
 
 Makna:
 
@@ -82,7 +104,9 @@ Sifat:
 
 ## Purchase Order Item
 
-### `Waiting`
+### `item_waiting`
+
+Legacy term saat ini: `Waiting`
 
 Makna:
 
@@ -94,7 +118,9 @@ Sifat:
 
 - bukan final
 
-### `Confirmed`
+### `item_confirmed`
+
+Legacy term saat ini: `Confirmed`
 
 Makna:
 
@@ -105,7 +131,9 @@ Sifat:
 
 - bukan final
 
-### `Late`
+### `item_late`
+
+Legacy term saat ini: `Late`
 
 Makna:
 
@@ -121,7 +149,9 @@ Sifat:
 
 - bukan final
 
-### `Partial`
+### `item_partial`
+
+Legacy term saat ini: `Partial`
 
 Makna:
 
@@ -132,7 +162,9 @@ Sifat:
 
 - bukan final
 
-### `Closed`
+### `item_closed`
+
+Legacy term saat ini: `Closed`
 
 Makna:
 
@@ -143,7 +175,9 @@ Sifat:
 
 - final
 
-### `Force Closed`
+### `item_force_closed`
+
+Legacy term saat ini: `Force Closed`
 
 Makna:
 
@@ -155,7 +189,9 @@ Sifat:
 
 - final
 
-### `Cancelled`
+### `item_cancelled`
+
+Legacy term saat ini: `Cancelled`
 
 Makna:
 
@@ -168,7 +204,9 @@ Sifat:
 
 ## Shipment
 
-### `Draft`
+### `shipment_draft`
+
+Legacy term saat ini: `Draft`
 
 Makna:
 
@@ -179,7 +217,9 @@ Sifat:
 
 - bukan final
 
-### `Shipped`
+### `shipment_shipped`
+
+Legacy term saat ini: `Shipped`
 
 Makna:
 
@@ -190,7 +230,9 @@ Sifat:
 
 - bukan final
 
-### `Partial Received`
+### `shipment_partial_received`
+
+Legacy term saat ini: `Partial Received`
 
 Makna:
 
@@ -201,7 +243,9 @@ Sifat:
 
 - bukan final
 
-### `Received`
+### `shipment_received`
+
+Legacy term saat ini: `Received`
 
 Makna:
 
@@ -211,7 +255,9 @@ Sifat:
 
 - final
 
-### `Cancelled`
+### `shipment_cancelled`
+
+Legacy term saat ini: `Cancelled`
 
 Makna:
 
@@ -223,7 +269,9 @@ Sifat:
 
 ## Goods Receipt
 
-### `Posted`
+### `gr_posted`
+
+Legacy term saat ini: `Posted`
 
 Makna:
 
@@ -233,7 +281,9 @@ Sifat:
 
 - bukan final mutlak karena masih bisa dibatalkan
 
-### `Cancelled`
+### `gr_cancelled`
+
+Legacy term saat ini: `Cancelled`
 
 Makna:
 
@@ -248,74 +298,76 @@ Sifat:
 
 ## PO Header
 
-- create PO -> `PO Issued`
-- ada progres item/ETD/shipment/partial -> `Open`
-- ada item overdue -> `Late`
-- semua item aktif final -> `Closed`
-- cancel header atau semua item batal -> `Cancelled`
+- create PO -> `po_issued`
+- ada progres item/ETD/shipment/partial -> `po_open`
+- ada item overdue -> `po_late`
+- semua item aktif final -> `po_closed`
+- cancel header atau semua item batal -> `po_cancelled`
 
 ## PO Item
 
-- create line item -> `Waiting`
-- ETD diisi -> `Confirmed`
-- ETD lewat dan outstanding masih ada -> `Late`
-- receiving sebagian -> `Partial`
-- qty terpenuhi -> `Closed`
-- force close manual -> `Force Closed`
-- cancel item -> `Cancelled`
+- create line item -> `item_waiting`
+- ETD diisi -> `item_confirmed`
+- ETD lewat dan outstanding masih ada -> `item_late`
+- receiving sebagian -> `item_partial`
+- qty terpenuhi -> `item_closed`
+- force close manual -> `item_force_closed`
+- cancel item -> `item_cancelled`
 
 ## Shipment
 
-- create shipment -> `Draft`
-- mark shipped -> `Shipped`
-- receiving sebagian -> `Partial Received`
-- receiving penuh -> `Received`
-- cancel draft -> `Cancelled`
+- create shipment -> `shipment_draft`
+- mark shipped -> `shipment_shipped`
+- receiving sebagian -> `shipment_partial_received`
+- receiving penuh -> `shipment_received`
+- cancel draft -> `shipment_cancelled`
 
 ## Goods Receipt
 
-- posting receiving -> `Posted`
-- cancel receiving -> `Cancelled`
+- posting receiving -> `gr_posted`
+- cancel receiving -> `gr_cancelled`
 
 ## Status Final dan Non-Final
 
 ### Final
 
 - PO:
-  - `Closed`
-  - `Cancelled`
+  - `po_closed`
+  - `po_cancelled`
 - PO Item:
-  - `Closed`
-  - `Force Closed`
-  - `Cancelled`
+  - `item_closed`
+  - `item_force_closed`
+  - `item_cancelled`
 - Shipment:
-  - `Received`
-  - `Cancelled`
+  - `shipment_received`
+  - `shipment_cancelled`
 - GR:
-  - `Cancelled`
+  - `gr_cancelled`
 
 ### Non-Final
 
 - PO:
-  - `PO Issued`
-  - `Open`
-  - `Late`
+  - `po_issued`
+  - `po_open`
+  - `po_late`
 - PO Item:
-  - `Waiting`
-  - `Confirmed`
-  - `Late`
-  - `Partial`
+  - `item_waiting`
+  - `item_confirmed`
+  - `item_late`
+  - `item_partial`
 - Shipment:
-  - `Draft`
-  - `Shipped`
-  - `Partial Received`
+  - `shipment_draft`
+  - `shipment_shipped`
+  - `shipment_partial_received`
 - GR:
-  - `Posted`
+  - `gr_posted`
 
 ## Catatan Penting
 
 - status PO header adalah status monitoring operasional
 - status item lebih penting untuk membaca kondisi aktual line item
+- selama migrasi, legacy term masih boleh muncul di tabel lama, badge, atau filter lama
+- internal code harus diperlakukan sebagai target source of truth baru
 - jangan mengubah arti status tanpa update:
   - kode
   - test

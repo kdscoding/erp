@@ -22,10 +22,17 @@ class TermCatalog
 
         $cacheKey = $groupKey.'|'.$code;
         if (! array_key_exists($cacheKey, self::$labels)) {
-            self::$labels[$cacheKey] = DB::table('document_terms')
+            $query = DB::table('document_terms')
                 ->where('group_key', $groupKey)
-                ->where('code', $code)
-                ->value('label');
+                ->where(function ($inner) use ($code) {
+                    $inner->where('code', $code);
+
+                    if (Schema::hasColumn('document_terms', 'internal_code')) {
+                        $inner->orWhere('internal_code', $code);
+                    }
+                });
+
+            self::$labels[$cacheKey] = $query->value('label');
         }
 
         return self::$labels[$cacheKey] ?: ($fallback ?? $code);

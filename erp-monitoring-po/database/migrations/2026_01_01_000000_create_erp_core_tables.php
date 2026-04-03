@@ -101,7 +101,8 @@ return new class extends Migration {
                 $table->foreignId('warehouse_id')->nullable()->constrained('warehouses');
                 $table->string('currency', 10)->default('IDR');
                 $table->text('notes')->nullable();
-                $table->string('status')->default('Draft');
+                $table->string('status')->default('PO Issued');
+                $table->string('status_code', 100)->default('po_issued')->index();
                 $table->timestamp('sent_to_supplier_at')->nullable();
                 $table->foreignId('approved_by')->nullable()->constrained('users');
                 $table->timestamp('approved_at')->nullable();
@@ -127,6 +128,7 @@ return new class extends Migration {
                 $table->date('etd_date')->nullable();
                 $table->date('eta_date')->nullable();
                 $table->string('item_status', 50)->default('Waiting');
+                $table->string('item_status_code', 100)->default('item_waiting')->index();
                 $table->text('cancel_reason')->nullable();
                 $table->text('remarks')->nullable();
                 $table->timestamps();
@@ -143,7 +145,8 @@ return new class extends Migration {
                 $table->date('eta_date')->nullable();
                 $table->string('delivery_note_number')->nullable();
                 $table->text('supplier_remark')->nullable();
-                $table->string('status')->default('Shipped');
+                $table->string('status')->default('Draft');
+                $table->string('status_code', 100)->default('shipment_draft')->index();
                 $table->foreignId('created_by')->nullable()->constrained('users');
                 $table->timestamps();
             });
@@ -174,6 +177,7 @@ return new class extends Migration {
                 $table->string('document_number')->nullable();
                 $table->text('remark')->nullable();
                 $table->string('status')->default('Posted');
+                $table->string('status_code', 100)->default('gr_posted')->index();
                 $table->text('cancel_reason')->nullable();
                 $table->foreignId('cancelled_by')->nullable()->constrained('users');
                 $table->timestamp('cancelled_at')->nullable();
@@ -201,7 +205,9 @@ return new class extends Migration {
                 $table->id();
                 $table->foreignId('purchase_order_id')->constrained('purchase_orders')->cascadeOnDelete();
                 $table->string('from_status')->nullable();
+                $table->string('from_status_code', 100)->nullable();
                 $table->string('to_status');
+                $table->string('to_status_code', 100)->nullable();
                 $table->foreignId('changed_by')->nullable()->constrained('users');
                 $table->timestamp('changed_at')->nullable();
                 $table->text('note')->nullable();
@@ -250,6 +256,7 @@ return new class extends Migration {
                 $table->id();
                 $table->string('group_key', 100);
                 $table->string('code', 100);
+                $table->string('internal_code', 100)->nullable();
                 $table->string('label', 150);
                 $table->text('description')->nullable();
                 $table->boolean('is_active')->default(true);

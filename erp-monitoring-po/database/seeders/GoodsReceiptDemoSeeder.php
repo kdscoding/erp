@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Support\DocumentTermCodes;
+use App\Support\DomainStatus;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -53,10 +54,9 @@ class GoodsReceiptDemoSeeder extends Seeder
         'warehouse_id' => $warehouseId,
         'document_number' => $shipment->delivery_note_number,
         'remark' => 'Demo receiving ' . $suffix,
-        'status' => DocumentTermCodes::GR_POSTED,
         'created_at' => $now,
         'updated_at' => $now,
-      ]);
+      ] + DomainStatus::payload(DomainStatus::GROUP_GOODS_RECEIPT_STATUS, 'status', DocumentTermCodes::GR_POSTED));
 
       DB::table('goods_receipt_items')->insert([
         'goods_receipt_id' => $grId,

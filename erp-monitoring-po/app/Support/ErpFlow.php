@@ -36,7 +36,9 @@ class ErpFlow
         DB::table('po_status_histories')->insert([
             'purchase_order_id' => $poId,
             'from_status' => $from,
+            'from_status_code' => DomainStatus::internalCode(DomainStatus::GROUP_PO_STATUS, $from),
             'to_status' => $to,
+            'to_status_code' => DomainStatus::internalCode(DomainStatus::GROUP_PO_STATUS, $to),
             'changed_by' => $userId,
             'changed_at' => now(),
             'note' => $note,
@@ -124,11 +126,10 @@ class ErpFlow
 
         if ($oldStatus !== $newStatus) {
             DB::table('purchase_orders')->where('id', $poId)->update([
-                'status' => $newStatus,
                 'eta_date' => $nextEtaDate,
                 'updated_at' => now(),
                 'updated_by' => $userId,
-            ]);
+            ] + DomainStatus::payload(DomainStatus::GROUP_PO_STATUS, 'status', $newStatus));
 
             self::pushPoStatus(
                 $poId,

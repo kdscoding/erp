@@ -4,6 +4,8 @@ namespace App\Support;
 
 class DocumentTermCodes
 {
+  // Legacy display-oriented values kept for backward compatibility.
+  // New domain-facing code should prefer App\Support\DomainStatus.
   public const GROUP_PO_STATUS = 'po_status';
   public const GROUP_PO_ITEM_STATUS = 'po_item_status';
   public const GROUP_SHIPMENT_STATUS = 'shipment_status';

@@ -39,6 +39,7 @@ Catatan penting:
 
 - route `summary.po` dan `summary.item` masih ada untuk kompatibilitas sementara
 - tetapi arah produk ke depan adalah mengonsolidasikan layar-layar tersebut ke `Monitoring Hub`
+- `Traceability` sedang digeser menjadi workspace investigasi, bukan report agregat kedua
 
 ## Teknologi dan Dependensi Utama
 
@@ -172,6 +173,7 @@ Catatan:
 
 - hindari `migrate:fresh` jika data transaksi lama masih dipakai
 - `DocumentTermSeeder` penting karena status tampilan dan badge mengambil data dari `document_terms`
+- migration status terbaru juga menambahkan dan mengisi kolom internal code pada transaksi, histori, dan term catalog
 
 ## Konfigurasi Environment Dasar
 
@@ -301,18 +303,34 @@ Penting:
 - perubahan `document_terms` hanya mengubah label dan tampilan
 - kode internal status tidak berubah
 - flow bisnis tetap mengikuti nilai `code`, bukan label display
+- repo saat ini masih dalam fase transisi; beberapa tabel transaksi masih menyimpan legacy string, tetapi lapisan kompatibilitas internal mulai dipisahkan melalui `App\Support\DomainStatus`
+- transaksi baru sekarang mulai menyimpan kolom `status_code` / `item_status_code` di samping legacy term untuk jalur migrasi bertahap
 
 ## Status Resmi Sistem
 
+Catatan transisi:
+
+- baseline transaksi aktif masih banyak memakai legacy term seperti `Open`, `Late`, `Draft`, dan `Cancelled`
+- arah refactor resmi ke depan adalah memakai stable internal code seperti `po_open`, `item_partial`, `shipment_draft`, dan `gr_posted`
+- mapping antara internal code dan display term sekarang mulai dipusatkan di `App\Support\DomainStatus`
+
 ### PO Header
 
-Kode status aktif:
+Legacy term yang masih aktif di data:
 
 - `PO Issued`
 - `Open`
 - `Late`
 - `Closed`
 - `Cancelled`
+
+Target internal code:
+
+- `po_issued`
+- `po_open`
+- `po_late`
+- `po_closed`
+- `po_cancelled`
 
 Makna:
 
@@ -338,7 +356,7 @@ Catatan penting:
 
 ### PO Item
 
-Kode status item aktif:
+Legacy term yang masih aktif di data:
 
 - `Waiting`
 - `Confirmed`
@@ -347,6 +365,16 @@ Kode status item aktif:
 - `Closed`
 - `Force Closed`
 - `Cancelled`
+
+Target internal code:
+
+- `item_waiting`
+- `item_confirmed`
+- `item_late`
+- `item_partial`
+- `item_closed`
+- `item_force_closed`
+- `item_cancelled`
 
 Makna operasional:
 
@@ -379,13 +407,21 @@ Catatan penting:
 
 ### Shipment
 
-Kode status shipment aktif:
+Legacy term yang masih aktif di data:
 
 - `Draft`
 - `Shipped`
 - `Partial Received`
 - `Received`
 - `Cancelled`
+
+Target internal code:
+
+- `shipment_draft`
+- `shipment_shipped`
+- `shipment_partial_received`
+- `shipment_received`
+- `shipment_cancelled`
 
 Makna:
 
@@ -404,10 +440,15 @@ Makna:
 
 ### Goods Receipt
 
-Kode status GR aktif:
+Legacy term yang masih aktif di data:
 
 - `Posted`
 - `Cancelled`
+
+Target internal code:
+
+- `gr_posted`
+- `gr_cancelled`
 
 Makna:
 
@@ -754,21 +795,17 @@ Shipment `Cancelled` tidak lagi memblokir reuse nomor tersebut.
 
 ### Dashboard
 
-Dashboard memuat ringkasan outstanding dan risiko:
+Dashboard sekarang diposisikan sebagai executive overview, bukan report detail penuh.
+
+Isi utama yang dipertahankan:
 
 - open PO
-- late PO
+- at-risk items
 - shipment hari ini
 - receiving hari ini
-- status breakdown item
-- supplier risk
-- supplier ETD health
-- supplier follow-up
-- list open PO
-- recent receiving
-- at-risk item
-- on-time item
-- item monitoring priority
+- top delayed suppliers
+- action center
+- shortcut ke monitoring/report utama
 
 Filter dashboard:
 
@@ -776,35 +813,35 @@ Filter dashboard:
 - tanggal PO dari
 - tanggal PO sampai
 
-### Summary Outstanding PO
+### Monitoring Hub
 
-Menampilkan agregasi outstanding per header PO:
+`Monitoring Hub` adalah layar utama monitoring outstanding dan menggantikan overlap antara:
 
-- jumlah item outstanding
-- total ordered
-- total received
-- total outstanding
-- ETA
+- `Summary Outstanding PO`
+- `Summary Outstanding Item`
+- sebagian isi `Monitoring PO` lama
 
-Mendukung export Excel.
+Mode utama:
 
-### Summary Outstanding Item
+- `PO View`
+- `Item View`
 
-Menampilkan outstanding per item:
+Isi utama:
 
-- PO
-- supplier
-- item
-- ordered
-- received
-- outstanding
-- ETD
+- filter tunggal
+- summary chips tunggal
+- tabel utama sesuai mode
+- link drill-down ke detail PO
 
 Mendukung export Excel.
+
+### Summary Outstanding PO / Item
+
+Route lama masih dipertahankan untuk kompatibilitas, tetapi secara produk keduanya bukan lagi halaman report utama. Arah resminya adalah redirect atau transisi penuh ke `Monitoring Hub`.
 
 ### Monitoring PO
 
-Halaman daftar PO menampilkan monitoring purchase order dan mendukung export Excel.
+Menu ini sekarang secara UX diposisikan sebagai `Monitoring Hub`, walau nama route historis masih dipertahankan di beberapa bagian kode.
 
 Halaman detail PO menampilkan:
 
@@ -821,21 +858,12 @@ Halaman detail PO menampilkan:
 
 ### Traceability
 
-Halaman traceability saat ini menampilkan ringkasan per item PO:
+Halaman traceability sedang diarahkan menjadi workspace investigasi.
 
-- nomor PO
-- tanggal PO
-- supplier
-- item
-- ETD
-- received vs ordered
-- status item
-- timeline ringkas:
-  - tanggal PO
-  - ETD
-  - first receipt date
-  - last receipt date
-  - jumlah receipt
+Struktur target yang sekarang mulai dipakai:
+
+- panel kiri untuk hasil pencarian atau daftar PO
+- panel kanan untuk timeline event dan detail per item
 
 Filter traceability saat ini:
 
@@ -843,9 +871,8 @@ Filter traceability saat ini:
 
 Catatan:
 
-- traceability saat ini masih berupa ringkasan PO-item ke receiving
-- shipment belum ditampilkan detail penuh di halaman traceability
-- detail tracking shipment dan GR yang lebih lengkap ada di halaman detail PO
+- detail tracking shipment dan GR paling lengkap masih ada di halaman detail PO
+- traceability akan terus digeser dari report agregat menjadi layar investigasi
 
 ## Audit dan Histori
 
@@ -939,12 +966,13 @@ Coverage feature test yang sudah terlihat:
 
 Jika README ini dipakai sebagai dasar SOP:
 
-- gunakan istilah status internal apa adanya
+- bedakan dengan tegas antara legacy term yang masih tersimpan di data dan internal code target refactor
 - pisahkan antara:
   - status internal
   - label display dari `document_terms`
 - pakai halaman detail PO sebagai acuan utama untuk tracking lengkap
 - pakai receiving history sebagai acuan reversal transaksi
+- jangan jadikan `summary-po` dan `summary-item` sebagai referensi UX utama baru
 
 Jika ingin refactor besar:
 

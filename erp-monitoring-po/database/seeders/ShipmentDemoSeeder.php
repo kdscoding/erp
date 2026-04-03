@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Support\DocumentTermCodes;
+use App\Support\DomainStatus;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -51,10 +52,9 @@ class ShipmentDemoSeeder extends Seeder
         'invoice_date' => now()->subDays(2)->toDateString(),
         'invoice_currency' => 'IDR',
         'supplier_remark' => 'Demo shipment ' . $suffix,
-        'status' => $shipmentStatus,
         'created_at' => $now,
         'updated_at' => $now,
-      ]);
+      ] + DomainStatus::payload(DomainStatus::GROUP_SHIPMENT_STATUS, 'status', $shipmentStatus));
 
       DB::table('shipment_items')->insert([
         'shipment_id' => $shipmentId,

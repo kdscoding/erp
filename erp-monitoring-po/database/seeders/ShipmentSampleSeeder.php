@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Support\DocumentTermCodes;
+use App\Support\DomainStatus;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -146,7 +147,7 @@ class ShipmentSampleSeeder extends Seeder
                     'cancel_reason' => $sample['po_status'] === DocumentTermCodes::PO_CANCELLED ? 'Demo cancelled PO' : null,
                     'created_at' => $now,
                     'updated_at' => $now,
-                ]);
+                ] + DomainStatus::payload(DomainStatus::GROUP_PO_STATUS, 'status', $sample['po_status']));
 
                 $itemStatus = match ($sample['po_status']) {
                     DocumentTermCodes::PO_CANCELLED => DocumentTermCodes::ITEM_CANCELLED,
@@ -176,12 +177,14 @@ class ShipmentSampleSeeder extends Seeder
                     'remarks' => 'Demo line ' . $sample['suffix'],
                     'created_at' => $now,
                     'updated_at' => $now,
-                ]);
+                ] + DomainStatus::payload(DomainStatus::GROUP_PO_ITEM_STATUS, 'item_status', $itemStatus));
 
                 DB::table('po_status_histories')->insert([
                     'purchase_order_id' => $poId,
                     'from_status' => null,
                     'to_status' => $sample['po_status'],
+                    'from_status_code' => null,
+                    'to_status_code' => DomainStatus::internalCode(DomainStatus::GROUP_PO_STATUS, $sample['po_status']),
                     'changed_by' => null,
                     'changed_at' => $now,
                     'note' => 'Seeded demo data',
@@ -202,10 +205,9 @@ class ShipmentSampleSeeder extends Seeder
                         'invoice_date' => now()->subDays(max(1, $sample['days_ago_po'] - 1))->toDateString(),
                         'invoice_currency' => 'IDR',
                         'supplier_remark' => 'Demo shipment ' . $sample['suffix'],
-                        'status' => $sample['shipment_status'],
                         'created_at' => $now,
                         'updated_at' => $now,
-                    ]);
+                    ] + DomainStatus::payload(DomainStatus::GROUP_SHIPMENT_STATUS, 'status', $sample['shipment_status']));
 
                     $shipmentItemId = DB::table('shipment_items')->insertGetId([
                         'shipment_id' => $shipmentId,
@@ -230,10 +232,9 @@ class ShipmentSampleSeeder extends Seeder
                             'warehouse_id' => $warehouseId,
                             'document_number' => 'SJ-DEMO-' . $sample['suffix'],
                             'remark' => 'Demo receiving ' . $sample['suffix'],
-                            'status' => DocumentTermCodes::GR_POSTED,
                             'created_at' => $now,
                             'updated_at' => $now,
-                        ]);
+                        ] + DomainStatus::payload(DomainStatus::GROUP_GOODS_RECEIPT_STATUS, 'status', DocumentTermCodes::GR_POSTED));
 
                         DB::table('goods_receipt_items')->insert([
                             'goods_receipt_id' => $grId,

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Support\DocumentTermCodes;
+use App\Support\DomainStatus;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -54,7 +55,7 @@ class PurchaseOrderDemoSeeder extends Seeder
         'cancel_reason' => $sample['status'] === DocumentTermCodes::PO_CANCELLED ? 'Demo cancelled PO' : null,
         'created_at' => $now,
         'updated_at' => $now,
-      ]);
+      ] + DomainStatus::payload(DomainStatus::GROUP_PO_STATUS, 'status', $sample['status']));
 
       $itemStatus = match ($sample['status']) {
         DocumentTermCodes::PO_CANCELLED => DocumentTermCodes::ITEM_CANCELLED,
@@ -80,12 +81,14 @@ class PurchaseOrderDemoSeeder extends Seeder
         'remarks' => 'Demo item PO ' . $sample['suffix'],
         'created_at' => $now,
         'updated_at' => $now,
-      ]);
+      ] + DomainStatus::payload(DomainStatus::GROUP_PO_ITEM_STATUS, 'item_status', $itemStatus));
 
       DB::table('po_status_histories')->insert([
         'purchase_order_id' => $poId,
         'from_status' => null,
         'to_status' => $sample['status'],
+        'from_status_code' => null,
+        'to_status_code' => DomainStatus::internalCode(DomainStatus::GROUP_PO_STATUS, $sample['status']),
         'changed_by' => null,
         'changed_at' => $now,
         'note' => 'Seeded demo data',

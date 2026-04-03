@@ -21,9 +21,23 @@ Route::get('/', fn() => redirect()->route('dashboard'));
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
-    Route::get('/summary/po', [DashboardController::class, 'summaryPo'])->name('summary.po');
+    Route::get('/summary/po', function (\Illuminate\Http\Request $request) {
+        return redirect()->route('monitoring.index', array_filter([
+            'supplier_id' => $request->query('supplier_id'),
+            'date_from' => $request->query('date_from'),
+            'date_to' => $request->query('date_to'),
+            'mode' => 'po',
+        ]));
+    })->name('summary.po');
     Route::get('/summary/po/export-excel', [DashboardController::class, 'exportSummaryPoExcel'])->name('summary.po.export-excel');
-    Route::get('/summary/item', [DashboardController::class, 'summaryItem'])->name('summary.item');
+    Route::get('/summary/item', function (\Illuminate\Http\Request $request) {
+        return redirect()->route('monitoring.index', array_filter([
+            'supplier_id' => $request->query('supplier_id'),
+            'date_from' => $request->query('date_from'),
+            'date_to' => $request->query('date_to'),
+            'mode' => 'item',
+        ]));
+    })->name('summary.item');
     Route::get('/summary/item/export-excel', [DashboardController::class, 'exportSummaryItemExcel'])->name('summary.item.export-excel');
     Route::get('/monitoring', [DashboardController::class, 'monitoring'])->name('monitoring.index');
     Route::get('/monitoring/export-excel', [DashboardController::class, 'exportMonitoringExcel'])->name('monitoring.export-excel');

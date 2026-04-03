@@ -15,8 +15,14 @@
 
     $classes = \App\Support\DocumentTermStatus::badgeClasses($group, $status, 'bg-secondary text-white');
     $label = \App\Support\DocumentTermStatus::label($group, $status, $status !== '' ? $status : '-');
+    $internalCode = \App\Support\DocumentTermStatus::internalCode($group, $status);
+    $legacyValue = \App\Support\DocumentTermStatus::legacyValue($group, $status);
 @endphp
 
-<span {{ $attributes->merge(['class' => 'badge ' . $classes]) }}>
+<span
+    data-status-code="{{ $internalCode ?? '' }}"
+    data-status-term="{{ $legacyValue ?? '' }}"
+    {{ $attributes->merge(['class' => 'badge ' . $classes]) }}
+>
     {{ $label }}
 </span>

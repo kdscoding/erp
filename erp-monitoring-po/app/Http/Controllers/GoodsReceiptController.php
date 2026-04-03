@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Queries\Receiving\ReceivingHistoryQuery;
 use App\Queries\Receiving\ShipmentReceivingQuery;
 use App\Support\DocumentTermCodes;
+use App\Support\DomainStatus;
 use App\Support\ErpFlow;
 use App\Support\PurchaseOrderItemStatusResolver;
 use Illuminate\Http\RedirectResponse;
@@ -155,9 +156,8 @@ class GoodsReceiptController extends Controller
                 DB::table('purchase_order_items')->where('id', $poItem->id)->update([
                     'received_qty' => $newPoReceived,
                     'outstanding_qty' => $newOutstanding,
-                    'item_status' => $newItemStatus,
                     'updated_at' => now(),
-                ]);
+                ] + DomainStatus::payload(DomainStatus::GROUP_PO_ITEM_STATUS, 'item_status', $newItemStatus));
 
                 if ($shipmentItem) {
                     DB::table('shipment_items')->where('id', $shipmentItem->id)->update([
@@ -182,12 +182,11 @@ class GoodsReceiptController extends Controller
             }
 
             DB::table('goods_receipts')->where('id', $receipt->id)->update([
-                'status' => DocumentTermCodes::GR_CANCELLED,
                 'cancel_reason' => $validated['cancel_reason'],
                 'cancelled_by' => optional($request->user())->id,
                 'cancelled_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ] + DomainStatus::payload(DomainStatus::GROUP_GOODS_RECEIPT_STATUS, 'status', DocumentTermCodes::GR_CANCELLED));
 
             ErpFlow::audit('goods_receipts', (int) $receipt->id, 'cancel', $receipt, [
                 'status' => DocumentTermCodes::GR_CANCELLED,
@@ -302,10 +301,9 @@ class GoodsReceiptController extends Controller
                         'received_by' => optional($request->user())->id,
                         'document_number' => $v['document_number'],
                         'remark' => $v['note'] ?? null,
-                        'status' => DocumentTermCodes::GR_POSTED,
                         'created_at' => now(),
                         'updated_at' => now(),
-                    ]);
+                    ] + DomainStatus::payload(DomainStatus::GROUP_GOODS_RECEIPT_STATUS, 'status', DocumentTermCodes::GR_POSTED));
                 }
 
                 DB::table('goods_receipt_items')->insert([
@@ -327,13 +325,16 @@ class GoodsReceiptController extends Controller
                 DB::table('purchase_order_items')->where('id', $poItem->id)->update([
                     'received_qty' => $newReceived,
                     'outstanding_qty' => $newOutstanding,
-                    'item_status' => $purchaseOrderItemStatusResolver->resolve(
+                    'updated_at' => now(),
+                ] + DomainStatus::payload(
+                    DomainStatus::GROUP_PO_ITEM_STATUS,
+                    'item_status',
+                    $purchaseOrderItemStatusResolver->resolve(
                         $newReceived,
                         $newOutstanding,
                         $poItem->etd_date
-                    ),
-                    'updated_at' => now(),
-                ]);
+                    )
+                ));
 
                 DB::table('shipment_items')->where('id', $shipmentItemId)->update([
                     'received_qty' => (float) $item->shipment_received_qty + $receivedQty,
@@ -440,10 +441,9 @@ class GoodsReceiptController extends Controller
                 'received_by' => optional($request->user())->id,
                 'document_number' => $v['document_number'],
                 'remark' => $v['note'] ?? null,
-                'status' => DocumentTermCodes::GR_POSTED,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ] + DomainStatus::payload(DomainStatus::GROUP_GOODS_RECEIPT_STATUS, 'status', DocumentTermCodes::GR_POSTED));
 
             $acceptedQty = $v['accepted_qty'] ?? $v['received_qty'];
             $variance = (float) $poItem->ordered_qty - (float) $v['received_qty'];
@@ -480,13 +480,16 @@ class GoodsReceiptController extends Controller
             DB::table('purchase_order_items')->where('id', $poItem->id)->update([
                 'received_qty' => $newReceived,
                 'outstanding_qty' => $newOutstanding,
-                'item_status' => $purchaseOrderItemStatusResolver->resolve(
+                'updated_at' => now(),
+            ] + DomainStatus::payload(
+                DomainStatus::GROUP_PO_ITEM_STATUS,
+                'item_status',
+                $purchaseOrderItemStatusResolver->resolve(
                     $newReceived,
                     $newOutstanding,
                     $poItem->etd_date
-                ),
-                'updated_at' => now(),
-            ]);
+                )
+            ));
 
             DB::table('shipment_items')->where('id', $shipmentItem->id)->update([
                 'received_qty' => (float) $shipmentItem->received_qty + (float) $v['received_qty'],
@@ -528,8 +531,7 @@ class GoodsReceiptController extends Controller
         }
 
         DB::table('shipments')->where('id', $shipmentId)->update([
-            'status' => $shipmentStatus,
             'updated_at' => now(),
-        ]);
+        ] + DomainStatus::payload(DomainStatus::GROUP_SHIPMENT_STATUS, 'status', $shipmentStatus));
     }
 }

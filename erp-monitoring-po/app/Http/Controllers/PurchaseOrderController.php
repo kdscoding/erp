@@ -6,6 +6,7 @@ use App\Actions\CreatePurchaseOrder;
 use App\Queries\PurchaseOrders\PurchaseOrderDetailQuery;
 use App\Queries\PurchaseOrders\PurchaseOrderIndexQuery;
 use App\Support\DocumentTermCodes;
+use App\Support\DomainStatus;
 use App\Support\PurchaseOrderItemStatusResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -132,10 +133,9 @@ class PurchaseOrderController extends Controller
 
         DB::table('purchase_order_items')->where('id', $itemId)->update([
             'etd_date' => $v['etd_date'] ?? null,
-            'item_status' => $newStatus,
             'remarks' => $v['remarks'] ?? DB::table('purchase_order_items')->where('id', $itemId)->value('remarks'),
             'updated_at' => now(),
-        ]);
+        ] + DomainStatus::payload(DomainStatus::GROUP_PO_ITEM_STATUS, 'item_status', $newStatus));
 
         \App\Support\ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
 
@@ -212,9 +212,8 @@ class PurchaseOrderController extends Controller
 
                 DB::table('purchase_order_items')->where('id', $item->id)->update([
                     'etd_date' => $targetDate,
-                    'item_status' => $newStatus,
                     'updated_at' => now(),
-                ]);
+                ] + DomainStatus::payload(DomainStatus::GROUP_PO_ITEM_STATUS, 'item_status', $newStatus));
 
                 \App\Support\ErpFlow::audit(
                     'purchase_order_items',
@@ -262,11 +261,10 @@ class PurchaseOrderController extends Controller
             }
 
             DB::table('purchase_order_items')->where('id', $itemId)->update([
-                'item_status' => DocumentTermCodes::ITEM_CANCELLED,
                 'cancel_reason' => $validated['cancel_reason'],
                 'outstanding_qty' => 0,
                 'updated_at' => now(),
-            ]);
+            ] + DomainStatus::payload(DomainStatus::GROUP_PO_ITEM_STATUS, 'item_status', DocumentTermCodes::ITEM_CANCELLED));
 
             \App\Support\ErpFlow::audit(
                 'purchase_order_items',
@@ -306,11 +304,10 @@ class PurchaseOrderController extends Controller
             }
 
             DB::table('purchase_order_items')->where('id', $itemId)->update([
-                'item_status' => DocumentTermCodes::ITEM_FORCE_CLOSED,
                 'cancel_reason' => '[FORCE CLOSE] ' . $validated['cancel_reason'],
                 'outstanding_qty' => 0,
                 'updated_at' => now(),
-            ]);
+            ] + DomainStatus::payload(DomainStatus::GROUP_PO_ITEM_STATUS, 'item_status', DocumentTermCodes::ITEM_FORCE_CLOSED));
 
             \App\Support\ErpFlow::audit(
                 'purchase_order_items',
@@ -350,22 +347,20 @@ class PurchaseOrderController extends Controller
             }
 
             DB::table('purchase_orders')->where('id', $id)->update([
-                'status' => DocumentTermCodes::PO_CANCELLED,
                 'eta_date' => null,
                 'cancel_reason' => $validated['cancel_reason'],
                 'updated_at' => now(),
                 'updated_by' => $userId,
-            ]);
+            ] + DomainStatus::payload(DomainStatus::GROUP_PO_STATUS, 'status', DocumentTermCodes::PO_CANCELLED));
 
             DB::table('purchase_order_items')
                 ->where('purchase_order_id', $id)
                 ->whereNotIn('item_status', [DocumentTermCodes::ITEM_CLOSED, DocumentTermCodes::ITEM_FORCE_CLOSED])
                 ->update([
-                    'item_status' => DocumentTermCodes::ITEM_CANCELLED,
                     'cancel_reason' => $validated['cancel_reason'],
                     'outstanding_qty' => 0,
                     'updated_at' => now(),
-                ]);
+                ] + DomainStatus::payload(DomainStatus::GROUP_PO_ITEM_STATUS, 'item_status', DocumentTermCodes::ITEM_CANCELLED));
 
             \App\Support\ErpFlow::pushPoStatus((int) $id, (string) $po->status, DocumentTermCodes::PO_CANCELLED, $userId, $validated['cancel_reason']);
             \App\Support\ErpFlow::audit('purchase_orders', (int) $id, 'po_cancelled', ['status' => $po->status], ['status' => DocumentTermCodes::PO_CANCELLED, 'cancel_reason' => $validated['cancel_reason']], $userId, $request->ip());

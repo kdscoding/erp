@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\DocumentTermCodes;
+use App\Support\DomainStatus;
 use App\Support\ErpFlow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -369,11 +370,10 @@ class ShipmentController extends Controller
                 'invoice_date' => $v['invoice_date'] ?? null,
                 'invoice_currency' => $v['invoice_currency'] ?? null,
                 'supplier_remark' => $remark,
-                'status' => DocumentTermCodes::SHIPMENT_DRAFT,
                 'created_by' => $userId,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ] + DomainStatus::payload(DomainStatus::GROUP_SHIPMENT_STATUS, 'status', DocumentTermCodes::SHIPMENT_DRAFT));
 
             $lineRows = collect($linePayloads)->map(fn($line) => [
                 'shipment_id' => $shipmentId,
@@ -629,9 +629,8 @@ class ShipmentController extends Controller
             }
 
             DB::table('shipments')->where('id', $shipment->id)->update([
-                'status' => DocumentTermCodes::SHIPMENT_SHIPPED,
                 'updated_at' => now(),
-            ]);
+            ] + DomainStatus::payload(DomainStatus::GROUP_SHIPMENT_STATUS, 'status', DocumentTermCodes::SHIPMENT_SHIPPED));
 
             foreach ($linePoIds as $poId) {
                 ErpFlow::refreshPoStatusByOutstanding((int) $poId, $userId);
@@ -667,9 +666,8 @@ class ShipmentController extends Controller
 
         DB::transaction(function () use ($shipment, $request) {
             DB::table('shipments')->where('id', $shipment->id)->update([
-                'status' => DocumentTermCodes::SHIPMENT_CANCELLED,
                 'updated_at' => now(),
-            ]);
+            ] + DomainStatus::payload(DomainStatus::GROUP_SHIPMENT_STATUS, 'status', DocumentTermCodes::SHIPMENT_CANCELLED));
 
             $linePoIds = DB::table('shipment_items as si')
                 ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')

@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Support\DocumentTermCodes;
+use App\Support\DomainStatus;
 use App\Support\ErpFlow;
 use App\Support\TermCatalog;
 use Illuminate\Support\Facades\DB;
@@ -19,13 +20,12 @@ class CreatePurchaseOrder
         'po_number'   => $poNumber,
         'po_date'     => $validated['po_date'],
         'supplier_id' => $validated['supplier_id'],
-        'status'      => DocumentTermCodes::PO_ISSUED,
         'notes'       => $notes,
         'created_by'  => $userId,
         'updated_by'  => $userId,
         'created_at'  => now(),
         'updated_at'  => now(),
-      ]);
+      ] + DomainStatus::payload(DomainStatus::GROUP_PO_STATUS, 'status', DocumentTermCodes::PO_ISSUED));
 
       foreach ($validated['items'] as $row) {
         DB::table('purchase_order_items')->insert([
@@ -34,12 +34,11 @@ class CreatePurchaseOrder
           'ordered_qty'       => $row['ordered_qty'],
           'received_qty'      => 0,
           'outstanding_qty'   => $row['ordered_qty'],
-          'item_status'       => DocumentTermCodes::ITEM_WAITING,
           'unit_price'        => $row['unit_price'] ?? null,
           'remarks'           => $row['remarks'] ?? null,
           'created_at'        => now(),
           'updated_at'        => now(),
-        ]);
+        ] + DomainStatus::payload(DomainStatus::GROUP_PO_ITEM_STATUS, 'item_status', DocumentTermCodes::ITEM_WAITING));
       }
 
       DB::table('purchase_orders')
