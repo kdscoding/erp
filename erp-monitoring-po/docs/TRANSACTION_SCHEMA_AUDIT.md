@@ -39,7 +39,35 @@ Tanggal audit: 2026-03-22
 - Kesimpulan: bukan duplikasi schema yang wajib dihapus, tapi perlu penamaan yang lebih tegas.
 - Rekomendasi:
   - jika maknanya memang selalu nomor dokumen supplier, rename jangka panjang ke `source_document_number`
-  - jika ingin menampung nomor dokumen GR internal terpisah, pertahankan dua field dan jelaskan bedanya di UI
+- jika ingin menampung nomor dokumen GR internal terpisah, pertahankan dua field dan jelaskan bedanya di UI
+
+### 4A. `shipments.purchase_order_id` adalah anchor lama, bukan source of truth shipment composition
+
+- Shipment aktif dapat memuat beberapa `purchase_order_items` dari beberapa PO selama supplier sama.
+- Karena itu, komposisi shipment yang benar ada di:
+  - `shipment_items.purchase_order_item_id`
+  - `purchase_order_items.purchase_order_id`
+- Kolom `shipments.purchase_order_id` sekarang hanya berfungsi sebagai anchor/header legacy.
+
+Kesimpulan:
+
+- jangan pakai `shipments.purchase_order_id` sebagai sumber resmi daftar PO pada shipment
+- untuk report dan UI, derive daftar PO dari line items
+- drop penuh kolom ini perlu redesign lebih besar dan migrasi controller/import/export
+
+### 4B. `goods_receipts.purchase_order_id` juga hanya anchor header
+
+- Receiving berbasis shipment bisa merepresentasikan line dari lebih dari satu PO.
+- Source of truth item yang diterima tetap berada di:
+  - `goods_receipt_items.purchase_order_item_id`
+  - `purchase_order_items.purchase_order_id`
+- Kolom `goods_receipts.purchase_order_id` saat ini lebih aman dipahami sebagai anchor/header compatibility field.
+
+Kesimpulan:
+
+- jangan pakai `goods_receipts.purchase_order_id` sebagai sumber resmi daftar PO pada GR multi-line
+- UI/report sebaiknya derive daftar PO dari `goods_receipt_items`
+- drop penuh kolom ini juga butuh redesign bertahap
 
 ### 5. `purchase_orders.notes`, `purchase_order_items.remarks`, `shipments.supplier_remark`, `goods_receipts.remark`
 - Nama kolom catatan memang banyak, tetapi levelnya berbeda:

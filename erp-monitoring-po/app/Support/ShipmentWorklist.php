@@ -12,14 +12,13 @@ class ShipmentWorklist
     {
         return DB::table('shipments as sh')
             ->leftJoin('suppliers as s', 's.id', '=', 'sh.supplier_id')
-            ->leftJoin('purchase_orders as anchor_po', 'anchor_po.id', '=', 'sh.purchase_order_id')
-            ->leftJoin('suppliers as anchor_s', 'anchor_s.id', '=', 'anchor_po.supplier_id')
             ->leftJoin('shipment_items as si', 'si.shipment_id', '=', 'sh.id')
             ->leftJoin('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
             ->leftJoin('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->leftJoin('suppliers as po_s', 'po_s.id', '=', 'po.supplier_id')
             ->select(
                 'sh.*',
-                DB::raw('COALESCE(s.supplier_name, anchor_s.supplier_name) as supplier_name'),
+                DB::raw('COALESCE(s.supplier_name, MIN(po_s.supplier_name)) as supplier_name'),
                 DB::raw('COUNT(DISTINCT si.id) as line_count'),
                 DB::raw('COUNT(DISTINCT po.id) as po_count'),
                 DB::raw("GROUP_CONCAT(DISTINCT po.po_number ORDER BY po.po_number SEPARATOR ', ') as po_numbers"),
@@ -29,7 +28,6 @@ class ShipmentWorklist
             )
             ->groupBy(
                 'sh.id',
-                'sh.purchase_order_id',
                 'sh.supplier_id',
                 'sh.shipment_number',
                 'sh.shipment_date',
@@ -42,8 +40,7 @@ class ShipmentWorklist
                 'sh.created_by',
                 'sh.created_at',
                 'sh.updated_at',
-                's.supplier_name',
-                'anchor_s.supplier_name'
+                's.supplier_name'
             );
     }
 
@@ -61,7 +58,7 @@ class ShipmentWorklist
                         ->orWhere('sh.delivery_note_number', 'like', $keyword)
                         ->orWhere('sh.invoice_number', 'like', $keyword)
                         ->orWhere('s.supplier_name', 'like', $keyword)
-                        ->orWhere('anchor_s.supplier_name', 'like', $keyword)
+                        ->orWhere('po_s.supplier_name', 'like', $keyword)
                         ->orWhere('po.po_number', 'like', $keyword);
                 });
             });

@@ -105,6 +105,10 @@ Progress saat ini:
   - `to_status_code`
   - `document_terms.internal_code`
 - seeder status dan write-path transaksi utama mulai menulis legacy term + internal code sekaligus
+- query mulai berhenti bergantung pada anchor lama seperti:
+  - `shipments.purchase_order_id`
+  - `goods_receipts.purchase_order_id`
+  ketika source of truth yang lebih benar sebenarnya ada di line items
 - normalisasi penuh query, filter, resolver, dan policy status masih belum selesai
 
 ### 1. Refactor Traceability
