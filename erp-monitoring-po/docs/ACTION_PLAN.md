@@ -109,6 +109,8 @@ Progress saat ini:
   - `shipments.purchase_order_id`
   - `goods_receipts.purchase_order_id`
   ketika source of truth yang lebih benar sebenarnya ada di line items
+- dashboard mulai mengurangi join receiving berbasis header anchor dan beralih menurunkan konteks PO/supplier dari line receiving
+- komponen `info-box` global mulai distandardisasi supaya layar detail dan modal audit tidak lagi terasa seperti dibangun dengan pola yang berbeda-beda
 - normalisasi penuh query, filter, resolver, dan policy status masih belum selesai
 
 ### 1. Refactor Traceability

@@ -18,6 +18,7 @@ Per 2026-04-03, beberapa arah refactor di dokumen ini sudah mulai dieksekusi:
 - `Monitoring Hub` sudah mulai menggantikan overlap `monitoring`, `summary-po`, dan `summary-item`
 - `Traceability` mulai digeser menjadi workspace investigasi
 - lapisan kompatibilitas `App\Support\DomainStatus` sudah diperkenalkan untuk memisahkan internal code dari legacy term
+- komponen `info-box` global sudah mulai distandardisasi agar halaman detail tidak lagi mudah pecah saat label panjang, badge status, atau metadata tambahan tampil bersamaan
 
 Yang belum selesai:
 
@@ -76,6 +77,11 @@ Yang belum selesai:
    - sebagian halaman memakai worklist + form builder di halaman yang sama
    - sebagian halaman memakai modal besar untuk detail
    - belum ada pola screen yang benar-benar konsisten
+
+8. **Komponen ringkasan metadata belum konsisten**
+   - `info-box` di shipment, receiving, audit, dan traceability masih terasa seperti dibuat per layar, bukan satu design language
+   - saat isi panjang atau badge status muncul, box mudah terlihat pecah dan ritmenya tidak rapi
+   - ini memperkuat kesan bahwa beberapa blade menampilkan informasi yang sama dengan gaya yang berbeda-beda
 
 ---
 

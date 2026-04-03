@@ -399,31 +399,69 @@
 
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: .75rem;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: .85rem;
+            align-items: stretch;
         }
 
         .info-box {
-            border: 1px solid #e7eadf;
-            border-radius: 14px;
-            background: #fafcf5;
-            padding: .9rem 1rem;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: .35rem;
+            min-height: 96px;
+            border: 1px solid var(--lemon-line);
+            border-radius: 16px;
+            background: linear-gradient(180deg, #fffef8 0%, #f6faea 100%);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, .85),
+                0 10px 24px rgba(111, 150, 40, .05);
+            padding: .95rem 1rem;
             height: 100%;
+            overflow: hidden;
+        }
+
+        .info-box::before {
+            content: '';
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 4px;
+            background: linear-gradient(180deg, var(--lemon-yellow), var(--lemon-green));
+            opacity: .9;
         }
 
         .info-label {
-            font-size: .72rem;
+            font-size: .7rem;
             text-transform: uppercase;
             letter-spacing: .08em;
             color: #7d866f;
-            margin-bottom: .25rem;
+            margin: 0;
+            padding-left: .15rem;
         }
 
         .info-value {
-            font-size: .95rem;
-            font-weight: 700;
+            display: flex;
+            align-items: flex-start;
+            gap: .4rem;
+            min-width: 0;
+            font-size: 1rem;
+            font-weight: 800;
             color: #2f3c1b;
+            line-height: 1.3;
             word-break: break-word;
+            padding-left: .15rem;
+        }
+
+        .info-box .doc-meta {
+            margin: 0;
+            padding-left: .15rem;
+            line-height: 1.35;
+        }
+
+        .info-value .badge {
+            white-space: normal;
+            text-align: left;
         }
 
         .shipment-progress-track {
@@ -730,7 +768,7 @@
             }
 
             .info-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
@@ -746,6 +784,10 @@
         }
 
         @media (max-width: 575.98px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
             .summary-chip {
                 flex: 1 1 100%;
             }

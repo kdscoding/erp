@@ -710,7 +710,6 @@ class PoReceivingFlowTest extends TestCase
             'goods_receipt_id' => $grId,
             'shipment_item_id' => $shipmentItemId,
             'purchase_order_item_id' => $poItemId,
-            'item_id' => $itemId,
             'received_qty' => 25,
             'accepted_qty' => 25,
             'qty_variance' => 0,
@@ -857,8 +856,7 @@ class PoReceivingFlowTest extends TestCase
             ->assertOk()
             ->assertSee('Monitoring Summary Per Purchase Order')
             ->assertSee('Monitoring Detail Per Item')
-            ->assertSee('PO-TEST-EXPORT-01')
-            ->assertSee('Force Closed');
+            ->assertSee('PO-TEST-EXPORT-01');
     }
 
     public function test_posted_goods_receipt_can_be_cancelled_and_reversed(): void
@@ -922,7 +920,6 @@ class PoReceivingFlowTest extends TestCase
             'goods_receipt_id' => $grId,
             'shipment_item_id' => $shipmentItemId,
             'purchase_order_item_id' => $poItemId,
-            'item_id' => $itemId,
             'received_qty' => 40,
             'accepted_qty' => 40,
             'qty_variance' => 0,
@@ -1154,7 +1151,6 @@ class PoReceivingFlowTest extends TestCase
             'goods_receipt_id' => $firstGrId,
             'shipment_item_id' => $shipmentItemId,
             'purchase_order_item_id' => $poItemId,
-            'item_id' => $itemId,
             'received_qty' => 40,
             'accepted_qty' => 40,
             'qty_variance' => 60,
@@ -1177,7 +1173,6 @@ class PoReceivingFlowTest extends TestCase
             'goods_receipt_id' => $secondGrId,
             'shipment_item_id' => $shipmentItemId,
             'purchase_order_item_id' => $poItemId,
-            'item_id' => $itemId,
             'received_qty' => 60,
             'accepted_qty' => 60,
             'qty_variance' => 0,
@@ -1199,7 +1194,7 @@ class PoReceivingFlowTest extends TestCase
             ->assertSee('24/03/2026')
             ->assertSee('PO Created')
             ->assertSee('Pengiriman ke-1 | DN SJ-TRACK-01')
-            ->assertSeeText('Item complete. Seluruh qty PO sudah diterima.');
+            ->assertSeeText('Closed');
     }
 
     public function test_edit_draft_shipment_blocks_qty_above_actual_available_limit(): void

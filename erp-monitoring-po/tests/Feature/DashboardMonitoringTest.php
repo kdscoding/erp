@@ -186,9 +186,16 @@ class DashboardMonitoringTest extends TestCase
         $this->actingAs($user)
             ->get('/monitoring')
             ->assertOk()
+            ->assertSee('Monitoring Hub')
+            ->assertSee('PO View')
+            ->assertSee('Item View')
             ->assertSee('Monitoring Summary Per Purchase Order')
+            ->assertSee('PO-MON-0001');
+
+        $this->actingAs($user)
+            ->get('/monitoring?mode=item')
+            ->assertOk()
             ->assertSee('Monitoring Detail Per Item')
-            ->assertSee('PO-MON-0001')
             ->assertSee('ITM001');
 
         $this->actingAs($user)
@@ -284,7 +291,6 @@ class DashboardMonitoringTest extends TestCase
                 'goods_receipt_id' => $grId,
                 'shipment_item_id' => $shipmentItemOnTimeId,
                 'purchase_order_item_id' => $onTimeItemId,
-                'item_id' => $itemAId,
                 'received_qty' => 20,
                 'accepted_qty' => 20,
                 'qty_variance' => 0,
@@ -295,7 +301,6 @@ class DashboardMonitoringTest extends TestCase
                 'goods_receipt_id' => $grId,
                 'shipment_item_id' => $shipmentItemDelayedId,
                 'purchase_order_item_id' => $delayedItemId,
-                'item_id' => $itemBId,
                 'received_qty' => 5,
                 'accepted_qty' => 5,
                 'qty_variance' => 0,

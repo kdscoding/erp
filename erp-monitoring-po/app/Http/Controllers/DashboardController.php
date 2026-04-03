@@ -21,6 +21,13 @@ class DashboardController extends Controller
         ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
         $savedViews = $this->savedViews();
         $activeSavedView = (string) $request->query('saved_view', 'default');
+        $activePoSql = StatusQuery::sqlNotEquals('po.status', DomainStatus::GROUP_PO_STATUS, DocumentTermCodes::PO_CLOSED)
+            . ' AND '
+            . StatusQuery::sqlNotEquals('po.status', DomainStatus::GROUP_PO_STATUS, DocumentTermCodes::PO_CANCELLED);
+        $activeItemSql = StatusQuery::sqlNotEquals('poi.item_status', DomainStatus::GROUP_PO_ITEM_STATUS, DocumentTermCodes::ITEM_CANCELLED);
+        $cancelledItemSql = StatusQuery::sqlEquals('poi.item_status', DomainStatus::GROUP_PO_ITEM_STATUS, DocumentTermCodes::ITEM_CANCELLED);
+        $poListSql = $this->groupConcatDistinct('po.po_number');
+        $supplierListSql = $this->groupConcatDistinct('s.supplier_name');
 
         $suppliers = DB::table('suppliers')
             ->orderBy('supplier_name')
@@ -61,10 +68,13 @@ class DashboardController extends Controller
                 ->count(),
 
             'received_today' => DB::table('goods_receipts')
-                ->join('purchase_orders as po', 'po.id', '=', 'goods_receipts.purchase_order_id')
+                ->leftJoin('goods_receipt_items as gri', 'gri.goods_receipt_id', '=', 'goods_receipts.id')
+                ->leftJoin('purchase_order_items as poi', 'poi.id', '=', 'gri.purchase_order_item_id')
+                ->leftJoin('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
                 ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
                 ->whereRaw("DATE(receipt_date) = {$currentDateSql}")
-                ->count(),
+                ->distinct('goods_receipts.id')
+                ->count('goods_receipts.id'),
 
             'late_po' => DB::table('purchase_orders')
                 ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
@@ -109,8 +119,8 @@ class DashboardController extends Controller
             ->selectRaw('COUNT(poi.id) as late_item_count')
             ->selectRaw('COUNT(DISTINCT po.id) as late_po_count')
             ->selectRaw('MIN(poi.etd_date) as oldest_late_etd')
-            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
-            ->where('poi.item_status', '!=', 'Cancelled')
+            ->whereRaw($activePoSql)
+            ->whereRaw($activeItemSql)
             ->where('poi.outstanding_qty', '>', 0)
             ->whereNotNull('poi.etd_date')
             ->whereRaw("DATE(poi.etd_date) < {$currentDateSql}")
@@ -128,12 +138,12 @@ class DashboardController extends Controller
             ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
             ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
             ->select('po.id as po_id', 'po.po_number', 'po.status as po_status', 's.supplier_name')
-            ->selectRaw("SUM(CASE WHEN COALESCE(poi.item_status, '') != 'Cancelled' AND poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NULL THEN 1 ELSE 0 END) as waiting_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(poi.item_status, '') != 'Cancelled' AND poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) >= {$currentDateSql} THEN 1 ELSE 0 END) as confirmed_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(poi.item_status, '') != 'Cancelled' AND poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) < {$currentDateSql} THEN 1 ELSE 0 END) as late_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(poi.item_status, '') != 'Cancelled' AND poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 1 ELSE 0 END) as partial_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(poi.item_status, '') != 'Cancelled' AND poi.outstanding_qty <= 0 THEN 1 ELSE 0 END) as closed_items")
-            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
+            ->selectRaw("SUM(CASE WHEN {$activeItemSql} AND poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NULL THEN 1 ELSE 0 END) as waiting_items")
+            ->selectRaw("SUM(CASE WHEN {$activeItemSql} AND poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) >= {$currentDateSql} THEN 1 ELSE 0 END) as confirmed_items")
+            ->selectRaw("SUM(CASE WHEN {$activeItemSql} AND poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) < {$currentDateSql} THEN 1 ELSE 0 END) as late_items")
+            ->selectRaw("SUM(CASE WHEN {$activeItemSql} AND poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 1 ELSE 0 END) as partial_items")
+            ->selectRaw("SUM(CASE WHEN {$activeItemSql} AND poi.outstanding_qty <= 0 THEN 1 ELSE 0 END) as closed_items")
+            ->whereRaw($activePoSql)
             ->groupBy('po.id', 'po.po_number', 'po.status', 's.supplier_name')
             ->orderBy('po.po_number')
             ->get();
@@ -152,25 +162,30 @@ class DashboardController extends Controller
                 's.supplier_name',
                 DB::raw('COALESCE(po.eta_date, MIN(COALESCE(poi.eta_date, poi.etd_date))) as po_eta_date')
             )
-            ->selectRaw("SUM(CASE WHEN poi.item_status = 'Cancelled' THEN 1 ELSE 0 END) as cancelled_items")
+            ->selectRaw("SUM(CASE WHEN {$cancelledItemSql} THEN 1 ELSE 0 END) as cancelled_items")
             ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty > 0 THEN 1 ELSE 0 END) as partial_items")
-            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty <= 0 AND poi.item_status != 'Cancelled' THEN 1 ELSE 0 END) as closed_items")
-            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NULL AND poi.item_status != 'Cancelled' THEN 1 ELSE 0 END) as waiting_items")
-            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) >= {$currentDateSql} AND poi.item_status != 'Cancelled' THEN 1 ELSE 0 END) as confirmed_items")
-            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) < {$currentDateSql} AND poi.item_status != 'Cancelled' THEN 1 ELSE 0 END) as late_items")
-            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
+            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty <= 0 AND {$activeItemSql} THEN 1 ELSE 0 END) as closed_items")
+            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NULL AND {$activeItemSql} THEN 1 ELSE 0 END) as waiting_items")
+            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) >= {$currentDateSql} AND {$activeItemSql} THEN 1 ELSE 0 END) as confirmed_items")
+            ->selectRaw("SUM(CASE WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) < {$currentDateSql} AND {$activeItemSql} THEN 1 ELSE 0 END) as late_items")
+            ->whereRaw($activePoSql)
             ->groupBy('po.id', 'po.po_number', 'po.po_date', 'po.status', 's.supplier_name', 'po.eta_date')
             ->orderBy('po_eta_date')
             ->limit(8)
             ->get();
 
         $recentReceivings = DB::table('goods_receipts as gr')
-            ->join('purchase_orders as po', 'po.id', '=', 'gr.purchase_order_id')
-            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->leftJoin('goods_receipt_items as gri', 'gri.goods_receipt_id', '=', 'gr.id')
+            ->leftJoin('purchase_order_items as poi', 'poi.id', '=', 'gri.purchase_order_item_id')
+            ->leftJoin('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
             ->when($dateFrom, fn ($query) => $query->whereDate('gr.receipt_date', '>=', $dateFrom))
             ->when($dateTo, fn ($query) => $query->whereDate('gr.receipt_date', '<=', $dateTo))
-            ->select('gr.id', 'gr.gr_number', 'gr.receipt_date', 'po.po_number', 's.supplier_name')
+            ->select('gr.id', 'gr.gr_number', 'gr.receipt_date')
+            ->selectRaw("{$poListSql} as po_number")
+            ->selectRaw("{$supplierListSql} as supplier_name")
+            ->groupBy('gr.id', 'gr.gr_number', 'gr.receipt_date')
             ->orderByDesc('gr.id')
             ->limit(8)
             ->get();
@@ -186,7 +201,7 @@ class DashboardController extends Controller
             ->where('poi.outstanding_qty', '>', 0)
             ->whereNotNull('poi.etd_date')
             ->whereRaw("DATE(poi.etd_date) >= {$currentDateSql}")
-            ->where('poi.item_status', '!=', 'Cancelled')
+            ->whereRaw($activeItemSql)
             ->orderBy('poi.etd_date')
             ->limit(8)
             ->get();
@@ -202,7 +217,7 @@ class DashboardController extends Controller
             ->where('poi.outstanding_qty', '>', 0)
             ->whereNotNull('poi.etd_date')
             ->whereRaw("DATE(poi.etd_date) < {$currentDateSql}")
-            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
+            ->whereRaw($activePoSql)
             ->orderBy('poi.etd_date')
             ->limit(8)
             ->get();
@@ -242,8 +257,8 @@ class DashboardController extends Controller
                 WHEN DATE(poi.etd_date) < {$currentDateSql} THEN 'Terlambat dari ETD'
                 ELSE 'Sudah dikonfirmasi supplier'
             END as item_status_note")
-            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
-            ->where('poi.item_status', '!=', 'Cancelled')
+            ->whereRaw($activePoSql)
+            ->whereRaw($activeItemSql)
             ->orderByRaw("CASE
                 WHEN poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 1
                 WHEN poi.etd_date IS NULL THEN 2
@@ -411,8 +426,10 @@ class DashboardController extends Controller
             ->groupBy('po_number');
 
         $receivingDetailRows = DB::table('goods_receipts as gr')
-            ->join('purchase_orders as po', 'po.id', '=', 'gr.purchase_order_id')
-            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->leftJoin('goods_receipt_items as gri', 'gri.goods_receipt_id', '=', 'gr.id')
+            ->leftJoin('purchase_order_items as poi', 'poi.id', '=', 'gri.purchase_order_item_id')
+            ->leftJoin('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->leftJoin('shipments as sh', 'sh.id', '=', 'gr.shipment_id')
             ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
             ->when($dateFrom, fn ($query) => $query->whereDate('gr.receipt_date', '>=', $dateFrom))
@@ -421,11 +438,12 @@ class DashboardController extends Controller
                 'gr.id',
                 'gr.gr_number',
                 'gr.receipt_date',
-                'po.po_number',
-                's.supplier_name',
                 'sh.shipment_number',
                 'sh.delivery_note_number'
             )
+            ->selectRaw("{$poListSql} as po_number")
+            ->selectRaw("{$supplierListSql} as supplier_name")
+            ->groupBy('gr.id', 'gr.gr_number', 'gr.receipt_date', 'sh.shipment_number', 'sh.delivery_note_number')
             ->orderByDesc('gr.id')
             ->limit(20)
             ->get();
@@ -450,19 +468,22 @@ class DashboardController extends Controller
             ->get();
 
         $receivingTodayRows = DB::table('goods_receipts as gr')
-            ->join('purchase_orders as po', 'po.id', '=', 'gr.purchase_order_id')
-            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->leftJoin('goods_receipt_items as gri', 'gri.goods_receipt_id', '=', 'gr.id')
+            ->leftJoin('purchase_order_items as poi', 'poi.id', '=', 'gri.purchase_order_item_id')
+            ->leftJoin('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->leftJoin('shipments as sh', 'sh.id', '=', 'gr.shipment_id')
             ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
             ->select(
                 'gr.id',
                 'gr.gr_number',
                 'gr.receipt_date',
-                'po.po_number',
-                's.supplier_name',
                 'sh.shipment_number'
             )
+            ->selectRaw("{$poListSql} as po_number")
+            ->selectRaw("{$supplierListSql} as supplier_name")
             ->whereRaw("DATE(gr.receipt_date) = {$currentDateSql}")
+            ->groupBy('gr.id', 'gr.gr_number', 'gr.receipt_date', 'sh.shipment_number')
             ->orderByDesc('gr.id')
             ->limit(20)
             ->get();
@@ -475,8 +496,8 @@ class DashboardController extends Controller
                 ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
                 ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
                 ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
-                ->whereNotIn('po.status', ['Closed', 'Cancelled'])
-                ->where('poi.item_status', '!=', 'Cancelled')
+                ->whereRaw($activePoSql)
+                ->whereRaw($activeItemSql)
                 ->where('poi.outstanding_qty', '>', 0)
                 ->whereNull('poi.etd_date')
                 ->select('po.id as po_id', 'po.po_number', 's.supplier_name', 'i.item_code', 'i.item_name', 'poi.outstanding_qty')
@@ -1066,5 +1087,12 @@ class DashboardController extends Controller
         return DB::connection()->getDriverName() === 'sqlite'
             ? "CAST(julianday({$endDateColumn}) - julianday({$startDateColumn}) AS INTEGER)"
             : "DATEDIFF({$endDateColumn}, {$startDateColumn})";
+    }
+
+    private function groupConcatDistinct(string $column): string
+    {
+        return DB::connection()->getDriverName() === 'sqlite'
+            ? "GROUP_CONCAT(DISTINCT {$column})"
+            : "GROUP_CONCAT(DISTINCT {$column} ORDER BY {$column} SEPARATOR ', ')";
     }
 }

@@ -62,6 +62,7 @@ class TraceabilityIndexQuery
             ->leftJoin('goods_receipts as gr', 'gr.id', '=', 'gri.goods_receipt_id')
             ->select(
                 'poi.id as purchase_order_item_id',
+                'po.id as po_id',
                 'po.supplier_id',
                 'po.po_number',
                 'po.po_date',
@@ -86,6 +87,7 @@ class TraceabilityIndexQuery
             ->selectRaw('COUNT(gri.id) as receipt_count')
             ->groupBy(
                 'poi.id',
+                'po.id',
                 'po.supplier_id',
                 'po.po_number',
                 'po.po_date',

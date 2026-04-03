@@ -146,7 +146,6 @@ class TraceabilityTest extends TestCase
         DB::table('goods_receipt_items')->insert([
             'goods_receipt_id' => $firstGrId,
             'purchase_order_item_id' => $firstPoItemId,
-            'item_id' => $itemId,
             'received_qty' => 40,
             'accepted_qty' => 40,
             'qty_variance' => 60,
