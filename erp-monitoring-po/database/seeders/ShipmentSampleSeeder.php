@@ -240,7 +240,6 @@ class ShipmentSampleSeeder extends Seeder
                             'goods_receipt_id' => $grId,
                             'shipment_item_id' => $shipmentItemId,
                             'purchase_order_item_id' => $poItemId,
-                            'item_id' => $itemId,
                             'received_qty' => $receivedQty,
                             'qty_variance' => (float) $sample['shipment_qty'] - $receivedQty,
                             'accepted_qty' => $receivedQty,

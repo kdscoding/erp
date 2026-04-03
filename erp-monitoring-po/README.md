@@ -941,6 +941,12 @@ Tabel pendukung:
 - `attachments`
 - `password_reset_requests`
 
+Catatan schema:
+
+- primary relational key tetap memakai `id`
+- business code seperti `supplier_code`, `item_code`, `unit_code`, `warehouse_code`, dan `plant_code` tetap dipakai sebagai alternate unique identifier, bukan FK utama transaksi
+- cleanup schema aktif sekarang fokus ke kolom yang benar-benar duplicate atau dormant, bukan mengganti seluruh relasi ke string code
+
 ## Testing
 
 Menjalankan test:

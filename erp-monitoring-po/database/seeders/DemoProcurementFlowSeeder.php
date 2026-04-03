@@ -137,7 +137,6 @@ class DemoProcurementFlowSeeder extends Seeder
                     $shipmentItems[] = [
                         'shipment_item_id' => $shipmentItemId,
                         'purchase_order_item_id' => $poItemId,
-                        'item_id' => $lineRow['item_id'],
                         'received_qty' => $receivedOnShipment,
                     ];
                 }
@@ -173,7 +172,6 @@ class DemoProcurementFlowSeeder extends Seeder
                         'shipment_id' => $shipmentId,
                         'shipment_item_id' => $shipmentItem['shipment_item_id'],
                         'purchase_order_item_id' => $shipmentItem['purchase_order_item_id'],
-                        'item_id' => $shipmentItem['item_id'],
                         'received_qty' => $shipmentItem['received_qty'],
                         'note' => 'Demo GR item',
                     ]));

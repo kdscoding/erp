@@ -71,6 +71,8 @@ Tanggal audit: 2026-03-22
 ### Aman dikerjakan cepat
 1. Drop salah satu dari `goods_receipt_items.note` / `goods_receipt_items.remark`
 2. Hapus field UI yang tidak tersambung seperti `reference_number` pada form PO
+3. Drop `goods_receipt_items.item_id` dan baca item melalui `purchase_order_items.item_id`
+4. Drop field dormant `purchase_orders.sent_to_supplier_at`, `approved_by`, `approved_at`, `bc_reference_no`, `bc_reference_date`
 
 ### Perlu keputusan bisnis dulu
 1. Tetapkan sumber resmi ETA header PO
@@ -88,3 +90,18 @@ Tanggal audit: 2026-03-22
 1. Bersihkan `goods_receipt_items.note` dan pertahankan satu kolom remark saja.
 2. Rapikan definisi ETA header PO agar dashboard dan report tidak membaca field yang stale.
 3. Setelah itu baru audit kolom approval/reference yang masih dormant untuk diputuskan tetap dipertahankan atau dipindah ke fase berikutnya.
+
+## Keputusan Tambahan Per 2026-04-03
+
+- `id` tetap dipertahankan sebagai primary relational key pada master dan transaksi.
+- unique code seperti `supplier_code` atau `item_code` **tidak** langsung dijadikan FK utama transaksi.
+
+Alasan:
+
+- code lebih mungkin berubah dibanding surrogate key
+- transaksi, audit, import, dan historical consistency membutuhkan key yang stabil
+- readability sebaiknya diperbaiki lewat:
+  - UI
+  - export
+  - alternate lookup
+  - document_terms internal code

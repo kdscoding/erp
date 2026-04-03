@@ -62,7 +62,6 @@ class GoodsReceiptDemoSeeder extends Seeder
         'goods_receipt_id' => $grId,
         'shipment_item_id' => $shipmentItem->id,
         'purchase_order_item_id' => $poItem->id,
-        'item_id' => $poItem->item_id,
         'received_qty' => (float) $shipmentItem->received_qty,
         'qty_variance' => (float) $shipmentItem->shipped_qty - (float) $shipmentItem->received_qty,
         'accepted_qty' => (float) $shipmentItem->received_qty,

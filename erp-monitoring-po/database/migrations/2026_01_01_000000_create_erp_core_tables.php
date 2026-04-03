@@ -103,12 +103,7 @@ return new class extends Migration {
                 $table->text('notes')->nullable();
                 $table->string('status')->default('PO Issued');
                 $table->string('status_code', 100)->default('po_issued')->index();
-                $table->timestamp('sent_to_supplier_at')->nullable();
-                $table->foreignId('approved_by')->nullable()->constrained('users');
-                $table->timestamp('approved_at')->nullable();
                 $table->date('eta_date')->nullable();
-                $table->string('bc_reference_no')->nullable();
-                $table->date('bc_reference_date')->nullable();
                 $table->text('cancel_reason')->nullable();
                 $table->foreignId('created_by')->nullable()->constrained('users');
                 $table->foreignId('updated_by')->nullable()->constrained('users');
@@ -191,7 +186,6 @@ return new class extends Migration {
                 $table->foreignId('goods_receipt_id')->constrained('goods_receipts')->cascadeOnDelete();
                 $table->foreignId('shipment_item_id')->nullable()->constrained('shipment_items');
                 $table->foreignId('purchase_order_item_id')->constrained('purchase_order_items');
-                $table->foreignId('item_id')->constrained('items');
                 $table->decimal('received_qty', 14, 2)->default(0);
                 $table->decimal('qty_variance', 14, 2)->default(0);
                 $table->decimal('accepted_qty', 14, 2)->default(0);

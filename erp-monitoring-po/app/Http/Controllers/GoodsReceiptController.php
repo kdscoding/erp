@@ -87,7 +87,7 @@ class GoodsReceiptController extends Controller
 
         $items = DB::table('goods_receipt_items as gri')
             ->join('purchase_order_items as poi', 'poi.id', '=', 'gri.purchase_order_item_id')
-            ->join('items as i', 'i.id', '=', 'gri.item_id')
+            ->join('items as i', 'i.id', '=', 'poi.item_id')
             ->leftJoin('units as u', 'u.id', '=', 'i.unit_id')
             ->leftJoin('shipment_items as si', 'si.id', '=', 'gri.shipment_item_id')
             ->select(
@@ -310,7 +310,6 @@ class GoodsReceiptController extends Controller
                     'goods_receipt_id' => $grId,
                     'shipment_item_id' => $shipmentItemId,
                     'purchase_order_item_id' => $poItem->id,
-                    'item_id' => $poItem->item_id,
                     'received_qty' => $receivedQty,
                     'qty_variance' => (float) $poItem->ordered_qty - $receivedQty,
                     'accepted_qty' => $receivedQty,
@@ -452,7 +451,6 @@ class GoodsReceiptController extends Controller
                 'goods_receipt_id' => $grId,
                 'shipment_item_id' => $shipmentItem->id,
                 'purchase_order_item_id' => $poItem->id,
-                'item_id' => $poItem->item_id,
                 'received_qty' => $v['received_qty'],
                 'qty_variance' => $variance,
                 'accepted_qty' => $acceptedQty,
