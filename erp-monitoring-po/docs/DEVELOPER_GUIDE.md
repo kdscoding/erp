@@ -121,7 +121,11 @@ Jika menyentuh salah satu area di atas:
 
 ## Konvensi Status
 
-Gunakan status resmi dari `App\Support\DocumentTermCodes`.
+Gunakan arsitektur status resmi berikut:
+
+- `App\Support\DomainStatus` untuk internal code yang stabil
+- `App\Support\DocumentTermCodes` untuk legacy term yang masih dipakai selama masa transisi
+- `App\Support\TermCatalog` atau `App\Support\DocumentTermStatus` untuk label dan badge UI
 
 Jangan:
 
@@ -131,8 +135,32 @@ Jangan:
 
 Gunakan:
 
-- `DocumentTermCodes` untuk code
+- `DomainStatus` untuk source of truth baru di domain logic
+- `DocumentTermCodes` hanya untuk kompatibilitas transisi
 - `TermCatalog` atau `DocumentTermStatus` untuk label dan badge
+
+### Kenapa `document_terms` tidak langsung dihubungkan FK ke tabel transaksi
+
+Saat ini `document_terms` tidak diposisikan sebagai parent table transaksi, karena:
+
+- row di `document_terms` bisa diubah admin untuk kebutuhan display
+- transaksi butuh identitas status yang stabil dan tidak mudah berubah
+- satu grup term melayani banyak konteks UI, bukan murni state machine domain
+
+Pola yang sedang dipakai sekarang:
+
+- transaksi menyimpan `status_code` atau `item_status_code`
+- `document_terms.internal_code` menjadi katalog display berdasarkan code tersebut
+- join ke `document_terms` dilakukan lewat kombinasi:
+  - `group_key`
+  - `internal_code`
+
+Kalau suatu saat ingin FK penuh, jalur yang lebih aman adalah:
+
+- buat master status domain yang immutable, atau
+- pecah katalog per domain status
+
+Jangan langsung menjadikan row editable di `document_terms` sebagai FK utama transaksi.
 
 ## Konvensi Pengembangan Flow Baru
 

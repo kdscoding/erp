@@ -305,6 +305,7 @@ Penting:
 - flow bisnis tetap mengikuti nilai `code`, bukan label display
 - repo saat ini masih dalam fase transisi; beberapa tabel transaksi masih menyimpan legacy string, tetapi lapisan kompatibilitas internal mulai dipisahkan melalui `App\Support\DomainStatus`
 - transaksi baru sekarang mulai menyimpan kolom `status_code` / `item_status_code` di samping legacy term untuk jalur migrasi bertahap
+- `document_terms` tidak dipakai sebagai parent FK transaksi; tabel ini diposisikan sebagai katalog istilah display yang dipetakan lewat `group_key + internal_code`
 
 ## Status Resmi Sistem
 

@@ -55,6 +55,13 @@
                         <hr class="my-2">
                         <div class="mb-0">Badge juga sekarang dikendalikan dari database: <code>badge_class</code> untuk warna badge dan <code>badge_text</code> untuk warna teks badge.</div>
                     @endif
+                    <hr class="my-2">
+                    <div class="mb-0">
+                        Arsitektur baru:
+                        <code>internal_code</code> adalah identitas domain yang stabil,
+                        <code>code</code> adalah legacy term untuk kompatibilitas,
+                        dan <code>label</code> adalah bahasa tampilan di UI.
+                    </div>
                 </div>
 
                 <form method="POST" action="{{ route('settings.document-terms.update') }}">
@@ -72,6 +79,7 @@
                                     <table class="table table-sm table-bordered align-middle mb-0 ui-table">
                                         <thead>
                                             <tr>
+                                                <th style="width: 180px;">Internal Code</th>
                                                 <th style="width: 180px;">Code</th>
                                                 <th style="min-width: 220px;">Label</th>
                                                 <th style="min-width: 220px;">Description</th>
@@ -95,6 +103,10 @@
                                                     $badgeTextValue = old('document_terms.' . $term->id . '.badge_text', isset($term->badge_text) ? $term->badge_text : 'text-white');
                                                 @endphp
                                                 <tr>
+                                                    <td>
+                                                        <div class="doc-number">{{ $term->internal_code ?: '-' }}</div>
+                                                        <div class="doc-meta">Stable domain key</div>
+                                                    </td>
                                                     <td>
                                                         <div class="doc-number">{{ $term->code }}</div>
                                                         <div class="doc-meta">ID: {{ $term->id }}</div>
