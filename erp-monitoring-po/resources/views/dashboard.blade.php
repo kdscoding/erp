@@ -8,14 +8,14 @@
     <style>
         .dash{display:grid;gap:1rem}.box{background:rgba(255,255,255,.96);border:1px solid rgba(111,150,40,.12);border-radius:20px;box-shadow:0 14px 32px rgba(111,150,40,.05)}.head{display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding:1rem 1rem 0}.head h3{margin:0;font-size:1rem;color:#314216}.sub{font-size:.8rem;color:#7a8660}.body{padding:1rem}
         .hero{padding:1.2rem;background:radial-gradient(circle at top right,rgba(241,217,59,.34),transparent 24%),radial-gradient(circle at bottom left,rgba(158,203,60,.18),transparent 24%),linear-gradient(135deg,rgba(255,255,255,.98),rgba(244,248,219,.98))}.eyebrow{display:inline-flex;gap:.45rem;padding:.35rem .7rem;border-radius:999px;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5f7331;border:1px solid rgba(111,150,40,.16);background:rgba(255,255,255,.7)}.hero h2{margin:.75rem 0 .45rem;font-size:1.55rem;line-height:1.1;color:#2d3d15}.muted,.meta,.note{font-size:.82rem;color:#728058}
-        .filters{display:grid;grid-template-columns:2fr 1fr 1fr auto auto;gap:.75rem;align-items:end;margin-top:1rem}.chips{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.85rem}.chip{padding:.32rem .65rem;border-radius:999px;background:#f7f9e7;border:1px solid #dbe5b0;font-size:.76rem;color:#62743a}.actions{display:flex;gap:.5rem;flex-wrap:wrap}
+        .filters{display:grid;grid-template-columns:2fr 1fr 1fr auto auto;gap:.75rem;align-items:end;margin-top:1rem}.chips{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.85rem}.chip{padding:.32rem .65rem;border-radius:999px;background:#f7f9e7;border:1px solid #dbe5b0;font-size:.76rem;color:#62743a}.actions{display:flex;gap:.5rem;flex-wrap:wrap}.saved-views{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem;margin-top:1rem}.saved-view-card{display:block;padding:.9rem 1rem;border-radius:16px;border:1px solid rgba(111,150,40,.12);background:rgba(255,255,255,.92);color:#314216;text-decoration:none;box-shadow:0 12px 24px rgba(111,150,40,.04)}.saved-view-card.active{border-color:#b9d044;background:linear-gradient(135deg,#fffde8,#eef7d2)}.saved-view-card:hover{border-color:#bfd730}.saved-view-title{font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#5e7230}.saved-view-note{margin-top:.3rem;font-size:.8rem;color:#728058}
         .kpis,.main,.secondary{display:grid;gap:1rem}.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.main{grid-template-columns:1.15fr 1fr .85fr}.secondary{grid-template-columns:1fr 1fr}.kpi{position:relative;overflow:hidden;padding:1rem;border-radius:18px;border:1px solid rgba(111,150,40,.12);box-shadow:0 12px 24px rgba(111,150,40,.04)}.kpi:after{content:"";position:absolute;right:-18px;bottom:-24px;width:80px;height:80px;border-radius:999px;background:rgba(255,255,255,.35)}.k1{background:linear-gradient(135deg,#fff,#eef7d2)}.k2{background:linear-gradient(135deg,#fffef8,#fff0d5)}.k3{background:linear-gradient(135deg,#fff,#e6f4d8)}.k4{background:linear-gradient(135deg,#fff,#edf7cf)}
         .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#7a8660}.value{font-size:1.8rem;font-weight:800;color:#314216;line-height:1;margin-top:.25rem}.chart{position:relative;min-height:280px}.legend{display:grid;gap:.55rem;margin-top:.8rem}.legend-row{display:grid;grid-template-columns:auto 1fr auto;gap:.6rem;align-items:center;font-size:.82rem;color:#647248}.sw{width:12px;height:12px;border-radius:999px}.lv{font-weight:800;color:#314216}
-        .meter{height:16px;display:flex;overflow:hidden;border-radius:999px;background:#edf2d5;margin-bottom:1rem}.risk{background:linear-gradient(90deg,#efaa8d,#d66848)}.safe{background:linear-gradient(90deg,#bfd86d,#86b83d)}.stack,.list{display:grid;gap:.75rem}.item,.list-card,.receipt{padding:.9rem;border-radius:16px;border:1px solid rgba(111,150,40,.1);background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(247,248,234,.96))}.receipt{text-decoration:none;display:block}.top{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start}.rank{width:30px;height:30px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800;background:#f4f7d8;color:#5d7425;flex:0 0 auto}.pill{padding:.38rem .65rem;border-radius:999px;background:#fff1eb;color:#b04835;font-size:.8rem;font-weight:800;white-space:nowrap}.ttl{font-weight:700;color:#314216}.table-wrap{padding:1rem}.qty{display:inline-flex;min-width:34px;justify-content:center;padding:.18rem .5rem;border-radius:999px;font-size:.76rem;font-weight:700;background:#f4f7d8;color:#5d7425}.health-table td,.health-table th{font-size:.8rem}.health-badge{display:inline-flex;padding:.2rem .5rem;border-radius:999px;font-size:.74rem;font-weight:700}.health-badge.red{background:#fff1eb;color:#b04835}.health-badge.yellow{background:#fff7d9;color:#8b6b12}.health-badge.green{background:#eef7d2;color:#5b7c24}
+        .meter{height:16px;display:flex;overflow:hidden;border-radius:999px;background:#edf2d5;margin-bottom:1rem}.risk{background:linear-gradient(90deg,#efaa8d,#d66848)}.safe{background:linear-gradient(90deg,#bfd86d,#86b83d)}.stack,.list,.action-grid{display:grid;gap:.75rem}.action-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.item,.list-card,.receipt,.action-card{padding:.9rem;border-radius:16px;border:1px solid rgba(111,150,40,.1);background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(247,248,234,.96))}.receipt{text-decoration:none;display:block}.top{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start}.rank{width:30px;height:30px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:800;background:#f4f7d8;color:#5d7425;flex:0 0 auto}.pill{padding:.38rem .65rem;border-radius:999px;background:#fff1eb;color:#b04835;font-size:.8rem;font-weight:800;white-space:nowrap}.ttl{font-weight:700;color:#314216}.table-wrap{padding:1rem}.qty{display:inline-flex;min-width:34px;justify-content:center;padding:.18rem .5rem;border-radius:999px;font-size:.76rem;font-weight:700;background:#f4f7d8;color:#5d7425}.health-table td,.health-table th{font-size:.8rem}.health-badge{display:inline-flex;padding:.2rem .5rem;border-radius:999px;font-size:.74rem;font-weight:700}.health-badge.red{background:#fff1eb;color:#b04835}.health-badge.yellow{background:#fff7d9;color:#8b6b12}.health-badge.green{background:#eef7d2;color:#5b7c24}.action-title{font-size:.9rem;font-weight:800;color:#314216}.action-meta{font-size:.8rem;color:#728058}.action-links{margin-top:.75rem;display:grid;gap:.55rem}.action-link{display:block;padding:.7rem .8rem;border-radius:12px;background:#fbfcf3;border:1px solid #e4eabc;color:#314216;text-decoration:none}
         .modal-list{display:grid;gap:.75rem}.modal-item{padding:.8rem .9rem;border-radius:14px;border:1px solid #e4eabc;background:#fbfcf3}.modal-kpi{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.modal-stat{padding:.8rem .9rem;border-radius:14px;background:#f7f9e7;border:1px solid #dbe5b0}.modal-stat-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#6b7b42}.modal-stat-value{font-size:1.2rem;font-weight:800;color:#314216}.modal-subtable{margin-top:.65rem}.modal-subtable th{font-size:.68rem;text-transform:uppercase;color:#6d7c44}.kpi-actions{position:relative;z-index:1;display:flex;justify-content:flex-end;margin-top:.65rem}
         .modal-summary th,.modal-summary td{font-size:.84rem}.modal-subtable th,.modal-subtable td{font-size:.8rem}.kpi-actions{position:relative;z-index:1;display:flex;justify-content:flex-end;margin-top:.65rem}
         .modal-filters{display:grid;grid-template-columns:2fr 1.2fr 1.2fr 1fr auto;gap:.75rem;align-items:end;margin-bottom:1rem}.filter-result{font-size:.8rem;color:#728058}
-        @media (max-width:1199.98px){.filters,.main,.secondary{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:767.98px){.kpis{grid-template-columns:1fr}.top{flex-direction:column}.hero h2{font-size:1.3rem}}
+        @media (max-width:1199.98px){.filters,.main,.secondary,.action-grid,.saved-views{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:767.98px){.kpis{grid-template-columns:1fr}.top{flex-direction:column}.hero h2{font-size:1.3rem}}
     </style>
 
     <div class="dash">
@@ -57,6 +57,16 @@
                 <span class="chip">Supplier: {{ $supplierId ? $suppliers->firstWhere('id', $supplierId)?->supplier_name : 'Semua' }}</span>
                 <span class="chip">PO Dari: {{ $dateFrom ?: 'Awal data' }}</span>
                 <span class="chip">PO Sampai: {{ $dateTo ?: 'Semua' }}</span>
+            </div>
+
+            <div class="saved-views">
+                @foreach ($savedViews as $view)
+                    <a href="{{ route('dashboard', array_filter(['saved_view' => $view['key'], 'supplier_id' => $supplierId])) }}"
+                        class="saved-view-card {{ $activeSavedView === $view['key'] ? 'active' : '' }}">
+                        <div class="saved-view-title">{{ $view['label'] }}</div>
+                        <div class="saved-view-note">{{ $view['description'] }}</div>
+                    </a>
+                @endforeach
             </div>
         </section>
 
@@ -179,6 +189,67 @@
                     @endforelse
                 </div></div>
             </article>
+        </section>
+
+        <section class="secondary">
+            <article class="box">
+                <div class="head">
+                    <div><h3>Action Center</h3><div class="sub">Inbox tugas lintas modul untuk memastikan tim tahu tindakan berikutnya.</div></div>
+                    <div class="actions"><a href="{{ route('monitoring.index', request()->query()) }}" class="btn btn-sm btn-light">Buka Monitoring PO</a></div>
+                </div>
+                <div class="body">
+                    <div class="action-grid">
+                        <div class="action-card">
+                            <div class="action-title">Items Need ETD Update</div>
+                            <div class="action-meta">Item outstanding tanpa ETD yang perlu konfirmasi supplier.</div>
+                            <div class="action-links">
+                                @forelse($actionCenter['items_need_etd_update'] as $row)
+                                    <a href="{{ route('po.show', $row->po_id) }}" class="action-link">
+                                        <div class="ttl">{{ $row->po_number }} · {{ $row->item_code }}</div>
+                                        <div class="meta">{{ $row->supplier_name }}</div>
+                                        <div class="meta">Outstanding {{ \App\Support\NumberFormatter::trim($row->outstanding_qty) }}</div>
+                                    </a>
+                                @empty
+                                    <div class="text-muted">Tidak ada item tanpa ETD pada filter ini.</div>
+                                @endforelse
+                            </div>
+                        </div>
+
+                        <div class="action-card">
+                            <div class="action-title">Incoming This Week</div>
+                            <div class="action-meta">Item dengan ETD tujuh hari ke depan untuk kesiapan receiving.</div>
+                            <div class="action-links">
+                                @forelse($actionCenter['incoming_this_week'] as $row)
+                                    <a href="{{ route('po.show', $row->po_id) }}" class="action-link">
+                                        <div class="ttl">{{ $row->po_number }} · {{ $row->item_code }}</div>
+                                        <div class="meta">{{ $row->supplier_name }}</div>
+                                        <div class="meta">ETD {{ \Carbon\Carbon::parse($row->etd_date)->format('d-m-Y') }} · OS {{ \App\Support\NumberFormatter::trim($row->outstanding_qty) }}</div>
+                                    </a>
+                                @empty
+                                    <div class="text-muted">Belum ada incoming item minggu ini.</div>
+                                @endforelse
+                            </div>
+                        </div>
+
+                        <div class="action-card">
+                            <div class="action-title">Partial Receiving Queue</div>
+                            <div class="action-meta">Shipment aktif yang masih punya sisa qty untuk diterima.</div>
+                            <div class="action-links">
+                                @forelse($actionCenter['partial_receiving_queue'] as $row)
+                                    <a href="{{ route('receiving.process', ['shipment_id' => $row->shipment_id]) }}" class="action-link">
+                                        <div class="ttl">{{ $row->shipment_number }} · {{ $row->item_code }}</div>
+                                        <div class="meta">{{ $row->supplier_name }}</div>
+                                        <div class="meta">PO {{ $row->po_number }} · DN {{ $row->delivery_note_number }} · Sisa {{ \App\Support\NumberFormatter::trim($row->shipment_outstanding_qty) }}</div>
+                                    </a>
+                                @empty
+                                    <div class="text-muted">Tidak ada queue receiving parsial.</div>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
         </section>
 
         <section class="secondary">

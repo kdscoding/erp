@@ -24,6 +24,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/summary/po/export-excel', [DashboardController::class, 'exportSummaryPoExcel'])->name('summary.po.export-excel');
     Route::get('/summary/item', [DashboardController::class, 'summaryItem'])->name('summary.item');
     Route::get('/summary/item/export-excel', [DashboardController::class, 'exportSummaryItemExcel'])->name('summary.item.export-excel');
+    Route::get('/monitoring', [DashboardController::class, 'monitoring'])->name('monitoring.index');
+    Route::get('/monitoring/export-excel', [DashboardController::class, 'exportMonitoringExcel'])->name('monitoring.export-excel');
     Route::get('/po', [PurchaseOrderController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('po.index');
     Route::get('/po/export-excel', [PurchaseOrderController::class, 'exportIndexExcel'])->middleware('role:administrator|staff|supervisor')->name('po.export-excel');
     Route::get('/traceability', [TraceabilityController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('traceability.index');

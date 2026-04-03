@@ -870,6 +870,14 @@
                             <li class="nav-header">Summary & Reports</li>
 
                             <li class="nav-item">
+                                <a href="{{ route('monitoring.index') }}"
+                                    class="nav-link {{ request()->routeIs('monitoring.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-binoculars"></i>
+                                    <p>Monitoring PO</p>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
                                 <a href="{{ route('summary.po') }}"
                                     class="nav-link {{ request()->routeIs('summary.po') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-file-invoice"></i>
