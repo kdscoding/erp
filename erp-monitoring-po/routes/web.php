@@ -63,6 +63,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/po/create', [PurchaseOrderController::class, 'create'])->name('po.create');
         Route::post('/po', [PurchaseOrderController::class, 'store'])->name('po.store');
         Route::patch('/po/items/{itemId}/schedule', [PurchaseOrderController::class, 'updateItemSchedule'])->name('po.items.schedule');
+        Route::patch('/po/{id}/items/bulk-schedule', [PurchaseOrderController::class, 'bulkUpdateItemSchedule'])->name('po.items.bulk-schedule');
         Route::post('/po/items/{itemId}/cancel', [PurchaseOrderController::class, 'cancelItem'])->name('po.items.cancel');
         Route::post('/po/items/{itemId}/force-close', [PurchaseOrderController::class, 'forceCloseItem'])->name('po.items.force-close');
         Route::post('/po/{id}/cancel', [PurchaseOrderController::class, 'cancelPo'])->name('po.cancel');

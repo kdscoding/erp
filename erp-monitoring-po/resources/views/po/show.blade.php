@@ -133,10 +133,33 @@
                     <span class="text-muted small">Status item otomatis: Waiting / Confirmed / Late / Partial / Closed /
                         Cancelled. Tracking shipment dan GR tersedia per item.</span>
                 </div>
+                <div class="card-body border-bottom">
+                    <form id="bulkEtdForm" method="POST" action="{{ route('po.items.bulk-schedule', $po->id) }}" class="row g-2 align-items-end">
+                        @csrf
+                        @method('PATCH')
+                        <div class="col-md-4">
+                            <label class="form-label">ETD Dasar Bulk Update</label>
+                            <input type="date" name="etd_date" class="form-control form-control-sm" @disabled($poIsFinal)>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Offset Hari</label>
+                            <input type="number" name="day_offset" class="form-control form-control-sm" value="0" min="-30" max="30" @disabled($poIsFinal)>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small text-muted mb-2">Pilih item aktif dari checklist di tabel lalu apply satu ETD untuk semua item terpilih.</div>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-sm btn-primary w-100" @disabled($poIsFinal)>Bulk Update ETD</button>
+                        </div>
+                    </form>
+                </div>
                 <div class="card-body table-responsive p-0">
                     <table class="table table-hover mb-0 data-table" style="min-width: 1380px;">
                         <thead>
                             <tr>
+                                <th style="min-width: 70px;">
+                                    <input type="checkbox" id="bulkSelectAll" @disabled($poIsFinal)>
+                                </th>
                                 <th style="min-width: 120px;">Kode</th>
                                 <th style="min-width: 220px;">Nama Item</th>
                                 <th style="min-width: 130px;">Ordered</th>
@@ -150,6 +173,14 @@
                         <tbody>
                             @foreach ($items as $item)
                                 <tr class="{{ $item->monitoring_status === 'Late' ? 'table-danger' : '' }}">
+                                    <td class="align-top">
+                                        <input type="checkbox"
+                                            name="item_ids[]"
+                                            value="{{ $item->id }}"
+                                            class="bulk-item-checkbox"
+                                            form="bulkEtdForm"
+                                            @disabled(!$item->can_update_etd || $poIsFinal)>
+                                    </td>
                                     <td class="align-top">{{ $item->item_code }}</td>
                                     <td class="align-top">{{ $item->item_name }}</td>
                                     <td class="align-top">{{ \App\Support\NumberFormatter::trim($item->ordered_qty) }}
@@ -467,6 +498,19 @@
 
     <script>
         (function() {
+            const bulkSelectAll = document.getElementById('bulkSelectAll');
+            const bulkCheckboxes = Array.from(document.querySelectorAll('.bulk-item-checkbox'));
+
+            if (bulkSelectAll && bulkCheckboxes.length > 0) {
+                bulkSelectAll.addEventListener('change', function() {
+                    bulkCheckboxes.forEach((checkbox) => {
+                        if (!checkbox.disabled) {
+                            checkbox.checked = bulkSelectAll.checked;
+                        }
+                    });
+                });
+            }
+
             function buildTrackingRows(modal) {
                 const unitName = modal.dataset.unitName || '';
                 const rows = [];

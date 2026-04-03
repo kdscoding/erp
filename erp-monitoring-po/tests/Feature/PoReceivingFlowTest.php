@@ -935,6 +935,74 @@ class PoReceivingFlowTest extends TestCase
         ]);
     }
 
+    public function test_bulk_etd_update_applies_same_target_date_to_selected_active_items(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $itemAId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+        $itemBId = DB::table('items')->where('item_code', 'ITM002')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TEST-BULK-ETD-01',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'PO Issued',
+            'eta_date' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $firstItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemAId,
+            'ordered_qty' => 30,
+            'received_qty' => 0,
+            'outstanding_qty' => 30,
+            'item_status' => 'Waiting',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $secondItemId = DB::table('purchase_order_items')->insertGetId([
+            'purchase_order_id' => $poId,
+            'item_id' => $itemBId,
+            'ordered_qty' => 20,
+            'received_qty' => 0,
+            'outstanding_qty' => 20,
+            'item_status' => 'Waiting',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $targetDate = now()->addDays(5)->toDateString();
+
+        $this->actingAs($user)->patch("/po/{$poId}/items/bulk-schedule", [
+            'item_ids' => [$firstItemId, $secondItemId],
+            'etd_date' => $targetDate,
+            'day_offset' => 2,
+        ])->assertSessionHas('success');
+
+        $expectedDate = now()->parse($targetDate)->addDays(2)->toDateString();
+
+        $this->assertDatabaseHas('purchase_order_items', [
+            'id' => $firstItemId,
+            'etd_date' => $expectedDate,
+            'item_status' => 'Confirmed',
+        ]);
+
+        $this->assertDatabaseHas('purchase_order_items', [
+            'id' => $secondItemId,
+            'etd_date' => $expectedDate,
+            'item_status' => 'Confirmed',
+        ]);
+
+        $this->assertDatabaseHas('purchase_orders', [
+            'id' => $poId,
+            'eta_date' => $expectedDate,
+            'status' => 'Open',
+        ]);
+    }
+
     public function test_po_detail_shows_item_tracking_per_shipment_and_goods_receipt(): void
     {
         $user = $this->makeUserWithRole('administrator');

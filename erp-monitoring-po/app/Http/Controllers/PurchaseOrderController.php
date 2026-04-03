@@ -152,6 +152,98 @@ class PurchaseOrderController extends Controller
         return back()->with('success', 'ETD item berhasil diperbarui.');
     }
 
+    public function bulkUpdateItemSchedule(
+        Request $request,
+        string $id,
+        PurchaseOrderItemStatusResolver $purchaseOrderItemStatusResolver
+    ): RedirectResponse
+    {
+        $validated = $request->validate([
+            'item_ids' => 'required|array|min:1',
+            'item_ids.*' => 'required|integer',
+            'etd_date' => 'nullable|date',
+            'day_offset' => 'nullable|integer|min:-30|max:30',
+        ], [
+            'item_ids.required' => 'Pilih minimal satu item untuk bulk update ETD.',
+            'item_ids.min' => 'Pilih minimal satu item untuk bulk update ETD.',
+        ]);
+
+        $offset = (int) ($validated['day_offset'] ?? 0);
+        $baseDate = $validated['etd_date'] ?? null;
+
+        if ($baseDate === null && $offset !== 0) {
+            return back()->with('error', 'Isi tanggal ETD dasar jika ingin memakai offset hari.');
+        }
+
+        $targetDate = $baseDate
+            ? now()->parse($baseDate)->addDays($offset)->toDateString()
+            : null;
+
+        DB::beginTransaction();
+        try {
+            $po = DB::table('purchase_orders')->where('id', $id)->lockForUpdate()->firstOrFail();
+
+            if (! $this->canCancelPo((object) ['status' => $po->status])) {
+                throw new \RuntimeException('Bulk update ETD hanya bisa dijalankan untuk PO yang belum final.');
+            }
+
+            $items = DB::table('purchase_order_items')
+                ->where('purchase_order_id', $id)
+                ->whereIn('id', $validated['item_ids'])
+                ->lockForUpdate()
+                ->get();
+
+            if ($items->isEmpty()) {
+                throw new \RuntimeException('Item yang dipilih tidak valid untuk PO ini.');
+            }
+
+            $updatedCount = 0;
+
+            foreach ($items as $item) {
+                if (! $this->canUpdateItemSchedule($item, $po->status)) {
+                    continue;
+                }
+
+                $newStatus = $purchaseOrderItemStatusResolver->resolve(
+                    (float) $item->received_qty,
+                    (float) $item->outstanding_qty,
+                    $targetDate
+                );
+
+                DB::table('purchase_order_items')->where('id', $item->id)->update([
+                    'etd_date' => $targetDate,
+                    'item_status' => $newStatus,
+                    'updated_at' => now(),
+                ]);
+
+                \App\Support\ErpFlow::audit(
+                    'purchase_order_items',
+                    (int) $item->id,
+                    'item_schedule_bulk_update',
+                    ['etd_date' => $item->etd_date, 'item_status' => $item->item_status],
+                    ['etd_date' => $targetDate, 'item_status' => $newStatus],
+                    optional($request->user())->id,
+                    $request->ip()
+                );
+
+                $updatedCount++;
+            }
+
+            if ($updatedCount === 0) {
+                throw new \RuntimeException('Tidak ada item aktif yang bisa diupdate dari pilihan tersebut.');
+            }
+
+            \App\Support\ErpFlow::refreshPoStatusByOutstanding((int) $id, optional($request->user())->id);
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', "Bulk update ETD berhasil untuk {$updatedCount} item.");
+    }
+
     public function cancelItem(Request $request, string $itemId): RedirectResponse
     {
         $validated = $request->validate([
