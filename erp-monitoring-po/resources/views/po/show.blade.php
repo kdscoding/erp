@@ -16,7 +16,7 @@
                 <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h3 class="card-title mb-0">Header PO</h3>
-                        <a href="{{ route('po.export-detail-excel', $po->id) }}" class="btn btn-sm btn-outline-success">
+                        <a href="{{ route('po.export-detail-excel', $po->po_number) }}" class="btn btn-sm btn-outline-success">
                             Export Excel
                         </a>
                     </div>

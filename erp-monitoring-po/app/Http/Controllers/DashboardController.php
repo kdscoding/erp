@@ -17,7 +17,7 @@ class DashboardController extends Controller
     public function __invoke(Request $request): View
     {
         $currentDateSql = $this->currentDateExpression();
-        $supplierId = $request->integer('supplier_id');
+        $supplierId = $this->resolveSupplierId($request);
         ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
         $savedViews = $this->savedViews();
         $activeSavedView = (string) $request->query('saved_view', 'default');
@@ -31,7 +31,7 @@ class DashboardController extends Controller
 
         $suppliers = DB::table('suppliers')
             ->orderBy('supplier_name')
-            ->get(['id', 'supplier_name']);
+            ->get(['id', 'supplier_name', 'supplier_code']);
 
         $metrics = [
             'open_po' => DB::table('purchase_orders')
@@ -581,7 +581,7 @@ class DashboardController extends Controller
 
     public function monitoring(Request $request): View
     {
-        $supplierId = $request->integer('supplier_id');
+        $supplierId = $this->resolveSupplierId($request);
         ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
         $monitoringMode = in_array((string) $request->query('mode', 'po'), ['po', 'item'], true)
             ? (string) $request->query('mode', 'po')
@@ -589,7 +589,7 @@ class DashboardController extends Controller
 
         $suppliers = DB::table('suppliers')
             ->orderBy('supplier_name')
-            ->get(['id', 'supplier_name']);
+            ->get(['id', 'supplier_name', 'supplier_code']);
 
         $summaryMetrics = $this->summaryMetrics($supplierId, $dateFrom, $dateTo);
 
@@ -631,7 +631,7 @@ class DashboardController extends Controller
 
     public function supplierPerformance(Request $request): View
     {
-        $supplierId = $request->integer('supplier_id');
+        $supplierId = $this->resolveSupplierId($request);
         ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
         $currentDateSql = $this->currentDateExpression();
         $shipmentToReceivingDaysSql = $this->dateDiffExpression('gr.receipt_date', 'sh.shipment_date');
@@ -1080,6 +1080,24 @@ class DashboardController extends Controller
         return DB::connection()->getDriverName() === 'sqlite'
             ? "date('now')"
             : 'CURDATE()';
+    }
+
+    private function resolveSupplierId(Request $request): ?int
+    {
+        $supplierCode = trim((string) $request->query('supplier_code', ''));
+        if ($supplierCode !== '') {
+            $supplierId = DB::table('suppliers')
+                ->when(
+                    is_numeric($supplierCode),
+                    fn ($query) => $query->where('supplier_code', $supplierCode)->orWhere('id', (int) $supplierCode),
+                    fn ($query) => $query->where('supplier_code', $supplierCode)
+                )
+                ->value('id');
+
+            return $supplierId !== null ? (int) $supplierId : null;
+        }
+
+        return $request->filled('supplier_id') ? $request->integer('supplier_id') : null;
     }
 
     private function dateDiffExpression(string $endDateColumn, string $startDateColumn): string

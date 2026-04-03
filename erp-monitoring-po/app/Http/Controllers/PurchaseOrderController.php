@@ -21,7 +21,7 @@ class PurchaseOrderController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name']);
+        $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name', 'supplier_code']);
 
         return view('po.index', compact('rows', 'suppliers'));
     }

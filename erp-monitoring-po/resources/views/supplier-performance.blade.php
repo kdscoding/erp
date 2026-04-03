@@ -36,7 +36,7 @@
             <form method="GET" class="filter-grid">
                 <div class="span-4">
                     <label class="field-label">Supplier</label>
-                    <select name="supplier_id" class="form-control form-control-sm">
+                    <select name="supplier_code" class="form-control form-control-sm">
                         <option value="">Semua Supplier</option>
                         @foreach ($suppliers as $supplier)
                             <option value="{{ $supplier->id }}" @selected($supplierId === (int) $supplier->id)>{{ $supplier->supplier_name }}</option>

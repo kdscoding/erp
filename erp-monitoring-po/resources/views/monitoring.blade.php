@@ -68,11 +68,11 @@
             <form method="GET" class="filter-grid">
                 <input type="hidden" name="mode" value="{{ $monitoringMode }}">
                 <div class="span-6">
-                    <label class="field-label">Supplier</label>
-                    <select name="supplier_id" class="form-control form-control-sm">
+                    <label class="field-label">Supplier Code</label>
+                    <select name="supplier_code" class="form-control form-control-sm">
                         <option value="">Semua Supplier</option>
                         @foreach ($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}" @selected($supplierId === (int) $supplier->id)>{{ $supplier->supplier_name }}
+                            <option value="{{ $supplier->supplier_code }}" @selected(request('supplier_code') === $supplier->supplier_code)>{{ $supplier->supplier_code }} - {{ $supplier->supplier_name }}
                             </option>
                         @endforeach
                     </select>
@@ -159,7 +159,7 @@
                             @forelse($outstandingPoRows as $row)
                                 <tr>
                                     <td>
-                                        <a href="{{ route('po.show', $row->po_id) }}"
+                                        <a href="{{ route('po.show', $row->po_number) }}"
                                             class="doc-number text-decoration-none">{{ $row->po_number }}</a>
                                         <div class="doc-meta">{{ $row->po_status }}</div>
                                     </td>
@@ -211,7 +211,7 @@
                         <tbody>
                             @forelse($outstandingItemRows as $row)
                                 <tr>
-                                    <td><a href="{{ route('po.show', $row->po_id) }}"
+                                    <td><a href="{{ route('po.show', $row->po_number) }}"
                                             class="doc-number text-decoration-none">{{ $row->po_number }}</a></td>
                                     <td>{{ $row->supplier_name }}</td>
                                     <td>{{ $row->item_code }} - {{ $row->item_name }}</td>

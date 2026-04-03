@@ -39,13 +39,18 @@
             </div>
 
             <form method="GET" class="filter-grid">
+                <div class="span-3">
+                    <label class="field-label">Nomor PO</label>
+                    <input type="text" name="po_number" value="{{ request('po_number') }}" class="form-control form-control-sm" placeholder="Contoh: PO-2026-0001">
+                </div>
+
                 <div class="span-4">
-                    <label class="field-label">Supplier</label>
-                    <select name="supplier_id" class="form-control form-control-sm">
+                    <label class="field-label">Supplier Code</label>
+                    <select name="supplier_code" class="form-control form-control-sm">
                         <option value="">Semua Supplier</option>
                         @foreach ($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}" @selected(request('supplier_id') == $supplier->id)>
-                                {{ $supplier->supplier_name }}
+                            <option value="{{ $supplier->supplier_code }}" @selected(request('supplier_code') === $supplier->supplier_code)>
+                                {{ $supplier->supplier_code }} - {{ $supplier->supplier_name }}
                             </option>
                         @endforeach
                     </select>
@@ -107,12 +112,12 @@
                                     <div class="doc-meta">Dokumen pembelian</div>
                                 </td>
                                 <td>{{ \Carbon\Carbon::parse($r->po_date)->format('d-m-Y') }}</td>
-                                <td>{{ $r->supplier_name }}</td>
+                                <td><div class="doc-number">{{ $r->supplier_code }}</div><div class="doc-meta">{{ $r->supplier_name }}</div></td>
                                 <td><x-status-badge :status="$r->status" scope="po" /></td>
                                 <td class="text-end">
                                     <div class="action-stack">
-                                        <a href="{{ route('po.show', $r->id) }}" class="btn btn-sm btn-outline-primary">Detail</a>
-                                        <a href="{{ route('po.export-detail-excel', $r->id) }}" class="btn btn-sm btn-outline-success">Export Excel</a>
+                                        <a href="{{ route('po.show', $r->po_number) }}" class="btn btn-sm btn-outline-primary">Detail</a>
+                                        <a href="{{ route('po.export-detail-excel', $r->po_number) }}" class="btn btn-sm btn-outline-success">Export Excel</a>
                                     </div>
                                 </td>
                             </tr>

@@ -19,7 +19,21 @@ class TraceabilityIndexQuery
                 fn (Builder $query) => $query->where('po.po_number', 'like', '%' . trim((string) $request->input('po_number')) . '%')
             )
             ->when(
-                $request->filled('supplier_id'),
+                $request->filled('supplier_code'),
+                function (Builder $query) use ($request) {
+                    $supplierCode = trim((string) $request->input('supplier_code'));
+
+                    $query->where(function (Builder $inner) use ($supplierCode) {
+                        $inner->where('s.supplier_code', $supplierCode);
+
+                        if (is_numeric($supplierCode)) {
+                            $inner->orWhere('po.supplier_id', (int) $supplierCode);
+                        }
+                    });
+                }
+            )
+            ->when(
+                ! $request->filled('supplier_code') && $request->filled('supplier_id'),
                 fn (Builder $query) => $query->where('po.supplier_id', (int) $request->input('supplier_id'))
             )
             ->when(

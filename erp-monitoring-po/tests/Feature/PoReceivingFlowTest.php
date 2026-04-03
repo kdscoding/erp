@@ -77,6 +77,61 @@ class PoReceivingFlowTest extends TestCase
         ]);
     }
 
+    public function test_po_detail_can_be_opened_by_po_number(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+
+        DB::table('purchase_orders')->insert([
+            'po_number' => 'PO-CODE-0001',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get('/po/PO-CODE-0001')
+            ->assertOk()
+            ->assertSee('PO-CODE-0001');
+    }
+
+    public function test_po_index_supports_supplier_code_filter(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+
+        DB::table('purchase_orders')->insert([
+            [
+                'po_number' => 'PO-SUPFILTER-0001',
+                'po_date' => now()->toDateString(),
+                'supplier_id' => $supplierId,
+                'status' => 'Open',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'po_number' => 'PO-SUPFILTER-0002',
+                'po_date' => now()->toDateString(),
+                'supplier_id' => $supplierId,
+                'status' => 'Closed',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get('/po?supplier_code=SUP001&po_number=PO-SUPFILTER-0001')
+            ->assertOk()
+            ->assertSee('PO-SUPFILTER-0001')
+            ->assertSee('SUP001')
+            ->assertViewHas('rows', function ($rows) {
+                return $rows->getCollection()->count() === 1
+                    && $rows->getCollection()->first()->po_number === 'PO-SUPFILTER-0001';
+            });
+    }
+
     public function test_shipment_partial_and_full_receipt_auto_close(): void
     {
         $user = $this->makeUserWithRole('administrator');

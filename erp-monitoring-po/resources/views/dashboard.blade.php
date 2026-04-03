@@ -157,7 +157,7 @@
                         <div class="action-meta">Item outstanding tanpa ETD yang perlu konfirmasi supplier.</div>
                         <div class="action-links">
                             @forelse($actionCenter['items_need_etd_update'] as $row)
-                                <a href="{{ route('po.show', $row->po_id) }}" class="action-link">
+                                <a href="{{ route('po.show', $row->po_number) }}" class="action-link">
                                     <div class="stack-title">{{ $row->po_number }} · {{ $row->item_code }}</div>
                                     <div class="stack-meta">{{ $row->supplier_name }} | Outstanding {{ \App\Support\NumberFormatter::trim($row->outstanding_qty) }}</div>
                                 </a>
@@ -172,7 +172,7 @@
                         <div class="action-meta">Item dengan ETD tujuh hari ke depan untuk kesiapan receiving.</div>
                         <div class="action-links">
                             @forelse($actionCenter['incoming_this_week'] as $row)
-                                <a href="{{ route('po.show', $row->po_id) }}" class="action-link">
+                                <a href="{{ route('po.show', $row->po_number) }}" class="action-link">
                                     <div class="stack-title">{{ $row->po_number }} · {{ $row->item_code }}</div>
                                     <div class="stack-meta">{{ $row->supplier_name }} | ETD {{ \Carbon\Carbon::parse($row->etd_date)->format('d-m-Y') }}</div>
                                 </a>

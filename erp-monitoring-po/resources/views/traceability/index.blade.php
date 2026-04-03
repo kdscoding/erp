@@ -71,11 +71,11 @@
             </div>
             <form method="GET" class="filter-grid">
                 <div class="span-3">
-                    <label class="field-label">Supplier</label>
-                    <select name="supplier_id" class="form-control form-control-sm">
+                    <label class="field-label">Supplier Code</label>
+                    <select name="supplier_code" class="form-control form-control-sm">
                         <option value="">Semua Supplier</option>
                         @foreach($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}" @selected((int) request('supplier_id') === (int) $supplier->id)>{{ $supplier->supplier_name }}</option>
+                            <option value="{{ $supplier->supplier_code }}" @selected(request('supplier_code') === $supplier->supplier_code)>{{ $supplier->supplier_code }} - {{ $supplier->supplier_name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -158,7 +158,7 @@
                                             <div class="timeline-title">{{ $row->item_code }} - {{ $row->item_name }}</div>
                                             <div class="timeline-meta">Status <x-status-badge :status="$row->item_status" scope="item" /> | Ordered {{ \App\Support\NumberFormatter::trim($row->ordered_qty) }} | Received {{ \App\Support\NumberFormatter::trim($row->received_qty) }}</div>
                                         </div>
-                                        <a href="{{ route('po.show', $row->po_id) }}" class="btn btn-sm btn-light">Buka Detail PO</a>
+                                        <a href="{{ route('po.show', $row->po_number) }}" class="btn btn-sm btn-light">Buka Detail PO</a>
                                     </div>
 
                                     <div class="timeline-grid">

@@ -832,7 +832,7 @@
                     ->map(fn ($po) => [
                         'label' => 'PO · ' . $po->po_number,
                         'description' => trim(($po->supplier_name ?: 'Tanpa Supplier') . ' | Status ' . ($po->status ?: '-')),
-                        'route' => route('po.show', $po->id),
+                        'route' => route('po.show', $po->po_number),
                     ]);
 
                 $recentShipmentPaletteItems = \Illuminate\Support\Facades\DB::table('shipments as sh')
@@ -855,7 +855,7 @@
                     ->map(fn ($supplier) => [
                         'label' => 'Supplier · ' . $supplier->supplier_name,
                         'description' => 'Filter supplier ' . ($supplier->supplier_code ?: '-') . ' di Supplier Performance',
-                        'route' => route('supplier-performance.index', ['supplier_id' => $supplier->id]),
+                        'route' => route('supplier-performance.index', ['supplier_code' => $supplier->supplier_code]),
                     ]);
 
                 $dynamicCommandPaletteItems = $dynamicCommandPaletteItems

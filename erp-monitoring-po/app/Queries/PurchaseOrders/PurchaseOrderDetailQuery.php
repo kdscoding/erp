@@ -10,16 +10,17 @@ use Illuminate\Support\Facades\DB;
 
 class PurchaseOrderDetailQuery
 {
-    public function get(string $id): array
+    public function get(string $identifier): array
     {
         $currentDateSql = ErpFlow::currentDateExpression();
+        $poId = $this->resolvePurchaseOrderId($identifier);
 
         $po = DB::table('purchase_orders as po')
             ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->leftJoin('plants as p', 'p.id', '=', 'po.plant_id')
             ->leftJoin('warehouses as w', 'w.id', '=', 'po.warehouse_id')
-            ->select('po.*', 's.supplier_name', 'p.plant_name', 'w.warehouse_name')
-            ->where('po.id', $id)
+            ->select('po.*', 's.supplier_name', 's.supplier_code', 'p.plant_name', 'w.warehouse_name')
+            ->where('po.id', $poId)
             ->firstOrFail();
 
         $items = DB::table('purchase_order_items as poi')
@@ -35,7 +36,7 @@ class PurchaseOrderDetailQuery
                 WHEN DATE(poi.etd_date) < {$currentDateSql} THEN '" . DocumentTermCodes::ITEM_LATE . "'
                 ELSE '" . DocumentTermCodes::ITEM_CONFIRMED . "'
             END as monitoring_status")
-            ->where('poi.purchase_order_id', $id)
+            ->where('poi.purchase_order_id', $poId)
             ->orderBy('poi.id')
             ->get();
 
@@ -66,7 +67,7 @@ class PurchaseOrderDetailQuery
                     ->on('gri.shipment_item_id', '=', 'si.id');
             })
             ->leftJoin('goods_receipts as gr', 'gr.id', '=', 'gri.goods_receipt_id')
-            ->where('poi.purchase_order_id', $id)
+            ->where('poi.purchase_order_id', $poId)
             ->select(
                 'poi.id as purchase_order_item_id',
                 'si.id as shipment_item_id',
@@ -156,7 +157,7 @@ class PurchaseOrderDetailQuery
 
         $histories = DB::table('po_status_histories as h')
             ->leftJoin('users as u', 'u.id', '=', 'h.changed_by')
-            ->where('h.purchase_order_id', $id)
+            ->where('h.purchase_order_id', $poId)
             ->orderByDesc('h.id')
             ->select('h.*', 'u.name as changed_by_name')
             ->get();
@@ -164,5 +165,23 @@ class PurchaseOrderDetailQuery
         $poCanCancel = ! $poIsFinal;
 
         return compact('po', 'items', 'itemSummary', 'histories', 'poCanCancel', 'poIsFinal');
+    }
+
+    private function resolvePurchaseOrderId(string $identifier): int
+    {
+        $normalizedIdentifier = trim($identifier);
+
+        $poId = DB::table('purchase_orders')
+            ->when(
+                is_numeric($normalizedIdentifier),
+                fn ($query) => $query->where('id', (int) $normalizedIdentifier)
+                    ->orWhere('po_number', $normalizedIdentifier),
+                fn ($query) => $query->where('po_number', $normalizedIdentifier)
+            )
+            ->value('id');
+
+        abort_if($poId === null, 404);
+
+        return (int) $poId;
     }
 }

@@ -111,6 +111,9 @@ Progress saat ini:
   ketika source of truth yang lebih benar sebenarnya ada di line items
 - dashboard mulai mengurangi join receiving berbasis header anchor dan beralih menurunkan konteks PO/supplier dari line receiving
 - komponen `info-box` global mulai distandardisasi supaya layar detail dan modal audit tidak lagi terasa seperti dibangun dengan pola yang berbeda-beda
+- layar PO mulai masuk transisi `code-first`: detail PO, export, dan filter user-facing diarahkan ke `po_number` dan `supplier_code`, sementara FK internal tetap memakai `id`
+- filter monitoring, traceability, dan shortcut supplier di command palette mulai diarahkan ke `supplier_code` agar user tidak lagi berpikir dalam `supplier_id`
+- selama masa transisi, controller/query tetap menerima input lama berbasis `id` sebagai fallback kompatibilitas agar screen yang belum tersapu tidak langsung rusak
 - normalisasi penuh query, filter, resolver, dan policy status masih belum selesai
 
 ### 1. Refactor Traceability
