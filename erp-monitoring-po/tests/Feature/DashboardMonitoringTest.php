@@ -149,8 +149,8 @@ class DashboardMonitoringTest extends TestCase
             ->assertSee('At-Risk Hari Ini')
             ->assertSee('Incoming Minggu Ini')
             ->assertSee('Action Center')
-            ->assertSee('Items Need ETD Update')
-            ->assertSee('Partial Receiving Queue')
+            ->assertSee('Perlu Konfirmasi ETD')
+            ->assertSee('Receiving Parsial')
             ->assertSee('PO-DASH-0001')
             ->assertSee('ITM001')
             ->assertSee('SHP-DASH-0001');

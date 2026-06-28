@@ -553,6 +553,60 @@ class DashboardController extends Controller
                 ->get(),
         ];
 
+        $chartStatusBreakdown = DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
+            ->where('poi.item_status', '!=', 'Cancelled')
+            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
+            ->selectRaw("CASE
+                WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NULL THEN 'Menunggu ETD'
+                WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) >= {$currentDateSql} THEN 'Terkonfirmasi'
+                WHEN poi.outstanding_qty > 0 AND poi.received_qty = 0 AND poi.etd_date IS NOT NULL AND DATE(poi.etd_date) < {$currentDateSql} THEN 'Terlambat'
+                WHEN poi.received_qty > 0 AND poi.outstanding_qty > 0 THEN 'Parsial'
+                WHEN poi.outstanding_qty <= 0 THEN 'Selesai'
+                ELSE 'Lainnya'
+            END as status_label")
+            ->selectRaw('COUNT(poi.id) as item_count')
+            ->groupBy('status_label')
+            ->get()
+            ->mapWithKeys(fn ($row) => [$row->status_label => (int) $row->item_count])
+            ->toArray();
+
+        $chartSupplierDelay = DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
+            ->where('poi.outstanding_qty', '>', 0)
+            ->whereNotNull('poi.etd_date')
+            ->whereRaw("DATE(poi.etd_date) < {$currentDateSql}")
+            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
+            ->where('poi.item_status', '!=', 'Cancelled')
+            ->select('s.supplier_name')
+            ->selectRaw('COUNT(poi.id) as late_item_count')
+            ->selectRaw('SUM(poi.outstanding_qty) as outstanding_qty')
+            ->groupBy('s.supplier_name')
+            ->orderByDesc('late_item_count')
+            ->limit(8)
+            ->get();
+
+        $chartMonthlyTrend = DB::table('purchase_orders as po')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
+            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
+            ->selectRaw("STRFTIME('%Y-%m', po.po_date) as month_key")
+            ->selectRaw("COUNT(DISTINCT po.id) as po_count")
+            ->groupBy('month_key')
+            ->orderBy('month_key')
+            ->limit(6)
+            ->get()
+            ->mapWithKeys(fn ($row) => [$row->month_key => (int) $row->po_count])
+            ->toArray();
+
         return view('dashboard', compact(
             'metrics',
             'suppliers',
@@ -580,7 +634,10 @@ class DashboardController extends Controller
             'recentReceivings',
             'atRiskItems',
             'onTimeItems',
-            'itemMonitoringList'
+            'itemMonitoringList',
+            'chartStatusBreakdown',
+            'chartSupplierDelay',
+            'chartMonthlyTrend'
         ));
     }
 
@@ -971,9 +1028,16 @@ class DashboardController extends Controller
             ];
         }
 
+        if ($request->filled('date_from') || $request->filled('date_to')) {
+            return [
+                'date_from' => $request->date('date_from')?->format('Y-m-d'),
+                'date_to' => $request->date('date_to')?->format('Y-m-d'),
+            ];
+        }
+
         return [
-            'date_from' => $request->date('date_from')?->format('Y-m-d') ?? $today->copy()->subMonth()->format('Y-m-d'),
-            'date_to' => $request->date('date_to')?->format('Y-m-d') ?? $today->format('Y-m-d'),
+            'date_from' => null,
+            'date_to' => null,
         ];
     }
 

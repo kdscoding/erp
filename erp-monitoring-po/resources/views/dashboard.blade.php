@@ -51,6 +51,25 @@
             transition: all .15s ease;
         }
         .quick-link:hover { background: #eef7d2; border-color: #b9d044; }
+        .filter-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            padding: .35rem .65rem;
+            border-radius: 8px;
+            border: 1px solid rgba(111,150,40,.2);
+            background: rgba(255,255,255,.7);
+            color: #4a5e2a;
+            font-size: .72rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .15s ease;
+        }
+        .filter-toggle:hover { background: #eef7d2; border-color: #b9d044; }
+        .filter-toggle i { font-size: .65rem; transition: transform .2s ease; }
+        .filter-toggle.collapsed i { transform: rotate(-90deg); }
+        .filter-body { transition: max-height .3s ease, opacity .2s ease; overflow: hidden; }
+        .filter-body.collapsed { max-height: 0 !important; opacity: 0; margin-top: 0; }
         .kpi-section-title { font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; color:#5e7230; font-weight:700; margin-bottom:.4rem; }
         .kpi-grid { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:.85rem; }
         .kpi-card {
@@ -104,13 +123,23 @@
         .action-item-title { font-weight: 600; color: #2d3d15; }
         .action-item-meta { font-size: .7rem; color: #728058; margin-top: .1rem; }
         .empty-state { font-size: .8rem; color: #8a9470; padding: .4rem 0; }
+        .chart-grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:1rem; }
+        .chart-card {
+            padding: 1rem;
+            border-radius: 14px;
+            border: 1px solid rgba(111,150,40,.1);
+            background: linear-gradient(135deg, rgba(255,255,255,.98), rgba(247,248,234,.94));
+        }
+        .chart-title { font-size: .82rem; font-weight: 800; color: #2d3d15; margin-bottom: .6rem; }
+        .chart-canvas-wrap { position: relative; width: 100%; max-height: 280px; }
+        .chart-canvas-wrap canvas { max-height: 280px; }
 
         @media (max-width: 991.98px) {
-            .kpi-grid, .action-grid, .filter-inline { grid-template-columns: 1fr 1fr; }
+            .kpi-grid, .action-grid, .chart-grid { grid-template-columns: 1fr 1fr; }
             .filter-inline { grid-template-columns: 1fr 1fr 1fr; }
         }
         @media (max-width: 575.98px) {
-            .kpi-grid, .action-grid, .filter-inline { grid-template-columns: 1fr; }
+            .kpi-grid, .action-grid, .chart-grid, .filter-inline { grid-template-columns: 1fr; }
         }
     </style>
 
@@ -129,40 +158,49 @@
                 </div>
             </div>
 
-            <form method="GET" class="filter-inline">
-                <div>
-                    <label class="field-label">Supplier</label>
-                    <select name="supplier_id" class="form-control form-control-sm">
-                        <option value="">Semua Supplier</option>
-                        @foreach ($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}" @selected($supplierId === (int) $supplier->id)>{{ $supplier->supplier_name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="field-label">PO Dari</label>
-                    <input type="date" name="date_from" value="{{ $dateFrom }}" class="form-control form-control-sm">
-                </div>
-                <div>
-                    <label class="field-label">PO Sampai</label>
-                    <input type="date" name="date_to" value="{{ $dateTo }}" class="form-control form-control-sm">
-                </div>
-                <div><button class="btn btn-primary btn-sm w-100">Apply Filter</button></div>
-                <div>
-                    <a href="{{ route('dashboard') }}" class="btn btn-light btn-sm w-100">Reset</a>
-                </div>
-                <div style="display:flex; align-items:end;">
-                    <a href="{{ route('dashboard', array_filter(['saved_view' => 'custom'])) }}" class="btn btn-outline-secondary btn-sm w-100">+ View Baru</a>
-                </div>
-            </form>
+            <div class="d-flex justify-content-between align-items-center" style="margin-top:.5rem;">
+                <button type="button" class="filter-toggle" id="filterToggle" aria-expanded="true">
+                    <i class="fas fa-chevron-down"></i>
+                    Filter &amp; Tampilan
+                </button>
+            </div>
 
-            <div class="saved-pills">
-                @foreach ($savedViews as $view)
-                    <a href="{{ route('dashboard', array_filter(['saved_view' => $view['key'], 'supplier_id' => $supplierId])) }}"
-                       class="saved-pill {{ $activeSavedView === $view['key'] ? 'active' : '' }}">
-                        {{ $view['label'] }}
-                    </a>
-                @endforeach
+            <div class="filter-body" id="filterBody" style="max-height: 600px; opacity: 1; margin-top: .5rem;">
+                <form method="GET" class="filter-inline">
+                    <div>
+                        <label class="field-label">Supplier</label>
+                        <select name="supplier_id" class="form-control form-control-sm">
+                            <option value="">Semua Supplier</option>
+                            @foreach ($suppliers as $supplier)
+                                <option value="{{ $supplier->id }}" @selected($supplierId === (int) $supplier->id)>{{ $supplier->supplier_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="field-label">PO Dari</label>
+                        <input type="date" name="date_from" value="{{ $dateFrom }}" class="form-control form-control-sm">
+                    </div>
+                    <div>
+                        <label class="field-label">PO Sampai</label>
+                        <input type="date" name="date_to" value="{{ $dateTo }}" class="form-control form-control-sm">
+                    </div>
+                    <div><button class="btn btn-primary btn-sm w-100">Apply Filter</button></div>
+                    <div>
+                        <a href="{{ route('dashboard') }}" class="btn btn-light btn-sm w-100">Reset</a>
+                    </div>
+                    <div style="display:flex; align-items:end;">
+                        <a href="{{ route('dashboard', array_filter(['saved_view' => 'custom'])) }}" class="btn btn-outline-secondary btn-sm w-100">+ View Baru</a>
+                    </div>
+                </form>
+
+                <div class="saved-pills">
+                    @foreach ($savedViews as $view)
+                        <a href="{{ route('dashboard', array_filter(['saved_view' => $view['key'], 'supplier_id' => $supplierId])) }}"
+                           class="saved-pill {{ $activeSavedView === $view['key'] ? 'active' : '' }}">
+                            {{ $view['label'] }}
+                        </a>
+                    @endforeach
+                </div>
             </div>
         </section>
 
@@ -193,11 +231,34 @@
         </section>
 
         <section>
+            <div class="chart-grid">
+                <article class="chart-card">
+                    <div class="chart-title">Distribusi Status Item</div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chartStatusBreakdown"></canvas>
+                    </div>
+                </article>
+                <article class="chart-card">
+                    <div class="chart-title">Top Supplier Terlambat ( outstanding )</div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chartSupplierDelay"></canvas>
+                    </div>
+                </article>
+                <article class="chart-card">
+                    <div class="chart-title">Tren PO Bulanan (6 bulan terakhir)</div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chartMonthlyTrend"></canvas>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section>
             <div class="action-section-head">Action Center</div>
             <div class="action-grid">
                 <article class="action-card">
                     <div class="action-header">
-                        <div class="action-title">Items Need ETD Update</div>
+                        <div class="action-title">Perlu Konfirmasi ETD</div>
                         <div class="action-count">{{ $actionCenter['items_need_etd_update']->count() }} item</div>
                     </div>
                     <div class="action-meta">Item outstanding tanpa konfirmasi ETD dari supplier.</div>
@@ -233,7 +294,7 @@
 
                 <article class="action-card">
                     <div class="action-header">
-                        <div class="action-title">Partial Receiving Queue</div>
+                        <div class="action-title">Receiving Parsial</div>
                         <div class="action-count">{{ $actionCenter['partial_receiving_queue']->count() }} shipment</div>
                     </div>
                     <div class="action-meta">Shipment aktif yang masih punya sisa qty untuk diterima.</div>
@@ -251,4 +312,149 @@
             </div>
         </section>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script>
+        (function() {
+            const lemonColors = {
+                green: '#9ecb3c',
+                greenDeep: '#6f9628',
+                yellow: '#f1d93b',
+                yellowSoft: '#fff4a8',
+                olive: '#566d2a',
+                ink: '#304218',
+                muted: '#728058',
+                line: '#dfe6b8',
+                bg: '#f7f8ea',
+            };
+
+            const statusLabels = @json(array_keys($chartStatusBreakdown));
+            const statusData = @json(array_values($chartStatusBreakdown));
+            const statusColors = [
+                '#f1d93b',
+                '#9ecb3c',
+                '#ef4444',
+                '#f59e0b',
+                '#9ca3af',
+                '#6b7280',
+            ];
+
+            new Chart(document.getElementById('chartStatusBreakdown'), {
+                type: 'doughnut',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusData,
+                        backgroundColor: statusColors,
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } },
+                    },
+                },
+            });
+
+            const supplierLabels = @json($chartSupplierDelay->pluck('supplier_name')->all());
+            const supplierLateData = @json($chartSupplierDelay->pluck('late_item_count')->all());
+            const supplierOutstandingData = @json($chartSupplierDelay->pluck('outstanding_qty')->all());
+
+            new Chart(document.getElementById('chartSupplierDelay'), {
+                type: 'bar',
+                data: {
+                    labels: supplierLabels,
+                    datasets: [
+                        {
+                            label: 'Item Terlambat',
+                            data: supplierLateData,
+                            backgroundColor: '#ef4444',
+                            borderRadius: 6,
+                        },
+                        {
+                            label: 'Total Outstanding',
+                            data: supplierOutstandingData,
+                            backgroundColor: '#f1d93b',
+                            borderRadius: 6,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+                        y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: lemonColors.line } },
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } },
+                    },
+                },
+            });
+
+            const monthLabels = @json(array_keys($chartMonthlyTrend));
+            const monthData = @json(array_values($chartMonthlyTrend));
+
+            new Chart(document.getElementById('chartMonthlyTrend'), {
+                type: 'line',
+                data: {
+                    labels: monthLabels,
+                    datasets: [{
+                        label: 'Jumlah PO',
+                        data: monthData,
+                        borderColor: lemonColors.greenDeep,
+                        backgroundColor: 'rgba(158,203,60,.15)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointBackgroundColor: lemonColors.greenDeep,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+                        y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: lemonColors.line } },
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } },
+                    },
+                },
+            });
+        })();
+
+        (function() {
+            const toggle = document.getElementById('filterToggle');
+            const body = document.getElementById('filterBody');
+            if (!toggle || !body) return;
+
+            const collapse = () => {
+                toggle.classList.add('collapsed');
+                body.classList.add('collapsed');
+                body.style.maxHeight = '0px';
+                toggle.setAttribute('aria-expanded', 'false');
+            };
+
+            const expand = () => {
+                toggle.classList.remove('collapsed');
+                body.classList.remove('collapsed');
+                body.style.maxHeight = body.scrollHeight + 'px';
+                toggle.setAttribute('aria-expanded', 'true');
+            };
+
+            toggle.addEventListener('click', function() {
+                if (body.classList.contains('collapsed')) {
+                    expand();
+                } else {
+                    collapse();
+                }
+            });
+
+            expand();
+        })();
+    </script>
 @endsection
