@@ -52,6 +52,12 @@
             "@php artisan config:clear --ansi",
             "@php artisan test"
         ],
+        "lint": [
+            "@php artisan pint --test"
+        ],
+        "fix": [
+            "@php artisan pint"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
@@ -84,12 +90,6 @@
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
         }
-    },
-    "require": {
-        "php": "^8.3",
-        "laravel/framework": "^13.0",
-        "laravel/tinker": "^3.0",
-        "maatwebsite/excel": "^3.1"
     },
     "minimum-stability": "dev",
     "prefer-stable": true

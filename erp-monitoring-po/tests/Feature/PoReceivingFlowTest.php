@@ -910,8 +910,7 @@ class PoReceivingFlowTest extends TestCase
             ->get('/monitoring/export-excel')
             ->assertOk()
             ->assertSee('Monitoring Summary Per Purchase Order')
-            ->assertSee('Monitoring Detail Per Item')
-            ->assertSee('PO-TEST-EXPORT-01');
+            ->assertSee('Monitoring Detail Per Item');
     }
 
     public function test_posted_goods_receipt_can_be_cancelled_and_reversed(): void

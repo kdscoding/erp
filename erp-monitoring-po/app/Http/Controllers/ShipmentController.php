@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\StoreShipmentDraft;
+use App\Actions\UpdateShipmentDraft;
 use App\Support\DocumentTermCodes;
 use App\Support\DomainStatus;
 use App\Support\ErpFlow;
@@ -251,7 +253,7 @@ class ShipmentController extends Controller
         return view('shipments.edit', compact('shipment', 'lines', 'splitShipmentBoard'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, StoreShipmentDraft $storeShipmentDraft): RedirectResponse
     {
         $v = $request->validate([
             'shipment_date' => 'required|date',
@@ -267,152 +269,7 @@ class ShipmentController extends Controller
             'invoice_unit_price' => 'nullable|array',
         ], ['required' => ':attribute wajib diisi.']);
 
-        $selectedIds = collect($v['selected_items'])->map(fn($id) => (int) $id)->unique()->values();
-        $userId = optional($request->user())->id;
-
-        $remark = trim(implode(' | ', array_filter([
-            !empty($v['po_reference_missing']) ? 'Dokumen supplier tidak mencantumkan nomor PO.' : null,
-            $v['supplier_remark'] ?? null,
-        ]))) ?: null;
-
-        $deliveryNote = trim((string) $v['delivery_note_number']);
-        $invoiceNumber = trim((string) ($v['invoice_number'] ?? '')) ?: null;
-        $shipmentId = null;
-
-        $shipmentId = DB::transaction(function () use ($selectedIds, $request, $deliveryNote, $invoiceNumber, $remark, $userId, $v) {
-            $items = $this->candidateItemsBaseQuery()
-                ->whereIn('poi.id', $selectedIds)
-                ->lockForUpdate()
-                ->get();
-
-            if ($items->count() !== $selectedIds->count()) {
-                throw ValidationException::withMessages([
-                    'selected_items' => 'Sebagian item tidak lagi tersedia untuk dibuat shipment.',
-                ]);
-            }
-
-            if ($items->pluck('supplier_id')->unique()->count() !== 1) {
-                throw ValidationException::withMessages([
-                    'selected_items' => 'Semua item shipment harus berasal dari supplier yang sama.',
-                ]);
-            }
-
-            $supplierId = (int) $items->first()->supplier_id;
-
-            $duplicateShipment = DB::table('shipments')
-                ->where('supplier_id', $supplierId)
-                ->whereRaw('LOWER(TRIM(delivery_note_number)) = ?', [mb_strtolower($deliveryNote)])
-                ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
-                ->lockForUpdate()
-                ->first();
-
-            if ($duplicateShipment) {
-                $statusLabel = $duplicateShipment->status === DocumentTermCodes::SHIPMENT_DRAFT
-                    ? 'masih berupa Draft'
-                    : 'sudah diproses dengan status ' . $duplicateShipment->status;
-
-                throw ValidationException::withMessages([
-                    'delivery_note_number' => "Delivery note {$deliveryNote} untuk supplier ini sudah digunakan pada shipment {$duplicateShipment->shipment_number} dan {$statusLabel}.",
-                ]);
-            }
-
-            if ($invoiceNumber) {
-                $duplicateInvoice = DB::table('shipments')
-                    ->where('supplier_id', $supplierId)
-                    ->whereRaw('LOWER(TRIM(invoice_number)) = ?', [mb_strtolower($invoiceNumber)])
-                    ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($duplicateInvoice) {
-                    throw ValidationException::withMessages([
-                        'invoice_number' => "Invoice {$invoiceNumber} untuk supplier ini sudah dipakai pada shipment {$duplicateInvoice->shipment_number}.",
-                    ]);
-                }
-            }
-
-            $linePayloads = [];
-            foreach ($items as $item) {
-                $qty = (float) ($request->input("shipped_qty.{$item->purchase_order_item_id}") ?? 0);
-                $invoiceUnitPrice = $request->input("invoice_unit_price.{$item->purchase_order_item_id}");
-                $invoiceUnitPrice = ($invoiceUnitPrice === null || $invoiceUnitPrice === '') ? null : (float) $invoiceUnitPrice;
-
-                if ($qty <= 0) {
-                    throw ValidationException::withMessages([
-                        'shipped_qty' => 'Qty kirim harus diisi untuk setiap item yang dipilih.',
-                    ]);
-                }
-
-                if ($qty > (float) $item->available_to_ship_qty) {
-                    throw ValidationException::withMessages([
-                        'shipped_qty.' . $item->purchase_order_item_id => "Qty kirim untuk {$item->item_code} melebihi sisa qty yang masih bisa dialokasikan.",
-                    ]);
-                }
-
-                $linePayloads[] = [
-                    'purchase_order_item_id' => $item->purchase_order_item_id,
-                    'purchase_order_id' => $item->purchase_order_id,
-                    'shipped_qty' => $qty,
-                    'invoice_unit_price' => $invoiceUnitPrice,
-                    'invoice_line_total' => $invoiceUnitPrice !== null ? round($invoiceUnitPrice * $qty, 2) : null,
-                ];
-            }
-
-            $number = ErpFlow::generateNumber('SHP', 'shipments', 'shipment_number');
-
-            $shipmentId = DB::table('shipments')->insertGetId([
-                'purchase_order_id' => $linePayloads[0]['purchase_order_id'],
-                'supplier_id' => $supplierId,
-                'shipment_number' => $number,
-                'shipment_date' => $v['shipment_date'],
-                'delivery_note_number' => $deliveryNote,
-                'invoice_number' => $invoiceNumber,
-                'invoice_date' => $v['invoice_date'] ?? null,
-                'invoice_currency' => $v['invoice_currency'] ?? null,
-                'supplier_remark' => $remark,
-                'created_by' => $userId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ] + DomainStatus::payload(DomainStatus::GROUP_SHIPMENT_STATUS, 'status', DocumentTermCodes::SHIPMENT_DRAFT));
-
-            $lineRows = collect($linePayloads)->map(fn($line) => [
-                'shipment_id' => $shipmentId,
-                'purchase_order_item_id' => $line['purchase_order_item_id'],
-                'shipped_qty' => $line['shipped_qty'],
-                'received_qty' => 0,
-                'invoice_unit_price' => $line['invoice_unit_price'],
-                'invoice_line_total' => $line['invoice_line_total'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ])->all();
-
-            DB::table('shipment_items')->insert($lineRows);
-
-            $poIds = collect($linePayloads)
-                ->pluck('purchase_order_id')
-                ->map(fn($poId) => (int) $poId)
-                ->unique()
-                ->values();
-
-            foreach ($poIds as $poId) {
-                ErpFlow::refreshPoStatusByOutstanding($poId, $userId);
-            }
-
-            ErpFlow::audit('shipments', $shipmentId, 'create', null, [
-                'shipment' => [
-                    'shipment_date' => $v['shipment_date'],
-                    'delivery_note_number' => $deliveryNote,
-                    'invoice_number' => $invoiceNumber,
-                    'invoice_date' => $v['invoice_date'] ?? null,
-                    'invoice_currency' => $v['invoice_currency'] ?? null,
-                    'supplier_remark' => $remark,
-                    'status' => DocumentTermCodes::SHIPMENT_DRAFT,
-                ],
-                'lines' => $linePayloads,
-            ], $userId, $request->ip());
-
-            return $shipmentId;
-        });
+        $shipmentId = $storeShipmentDraft->handle($v, optional($request->user())->id, $request);
 
         $request->session()->forget('shipment_selected_items');
         $request->session()->forget('shipment_shipped_qty');
@@ -424,7 +281,7 @@ class ShipmentController extends Controller
         ])->with('success', 'Shipment tersimpan dengan status Draft.');
     }
 
-    public function update(string $id, Request $request): RedirectResponse
+    public function update(string $id, Request $request, UpdateShipmentDraft $updateShipmentDraft): RedirectResponse
     {
         $v = $request->validate([
             'shipment_date' => 'required|date',
@@ -440,132 +297,7 @@ class ShipmentController extends Controller
             'shipment_items.*.keep' => ['nullable', Rule::in(['1'])],
         ]);
 
-        $deliveryNote = trim((string) $v['delivery_note_number']);
-        $invoiceNumber = trim((string) ($v['invoice_number'] ?? '')) ?: null;
-        $userId = optional($request->user())->id;
-
-        DB::transaction(function () use ($id, $v, $deliveryNote, $invoiceNumber, $userId, $request) {
-            $shipment = DB::table('shipments')->where('id', $id)->lockForUpdate()->firstOrFail();
-
-            if ($shipment->status !== DocumentTermCodes::SHIPMENT_DRAFT) {
-                throw ValidationException::withMessages([
-                    'shipment' => 'Hanya draft shipment yang masih bisa diubah.',
-                ]);
-            }
-
-            $duplicateShipment = DB::table('shipments')
-                ->where('supplier_id', $shipment->supplier_id)
-                ->where('id', '!=', $shipment->id)
-                ->whereRaw('LOWER(TRIM(delivery_note_number)) = ?', [mb_strtolower($deliveryNote)])
-                ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
-                ->lockForUpdate()
-                ->first();
-
-            if ($duplicateShipment) {
-                throw ValidationException::withMessages([
-                    'delivery_note_number' => "Delivery note {$deliveryNote} sudah dipakai oleh shipment {$duplicateShipment->shipment_number}.",
-                ]);
-            }
-
-            if ($invoiceNumber) {
-                $duplicateInvoice = DB::table('shipments')
-                    ->where('supplier_id', $shipment->supplier_id)
-                    ->where('id', '!=', $shipment->id)
-                    ->whereRaw('LOWER(TRIM(invoice_number)) = ?', [mb_strtolower($invoiceNumber)])
-                    ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($duplicateInvoice) {
-                    throw ValidationException::withMessages([
-                        'invoice_number' => "Invoice {$invoiceNumber} sudah dipakai oleh shipment {$duplicateInvoice->shipment_number}.",
-                    ]);
-                }
-            }
-
-            $currentLines = $this->shipmentLineQuery((int) $shipment->id)
-                ->lockForUpdate()
-                ->get()
-                ->keyBy('shipment_item_id');
-
-            $keptLines = collect($v['shipment_items'])
-                ->filter(fn($line) => ($line['keep'] ?? null) === '1')
-                ->values();
-
-            if ($keptLines->isEmpty()) {
-                throw ValidationException::withMessages([
-                    'shipment_items' => 'Minimal satu item harus dipertahankan di draft shipment.',
-                ]);
-            }
-
-            foreach ($keptLines as $line) {
-                $existing = $currentLines->get((int) $line['id']);
-
-                if (!$existing) {
-                    throw ValidationException::withMessages([
-                        'shipment_items' => 'Ada item draft yang tidak valid.',
-                    ]);
-                }
-
-                $maxQty = (float) $existing->available_to_ship_qty;
-
-                if ((float) $line['shipped_qty'] > $maxQty) {
-                    throw ValidationException::withMessages([
-                        'shipment_items' => "Qty kirim untuk {$existing->item_code} melebihi batas yang masih tersedia.",
-                    ]);
-                }
-            }
-
-            DB::table('shipments')->where('id', $shipment->id)->update([
-                'shipment_date' => $v['shipment_date'],
-                'delivery_note_number' => $deliveryNote,
-                'invoice_number' => $invoiceNumber,
-                'invoice_date' => $v['invoice_date'] ?? null,
-                'invoice_currency' => $v['invoice_currency'] ?? null,
-                'supplier_remark' => $v['supplier_remark'] ?? null,
-                'updated_at' => now(),
-            ]);
-
-            $keptIds = $keptLines->pluck('id')->map(fn($lineId) => (int) $lineId)->all();
-
-            DB::table('shipment_items')
-                ->where('shipment_id', $shipment->id)
-                ->whereNotIn('id', $keptIds)
-                ->delete();
-
-            foreach ($keptLines as $line) {
-                $invoiceUnitPrice = array_key_exists('invoice_unit_price', $line) && $line['invoice_unit_price'] !== null && $line['invoice_unit_price'] !== ''
-                    ? (float) $line['invoice_unit_price']
-                    : null;
-
-                $invoiceLineTotal = $invoiceUnitPrice !== null
-                    ? round($invoiceUnitPrice * (float) $line['shipped_qty'], 2)
-                    : null;
-
-                DB::table('shipment_items')
-                    ->where('id', (int) $line['id'])
-                    ->update([
-                        'shipped_qty' => (float) $line['shipped_qty'],
-                        'invoice_unit_price' => $invoiceUnitPrice,
-                        'invoice_line_total' => $invoiceLineTotal,
-                        'updated_at' => now(),
-                    ]);
-            }
-
-            $linePoIds = DB::table('shipment_items as si')
-                ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
-                ->where('si.shipment_id', $shipment->id)
-                ->pluck('poi.purchase_order_id')
-                ->map(fn($poId) => (int) $poId)
-                ->unique()
-                ->values();
-
-            foreach ($linePoIds as $poId) {
-                ErpFlow::refreshPoStatusByOutstanding((int) $poId, $userId);
-            }
-
-            ErpFlow::audit('shipments', (int) $shipment->id, 'update', $shipment, $v, $userId, $request->ip());
-        });
+        $updateShipmentDraft->handle($id, $v, optional($request->user())->id, $request);
 
         return redirect()->route('shipments.edit', $id)->with('success', 'Draft shipment berhasil diperbarui.');
     }

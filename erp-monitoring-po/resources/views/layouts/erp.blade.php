@@ -865,9 +865,15 @@
             }
 
             if ($currentUser?->hasAnyRole(['administrator', 'staff'])) {
-                $itemPaletteItems = \Illuminate\Support\Facades\DB::table('items')
+                $itemQuery = DB::table('items')
                     ->select('id', 'item_code', 'item_name')
-                    ->orderBy('item_name')
+                    ->orderBy('item_name');
+
+                if (request()->is('masters/items') && request()->filled('category_id')) {
+                    $itemQuery->where('category_id', (int) request()->query('category_id'));
+                }
+
+                $itemPaletteItems = $itemQuery
                     ->limit(5)
                     ->get()
                     ->map(fn ($item) => [

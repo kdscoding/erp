@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\PostReceiptDocument;
 use App\Queries\Receiving\ReceivingHistoryQuery;
 use App\Queries\Receiving\ShipmentReceivingQuery;
 use App\Support\DocumentTermCodes;
@@ -203,31 +204,16 @@ class GoodsReceiptController extends Controller
         return redirect()->route('receiving.show', $id)->with('success', 'Goods Receipt berhasil dibatalkan dan qty receiving telah dikembalikan.');
     }
 
-    public function store(
-        Request $request,
-        ShipmentReceivingQuery $shipmentReceivingQuery,
-        PurchaseOrderItemStatusResolver $purchaseOrderItemStatusResolver
-    ): RedirectResponse
+    public function store(Request $request, PostReceiptDocument $postReceiptDocument): RedirectResponse
     {
         if ($request->filled('shipment_id')) {
-            return $this->storeDocumentReceiving(
-                $request,
-                $shipmentReceivingQuery,
-                $purchaseOrderItemStatusResolver
-            );
+            return $this->storeDocumentReceiving($request, $postReceiptDocument);
         }
 
-        return $this->storeSingleLineReceiving(
-            $request,
-            $purchaseOrderItemStatusResolver
-        );
+        return $this->storeSingleLineReceiving($request, app(PurchaseOrderItemStatusResolver::class));
     }
 
-    private function storeDocumentReceiving(
-        Request $request,
-        ShipmentReceivingQuery $shipmentReceivingQuery,
-        PurchaseOrderItemStatusResolver $purchaseOrderItemStatusResolver
-    ): RedirectResponse
+    private function storeDocumentReceiving(Request $request, PostReceiptDocument $postReceiptDocument): RedirectResponse
     {
         $v = $request->validate([
             'shipment_id' => 'required|integer|exists:shipments,id',
@@ -239,131 +225,11 @@ class GoodsReceiptController extends Controller
             'received_qty.*' => 'nullable|numeric|min:0',
         ]);
 
-        $lineInputs = collect($v['received_qty'])
-            ->mapWithKeys(fn($qty, $shipmentItemId) => [(int) $shipmentItemId => (float) $qty])
-            ->filter(fn($qty) => $qty > 0);
-
-        if ($lineInputs->isEmpty()) {
-            throw ValidationException::withMessages([
-                'received_qty' => 'Isi minimal satu qty terima untuk memproses receiving.',
-            ]);
-        }
-
-        $allowOverReceipt = (bool) DB::table('settings')->where('key', 'allow_over_receipt')->value('value');
-        $storedPath = null;
-
-        DB::beginTransaction();
         try {
-            $shipment = DB::table('shipments')->where('id', $v['shipment_id'])->lockForUpdate()->firstOrFail();
-
-            if (! in_array($shipment->status, [
-                DocumentTermCodes::SHIPMENT_SHIPPED,
-                DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED,
-            ], true)) {
-                throw new \RuntimeException('Receiving hanya bisa diproses untuk shipment yang sudah berstatus Shipped atau Partial Received.');
-            }
-
-            $shipmentItems = $shipmentReceivingQuery->itemsForShipmentBuilder((int) $shipment->id)
-                ->whereIn('si.id', $lineInputs->keys()->all())
-                ->lockForUpdate()
-                ->orderBy('po.po_number')
-                ->orderBy('i.item_code')
-                ->get()
-                ->keyBy('shipment_item_id');
-
-            if ($shipmentItems->count() !== $lineInputs->count()) {
-                throw new \RuntimeException('Sebagian item shipment tidak valid untuk diproses.');
-            }
-
-            $grId = null;
-            foreach ($lineInputs as $shipmentItemId => $receivedQty) {
-                $item = $shipmentItems->get($shipmentItemId);
-                $shipmentRemaining = max(0, (float) $item->shipped_qty - (float) $item->shipment_received_qty);
-
-                if ($receivedQty > $shipmentRemaining && ! $allowOverReceipt) {
-                    throw new \RuntimeException("Qty menerima untuk {$item->item_code} melebihi sisa kiriman.");
-                }
-
-                if ($receivedQty > (float) $item->outstanding_qty && ! $allowOverReceipt) {
-                    throw new \RuntimeException("Qty menerima untuk {$item->item_code} melebihi outstanding PO.");
-                }
-
-                $poItem = DB::table('purchase_order_items')->where('id', $item->purchase_order_item_id)->lockForUpdate()->firstOrFail();
-                $po = DB::table('purchase_orders')->where('id', $poItem->purchase_order_id)->lockForUpdate()->firstOrFail();
-
-                if (! $grId) {
-                    $grId = DB::table('goods_receipts')->insertGetId([
-                        'gr_number' => ErpFlow::generateNumber('GR', 'goods_receipts', 'gr_number'),
-                        'receipt_date' => $v['receipt_date'],
-                        'purchase_order_id' => $poItem->purchase_order_id,
-                        'shipment_id' => $shipment->id,
-                        'warehouse_id' => $po->warehouse_id,
-                        'received_by' => optional($request->user())->id,
-                        'document_number' => $v['document_number'],
-                        'remark' => $v['note'] ?? null,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ] + DomainStatus::payload(DomainStatus::GROUP_GOODS_RECEIPT_STATUS, 'status', DocumentTermCodes::GR_POSTED));
-                }
-
-                DB::table('goods_receipt_items')->insert([
-                    'goods_receipt_id' => $grId,
-                    'shipment_item_id' => $shipmentItemId,
-                    'purchase_order_item_id' => $poItem->id,
-                    'received_qty' => $receivedQty,
-                    'qty_variance' => (float) $poItem->ordered_qty - $receivedQty,
-                    'accepted_qty' => $receivedQty,
-                    'remark' => $v['note'] ?? null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-
-                $newReceived = (float) $poItem->received_qty + $receivedQty;
-                $newOutstanding = max(0, (float) $poItem->ordered_qty - $newReceived);
-
-                DB::table('purchase_order_items')->where('id', $poItem->id)->update([
-                    'received_qty' => $newReceived,
-                    'outstanding_qty' => $newOutstanding,
-                    'updated_at' => now(),
-                ] + DomainStatus::payload(
-                    DomainStatus::GROUP_PO_ITEM_STATUS,
-                    'item_status',
-                    $purchaseOrderItemStatusResolver->resolve(
-                        $newReceived,
-                        $newOutstanding,
-                        $poItem->etd_date
-                    )
-                ));
-
-                DB::table('shipment_items')->where('id', $shipmentItemId)->update([
-                    'received_qty' => (float) $item->shipment_received_qty + $receivedQty,
-                    'updated_at' => now(),
-                ]);
-
-                ErpFlow::refreshPoStatusByOutstanding((int) $poItem->purchase_order_id, optional($request->user())->id);
-            }
-
-            if ($request->hasFile('attachment') && $grId) {
-                $storedPath = $request->file('attachment')->store('attachments/receiving', 'public');
-                DB::table('attachments')->insert([
-                    'module' => 'goods_receipts',
-                    'record_id' => $grId,
-                    'file_path' => $storedPath,
-                    'file_name' => basename($storedPath),
-                    'uploaded_by' => optional($request->user())->id,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-
-            $this->refreshShipmentStatus((int) $shipment->id);
-            ErpFlow::audit('goods_receipts', $grId, 'create', null, $v, optional($request->user())->id, $request->ip());
-            DB::commit();
+            $grId = $postReceiptDocument->handle($v, optional($request->user())->id, $request);
         } catch (\Throwable $e) {
-            DB::rollBack();
-
-            if ($storedPath) {
-                Storage::disk('public')->delete($storedPath);
+            if ($request->hasFile('attachment')) {
+                $request->file('attachment')->delete();
             }
 
             return back()->withInput()->with('error', $e->getMessage());

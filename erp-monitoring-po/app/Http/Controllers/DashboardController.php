@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Queries\Dashboard\DashboardQuery;
 use App\Support\DocumentTermCodes;
 use App\Support\DomainStatus;
 use App\Support\StatusQuery;
@@ -14,6 +15,10 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function __construct(private DashboardQuery $dashboardQuery)
+    {
+    }
+
     public function __invoke(Request $request): View
     {
         $currentDateSql = $this->currentDateExpression();
@@ -591,9 +596,9 @@ class DashboardController extends Controller
             ->orderBy('supplier_name')
             ->get(['id', 'supplier_name', 'supplier_code']);
 
-        $summaryMetrics = $this->summaryMetrics($supplierId, $dateFrom, $dateTo);
+        $summaryMetrics = $this->dashboardQuery->summaryMetrics($supplierId, $dateFrom, $dateTo);
 
-        $outstandingPoRows = $this->baseMonitoringPoQuery($supplierId, $dateFrom, $dateTo)
+        $outstandingPoRows = $this->dashboardQuery->baseMonitoringPoQuery($supplierId, $dateFrom, $dateTo)
             ->select(
                 'po.id as po_id',
                 'po.po_number',
@@ -611,7 +616,7 @@ class DashboardController extends Controller
             ->orderBy('po.po_number')
             ->get();
 
-        $outstandingItemRows = $this->baseMonitoringItemQuery($supplierId, $dateFrom, $dateTo)
+        $outstandingItemRows = $this->dashboardQuery->baseMonitoringItemQuery($supplierId, $dateFrom, $dateTo)
             ->orderByDesc('poi.outstanding_qty')
             ->orderBy('po.po_number')
             ->orderBy('i.item_code')
@@ -755,9 +760,9 @@ class DashboardController extends Controller
         $supplierId = $request->integer('supplier_id');
         ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
 
-        $summaryMetrics = $this->summaryMetrics($supplierId, $dateFrom, $dateTo);
+        $summaryMetrics = $this->dashboardQuery->summaryMetrics($supplierId, $dateFrom, $dateTo);
 
-        $outstandingPoRows = $this->baseMonitoringPoQuery($supplierId, $dateFrom, $dateTo)
+        $outstandingPoRows = $this->dashboardQuery->baseMonitoringPoQuery($supplierId, $dateFrom, $dateTo)
             ->select(
                 'po.id as po_id',
                 'po.po_number',
@@ -775,7 +780,7 @@ class DashboardController extends Controller
             ->orderBy('po.po_number')
             ->get();
 
-        $outstandingItemRows = $this->baseMonitoringItemQuery($supplierId, $dateFrom, $dateTo)
+        $outstandingItemRows = $this->dashboardQuery->baseMonitoringItemQuery($supplierId, $dateFrom, $dateTo)
             ->orderByDesc('poi.outstanding_qty')
             ->orderBy('po.po_number')
             ->orderBy('i.item_code')
@@ -803,9 +808,9 @@ class DashboardController extends Controller
             ->orderBy('supplier_name')
             ->get(['id', 'supplier_name']);
 
-        $summaryMetrics = $this->summaryMetrics($supplierId, $dateFrom, $dateTo);
+        $summaryMetrics = $this->dashboardQuery->summaryMetrics($supplierId, $dateFrom, $dateTo);
 
-        $outstandingPoRows = $this->baseOutstandingQuery($supplierId, $dateFrom, $dateTo)
+        $outstandingPoRows = $this->dashboardQuery->baseOutstandingQuery($supplierId, $dateFrom, $dateTo)
             ->select(
                 'po.id as po_id',
                 'po.po_number',
@@ -838,9 +843,9 @@ class DashboardController extends Controller
         $supplierId = $request->integer('supplier_id');
         ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
 
-        $summaryMetrics = $this->summaryMetrics($supplierId, $dateFrom, $dateTo);
+        $summaryMetrics = $this->dashboardQuery->summaryMetrics($supplierId, $dateFrom, $dateTo);
 
-        $outstandingPoRows = $this->baseOutstandingQuery($supplierId, $dateFrom, $dateTo)
+        $outstandingPoRows = $this->dashboardQuery->baseOutstandingQuery($supplierId, $dateFrom, $dateTo)
             ->select(
                 'po.id as po_id',
                 'po.po_number',
@@ -879,9 +884,9 @@ class DashboardController extends Controller
             ->orderBy('supplier_name')
             ->get(['id', 'supplier_name']);
 
-        $summaryMetrics = $this->summaryMetrics($supplierId, $dateFrom, $dateTo);
+        $summaryMetrics = $this->dashboardQuery->summaryMetrics($supplierId, $dateFrom, $dateTo);
 
-        $outstandingItemRows = $this->baseOutstandingQuery($supplierId, $dateFrom, $dateTo)
+        $outstandingItemRows = $this->dashboardQuery->baseOutstandingQuery($supplierId, $dateFrom, $dateTo)
             ->join('items as i', 'i.id', '=', 'poi.item_id')
             ->select(
                 'po.id as po_id',
@@ -915,9 +920,9 @@ class DashboardController extends Controller
         $supplierId = $request->integer('supplier_id');
         ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
 
-        $summaryMetrics = $this->summaryMetrics($supplierId, $dateFrom, $dateTo);
+        $summaryMetrics = $this->dashboardQuery->summaryMetrics($supplierId, $dateFrom, $dateTo);
 
-        $outstandingItemRows = $this->baseOutstandingQuery($supplierId, $dateFrom, $dateTo)
+        $outstandingItemRows = $this->dashboardQuery->baseOutstandingQuery($supplierId, $dateFrom, $dateTo)
             ->join('items as i', 'i.id', '=', 'poi.item_id')
             ->select(
                 'po.id as po_id',
@@ -945,88 +950,6 @@ class DashboardController extends Controller
             'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="summary-item-' . now()->format('Ymd-His') . '.xls"',
         ]);
-    }
-
-    private function summaryMetrics(?int $supplierId, ?string $dateFrom, ?string $dateTo): array
-    {
-        $baseQuery = $this->baseOutstandingQuery($supplierId, $dateFrom, $dateTo);
-
-        return (array) $baseQuery
-            ->selectRaw('COUNT(DISTINCT po.id) as outstanding_po')
-            ->selectRaw('COUNT(poi.id) as outstanding_item')
-            ->selectRaw('COALESCE(SUM(poi.ordered_qty), 0) as total_order_qty')
-            ->selectRaw('COALESCE(SUM(poi.received_qty), 0) as total_shipped_qty')
-            ->selectRaw('COALESCE(SUM(poi.outstanding_qty), 0) as total_outstanding_qty')
-            ->first();
-    }
-
-    private function baseOutstandingQuery(?int $supplierId, ?string $dateFrom, ?string $dateTo)
-    {
-        return DB::table('purchase_order_items as poi')
-            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
-            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
-            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
-            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
-            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
-            ->when(true, fn ($query) => StatusQuery::whereNotIn(
-                $query,
-                'po.status',
-                DomainStatus::GROUP_PO_STATUS,
-                [DocumentTermCodes::PO_CLOSED, DocumentTermCodes::PO_CANCELLED]
-            ))
-            ->when(true, fn ($query) => StatusQuery::whereNotEquals(
-                $query,
-                'poi.item_status',
-                DomainStatus::GROUP_PO_ITEM_STATUS,
-                DocumentTermCodes::ITEM_CANCELLED
-            ))
-            ->where('poi.outstanding_qty', '>', 0);
-    }
-
-    private function baseMonitoringPoQuery(?int $supplierId, ?string $dateFrom, ?string $dateTo)
-    {
-        return DB::table('purchase_orders as po')
-            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
-            ->leftJoin('purchase_order_items as poi', 'poi.purchase_order_id', '=', 'po.id')
-            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
-            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
-            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo));
-    }
-
-    private function baseMonitoringItemQuery(?int $supplierId, ?string $dateFrom, ?string $dateTo)
-    {
-        return DB::table('purchase_order_items as poi')
-            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
-            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
-            ->join('items as i', 'i.id', '=', 'poi.item_id')
-            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
-            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
-            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
-            ->when(true, fn ($query) => StatusQuery::whereNotEquals(
-                $query,
-                'poi.item_status',
-                DomainStatus::GROUP_PO_ITEM_STATUS,
-                DocumentTermCodes::ITEM_CANCELLED
-            ))
-            ->when(true, fn ($query) => StatusQuery::whereNotIn(
-                $query,
-                'po.status',
-                DomainStatus::GROUP_PO_STATUS,
-                [DocumentTermCodes::PO_CLOSED, DocumentTermCodes::PO_CANCELLED]
-            ))
-            ->select(
-                'po.id as po_id',
-                'po.po_number',
-                'po.status as po_status',
-                's.supplier_name',
-                'i.item_code',
-                'i.item_name',
-                'poi.ordered_qty',
-                'poi.received_qty',
-                'poi.outstanding_qty',
-                'poi.etd_date',
-                'poi.item_status'
-            );
     }
 
     private function resolveDateRange(Request $request): array
