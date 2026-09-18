@@ -598,7 +598,11 @@ class DashboardController extends Controller
             ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
             ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
             ->whereNotIn('po.status', ['Closed', 'Cancelled'])
-            ->selectRaw("STRFTIME('%Y-%m', po.po_date) as month_key")
+            ->when(config('database.default') === 'sqlite', function ($query) {
+                $query->selectRaw("strftime('%Y-%m', po.po_date) as month_key");
+            }, function ($query) {
+                $query->selectRaw("DATE_FORMAT(po.po_date, '%Y-%m') as month_key");
+            })
             ->selectRaw("COUNT(DISTINCT po.id) as po_count")
             ->groupBy('month_key')
             ->orderBy('month_key')
