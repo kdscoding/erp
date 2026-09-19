@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Imports\ItemImport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ItemController extends Controller
 {
@@ -194,5 +200,72 @@ class ItemController extends Controller
         ]);
 
         return back()->with('success', 'Status item berhasil diperbarui.');
+    }
+
+    public function downloadTemplate(): BinaryFileResponse
+    {
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('ITEMS');
+
+        $columns = [
+            'item_code',
+            'item_name',
+            'category_code',
+            'unit_code',
+            'specification',
+        ];
+
+        foreach ($columns as $index => $column) {
+            $sheet->setCellValueByColumnAndRow($index + 1, 1, $column);
+        }
+
+        $highestColumn = $sheet->getHighestColumn();
+        $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
+
+        for ($col = 1; $col <= $highestColumnIndex; $col++) {
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($col))->setAutoSize(true);
+        }
+
+        $tempPath = storage_path('app/temp/'.uniqid('item_template_', true).'.xlsx');
+
+        if (! is_dir(dirname($tempPath))) {
+            mkdir(dirname($tempPath), 0775, true);
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        return response()->download($tempPath, 'item-template.xlsx')->deleteFileAfterSend(true);
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls'],
+        ], [
+            'file.required' => 'File Excel wajib dipilih.',
+            'file.mimes' => 'Format file harus xlsx atau xls.',
+        ]);
+
+        $import = new ItemImport;
+
+        try {
+            Excel::import($import, $request->file('file'));
+        } catch (ValidationException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        $message = "Import berhasil. {$import->inserted} item ditambahkan.";
+
+        if (! empty($import->duplicates)) {
+            $message .= ' '.count($import->duplicates).' item duplikat dilewati.';
+        }
+
+        if (! empty($import->invalidRows)) {
+            $message .= ' '.implode(' ', $import->invalidRows);
+        }
+
+        return back()->with('success', $message);
     }
 }

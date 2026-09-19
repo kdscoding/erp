@@ -72,6 +72,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/masters/items/{id}/edit', [ItemController::class, 'edit'])->name('items.edit');
         Route::put('/masters/items/{id}', [ItemController::class, 'update'])->name('items.update');
         Route::patch('/masters/items/{id}/toggle-status', [ItemController::class, 'toggleStatus'])->name('items.toggle-status');
+        Route::get('/masters/items/excel/template', [ItemController::class, 'downloadTemplate'])->name('items.template');
+        Route::post('/masters/items/import', [ItemController::class, 'import'])->name('items.import');
 
         Route::get('/po/create', [PurchaseOrderController::class, 'create'])->name('po.create');
         Route::post('/po', [PurchaseOrderController::class, 'store'])->name('po.store');

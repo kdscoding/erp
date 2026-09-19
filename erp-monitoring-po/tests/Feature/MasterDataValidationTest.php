@@ -244,5 +244,4 @@ class MasterDataValidationTest extends TestCase
             'plant_name' => 'Plant Baru',
         ]);
     }
-
 }

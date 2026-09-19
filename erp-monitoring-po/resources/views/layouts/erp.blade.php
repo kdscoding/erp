@@ -798,6 +798,424 @@
                 flex: 1 1 100%;
             }
         }
+
+        .main-header.navbar {
+            min-height: 64px;
+            padding: 0 1rem;
+            box-shadow: 0 2px 12px rgba(48, 66, 24, .08);
+        }
+
+        .main-header .navbar-nav {
+            align-items: center;
+        }
+
+        .main-header .navbar-nav > .nav-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .main-header .nav-link {
+            min-width: 40px;
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            margin: 0 .15rem;
+        }
+
+        .main-header .nav-link:hover {
+            background: rgba(255, 255, 255, .18) !important;
+        }
+
+        .topbar-context {
+            gap: .65rem;
+            padding-left: .35rem;
+        }
+
+        .topbar-context-icon {
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, .28);
+            color: #26370f;
+        }
+
+        .topbar-context-copy {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.05;
+        }
+
+        .topbar-context-copy strong {
+            font-size: 12px;
+            color: #21300b;
+        }
+
+        .topbar-context-copy small {
+            font-size: 9.5px;
+            color: rgba(33, 48, 11, .72);
+        }
+
+        .topbar-command {
+            margin-right: .65rem;
+        }
+
+        .topbar-role {
+            margin-right: .65rem;
+        }
+
+        .topbar-user {
+            gap: .55rem;
+            padding: .25rem .35rem;
+            border-left: 1px solid rgba(48, 66, 24, .14);
+            margin-left: .2rem;
+        }
+
+        .topbar-user-icon {
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .4);
+            color: #273811;
+        }
+
+        .topbar-user-copy {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.1;
+        }
+
+        .topbar-user-copy strong {
+            font-size: 11px;
+            color: #21300b;
+        }
+
+        .topbar-user-copy small {
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 10px;
+            color: rgba(33, 48, 11, .72);
+        }
+
+        .topbar-user + .nav-item form .btn {
+            margin-left: .35rem;
+        }
+
+        .main-sidebar {
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, .04), 0 12px 24px rgba(48, 66, 24, .06);
+        }
+
+        .brand-link {
+            min-height: 64px;
+        }
+
+        .brand-image {
+            width: 34px;
+            height: 34px;
+        }
+
+        .sidebar {
+            padding: .65rem .7rem;
+        }
+
+        .nav-header {
+            margin: 1.05rem .65rem .35rem;
+            padding: 0 .65rem .35rem;
+            border-bottom: 1px solid rgba(220, 236, 167, .16);
+        }
+
+        .nav-header:first-child {
+            margin-top: .25rem;
+        }
+
+        .nav-sidebar .nav-link {
+            margin-bottom: .2rem;
+            border-radius: 10px;
+        }
+
+        .nav-sidebar .nav-link.active {
+            box-shadow: 0 6px 14px rgba(0, 0, 0, .12);
+        }
+
+        .nav-sidebar .nav-treeview {
+            padding-left: .25rem;
+        }
+
+        .nav-sidebar .nav-treeview > .nav-item > .nav-link {
+            margin-bottom: .15rem;
+            border-radius: 8px;
+        }
+
+        .content-wrapper {
+            min-height: calc(100vh - 64px);
+        }
+
+        .content-header {
+            padding: 1rem .5rem .9rem;
+        }
+
+        .content {
+            padding: 1rem .75rem 1.5rem;
+        }
+
+        .content-header .container-fluid,
+        .content .container-fluid {
+            max-width: 1540px;
+            margin: 0 auto;
+        }
+
+        .page-topbar {
+            align-items: center;
+            padding: 1rem 1.1rem;
+            border: 1px solid rgba(204, 216, 138, .55);
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, .94), rgba(249, 251, 207, .88));
+            box-shadow: 0 8px 20px rgba(111, 150, 40, .05);
+        }
+
+        .page-title-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: .8rem;
+            padding-left: 1rem;
+        }
+
+        .page-title-wrap::before {
+            content: '';
+            position: absolute;
+            inset: .1rem auto .1rem 0;
+            width: 4px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, var(--lemon-yellow), var(--lemon-green));
+        }
+
+        .page-title {
+            font-size: 1.28rem;
+        }
+
+        .page-subtitle {
+            max-width: 760px;
+            font-size: .88rem;
+            line-height: 1.35;
+        }
+
+        .page-ribbon {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            box-shadow: 0 3px 10px rgba(111, 150, 40, .04);
+        }
+
+        .page-shell {
+            max-width: 1540px;
+            margin: 0 auto;
+            gap: 1.15rem;
+        }
+
+        .page-head {
+            align-items: center;
+        }
+
+        .page-actions {
+            align-items: center;
+        }
+
+        .summary-chips {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+            gap: .8rem;
+        }
+
+        .summary-chip {
+            min-height: 104px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .summary-chip::after {
+            content: '';
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 4px;
+            background: linear-gradient(180deg, var(--lemon-yellow), var(--lemon-green));
+            opacity: .85;
+        }
+
+        .summary-chip-label,
+        .summary-chip-value {
+            padding-left: .35rem;
+        }
+
+        .ui-surface,
+        .card {
+            overflow: hidden;
+        }
+
+        .ui-surface {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ui-surface-head {
+            padding-right: 1.1rem;
+            padding-left: 1.1rem;
+        }
+
+        .ui-surface-body {
+            flex: 1;
+        }
+
+        .table-wrap {
+            padding-right: 1.1rem;
+            padding-left: 1.1rem;
+        }
+
+        .alert {
+            border-radius: 12px;
+            box-shadow: 0 6px 14px rgba(111, 150, 40, .04);
+        }
+
+        .main-footer {
+            padding: .8rem 1rem;
+        }
+
+        .main-footer-inner {
+            max-width: 1540px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .modal-content {
+            border: 1px solid var(--lemon-line);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 24px 60px rgba(48, 66, 24, .16);
+        }
+
+        .modal-header {
+            align-items: center;
+            padding: 1rem 1.1rem;
+            border-bottom: 1px solid var(--lemon-line);
+            background: linear-gradient(180deg, var(--lemon-bg-soft), #f4f7d8);
+        }
+
+        .modal-body {
+            padding: 1rem 1.1rem 1.1rem;
+        }
+
+        .command-palette-list {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        @media (max-width: 991.98px) {
+            .topbar-context-copy,
+            .topbar-user-copy small {
+                display: none;
+            }
+
+            .topbar-user {
+                padding-right: 0;
+            }
+
+            .content-header .container-fluid,
+            .content .container-fluid,
+            .page-shell,
+            .main-footer-inner {
+                max-width: none;
+            }
+
+            .page-topbar {
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .main-header.navbar {
+                min-height: 58px;
+                padding: 0 .65rem;
+            }
+
+            .topbar-command {
+                margin-right: .35rem;
+            }
+
+            .command-palette-trigger span,
+            .command-palette-trigger kbd {
+                display: none;
+            }
+
+            .topbar-role {
+                margin-right: .35rem;
+            }
+
+            .content-header {
+                padding: .8rem .5rem .7rem;
+            }
+
+            .content {
+                padding: .8rem .5rem 1.2rem;
+            }
+
+            .page-topbar {
+                padding: .9rem;
+            }
+
+            .page-title-wrap {
+                gap: .55rem;
+                padding-left: .75rem;
+            }
+
+            .page-title {
+                font-size: 1.12rem;
+            }
+
+            .page-subtitle {
+                font-size: .8rem;
+            }
+
+            .page-ribbon {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .command-palette-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .topbar-context-icon {
+                width: 30px;
+                height: 30px;
+            }
+
+            .topbar-user-icon {
+                width: 30px;
+                height: 30px;
+            }
+
+            .topbar-user-copy {
+                display: none;
+            }
+
+            .topbar-user {
+                border-left: 0;
+            }
+        }
     </style>
 </head>
 
@@ -946,27 +1364,46 @@
         <nav class="main-header navbar navbar-expand">
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <a class="nav-link" data-widget="pushmenu" href="#"><i class="fas fa-bars"></i></a>
+                    <a class="nav-link" data-widget="pushmenu" href="#" aria-label="Buka navigasi">
+                        <i class="fas fa-bars"></i>
+                    </a>
+                </li>
+                <li class="nav-item topbar-context">
+                    <span class="topbar-context-icon" aria-hidden="true">
+                        <i class="fas fa-leaf"></i>
+                    </span>
+                    <span class="topbar-context-copy">
+                        <strong>LEMON</strong>
+                        <small>Internal Monitoring</small>
+                    </span>
                 </li>
             </ul>
 
             <ul class="navbar-nav ml-auto align-items-center">
                 @auth
-                    <li class="nav-item mr-2">
+                    <li class="nav-item topbar-command">
                         <button type="button" class="command-palette-trigger" data-toggle="modal" data-target="#commandPaletteModal">
                             <i class="fas fa-terminal"></i>
                             <span>Command Palette</span>
                             <kbd>Ctrl+K</kbd>
                         </button>
                     </li>
-                    <li class="nav-item mr-3"><span class="bc-chip">{{ $roleLabel }}</span></li>
-                @endauth
-                <li class="nav-item mr-3 small">{{ auth()->user()->nik ?? '-' }} | {{ auth()->user()->email ?? 'Guest' }}</li>
-                @auth
+                    <li class="nav-item topbar-role">
+                        <span class="bc-chip">{{ $roleLabel }}</span>
+                    </li>
+                    <li class="nav-item topbar-user">
+                        <span class="topbar-user-icon" aria-hidden="true">
+                            <i class="fas fa-user"></i>
+                        </span>
+                        <span class="topbar-user-copy">
+                            <strong>{{ auth()->user()->nik ?? '-' }}</strong>
+                            <small>{{ auth()->user()->email ?? 'Guest' }}</small>
+                        </span>
+                    </li>
                     <li class="nav-item">
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-                            <button class="btn btn-sm btn-light">Logout</button>
+                            <button class="btn btn-sm btn-light" type="submit">Logout</button>
                         </form>
                     </li>
                 @endauth
@@ -1216,12 +1653,13 @@
             </section>
         </div>
 
-        <footer class="main-footer"
-        style="background:#314216;border-top:none;">
-    <span class="footer-note">
-        <strong>LEMON Internal Monitoring</strong> - Tema lemon untuk kebutuhan operasional internal
-    </span>
-    </footer>
+        <footer class="main-footer" style="background:#314216;border-top:none;">
+            <div class="main-footer-inner">
+                <span class="footer-note">
+                    <strong>LEMON Internal Monitoring</strong> - Tema lemon untuk kebutuhan operasional internal
+                </span>
+            </div>
+        </footer>
     </div>
 
     <div class="modal fade" id="commandPaletteModal" tabindex="-1" aria-hidden="true">

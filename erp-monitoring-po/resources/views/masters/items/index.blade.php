@@ -64,6 +64,12 @@
                 <div>
                     <h3 class="ui-surface-title">Daftar Item</h3>
                 </div>
+                <div class="surface-actions">
+                    <a href="{{ route('items.template') }}" class="btn btn-sm btn-outline-secondary">Template Excel</a>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#importItemModal">
+                        Import Excel
+                    </button>
+                </div>
             </div>
 
             <div class="table-wrap table-responsive">
@@ -134,7 +140,34 @@
                     </tbody>
                 </table>
             </div>
-        </section>
+         </section>
+     </div>
+
+    {{-- Import Item Modal --}}
+    <div class="modal fade" id="importItemModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <form method="POST" action="{{ route('items.import') }}" enctype="multipart/form-data" class="modal-content">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title">Import Item dari Excel</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="field-label">File Excel</label>
+                        <input type="file" name="file" class="form-control form-control-sm" accept=".xlsx,.xls" required>
+                    </div>
+                    <div class="alert alert-info" style="font-size: 12px;">
+                        Kolom yang diharapkan: <strong>item_code</strong>, <strong>item_name</strong>, <strong>category_code</strong>, <strong>unit_code</strong>, <strong>specification</strong>.
+                        Unduh <a href="{{ route('items.template') }}">template</a> terlebih dahulu.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Import</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     {{-- FAB - Add Item --}}
