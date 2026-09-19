@@ -3,10 +3,9 @@
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GoodsReceiptController;
-use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ItemCategoryController;
+use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\MasterDataSeeder;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ShipmentController;
@@ -14,13 +13,14 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TraceabilityController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserManagementController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn() => redirect()->route('dashboard'));
+Route::get('/', fn () => redirect()->route('dashboard'));
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
-    Route::get('/summary/po', function (\Illuminate\Http\Request $request) {
+    Route::get('/summary/po', function (Request $request) {
         return redirect()->route('monitoring.index', array_filter([
             'supplier_id' => $request->query('supplier_id'),
             'date_from' => $request->query('date_from'),
@@ -29,7 +29,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]));
     })->name('summary.po');
     Route::get('/summary/po/export-excel', [DashboardController::class, 'exportSummaryPoExcel'])->name('summary.po.export-excel');
-    Route::get('/summary/item', function (\Illuminate\Http\Request $request) {
+    Route::get('/summary/item', function (Request $request) {
         return redirect()->route('monitoring.index', array_filter([
             'supplier_id' => $request->query('supplier_id'),
             'date_from' => $request->query('date_from'),
@@ -97,7 +97,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::get('/po/{id}', [PurchaseOrderController::class, 'show'])->middleware('role:administrator|staff|supervisor')->name('po.show');
+    Route::patch('/po/{id}/refresh-status', [PurchaseOrderController::class, 'refreshStatus'])->middleware('role:administrator|staff|supervisor')->name('po.refresh-status');
+    Route::get('/po/{id}/item/{itemId}/tracking/copy-text', [PurchaseOrderController::class, 'exportItemTrackingText'])->middleware('role:administrator|staff|supervisor')->name('po.item.tracking.copy-text');
+    Route::get('/po/{id}/item/{itemId}/tracking/export-excel', [PurchaseOrderController::class, 'exportItemTrackingExcel'])->middleware('role:administrator|staff|supervisor')->name('po.item.tracking.export-excel');
     Route::get('/po/{id}/export-excel', [PurchaseOrderController::class, 'exportDetailExcel'])->middleware('role:administrator|staff|supervisor')->name('po.export-detail-excel');
+
+    Route::middleware('role:administrator|staff')->group(function () {
+        Route::get('/po/items/search', [PurchaseOrderController::class, 'searchItems'])->name('po.items.search');
+    });
 
     Route::middleware('role:administrator|staff')->group(function () {
         Route::get('/receiving', [GoodsReceiptController::class, 'index'])->defaults('mode', 'process')->name('receiving.index');
@@ -129,4 +136,4 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

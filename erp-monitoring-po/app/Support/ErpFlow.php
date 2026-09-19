@@ -6,6 +6,11 @@ use Illuminate\Support\Facades\DB;
 
 class ErpFlow
 {
+    public const PO_STATUS_FULL = 'Full';
+    public const PO_STATUS_PARTIAL = 'Partial';
+    public const PO_STATUS_DELAYED = 'Delayed';
+    public const PO_STATUS_CANCELLED = 'Cancelled';
+
     public static function currentDateExpression(): string
     {
         return DB::connection()->getDriverName() === 'sqlite'
@@ -64,89 +69,82 @@ class ErpFlow
 
     public static function refreshPoStatusByOutstanding(int $poId, ?int $userId = null): string
     {
-        $currentDateSql = self::currentDateExpression();
+        $currentDate = now()->toDateString();
 
         $summary = DB::table('purchase_order_items')
             ->where('purchase_order_id', $poId)
-            ->selectRaw('COUNT(*) total_items')
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') = '" . DocumentTermCodes::ITEM_CANCELLED . "' THEN 1 ELSE 0 END) cancelled_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "' THEN 1 ELSE 0 END) active_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "' AND received_qty = 0 AND outstanding_qty > 0 AND etd_date IS NULL THEN 1 ELSE 0 END) pure_waiting_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "' AND received_qty = 0 AND outstanding_qty > 0 AND etd_date IS NOT NULL THEN 1 ELSE 0 END) items_with_etd")
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "' AND received_qty = 0 AND outstanding_qty > 0 AND etd_date IS NOT NULL AND DATE(etd_date) < {$currentDateSql} THEN 1 ELSE 0 END) overdue_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "' AND received_qty > 0 AND outstanding_qty > 0 THEN 1 ELSE 0 END) partial_items")
-            ->selectRaw("SUM(CASE WHEN COALESCE(item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "' AND outstanding_qty <= 0 THEN 1 ELSE 0 END) closed_items")
-            ->first();
-
-        $allocationSummary = DB::table('purchase_order_items as poi')
-            ->leftJoin('shipment_items as si', 'si.purchase_order_item_id', '=', 'poi.id')
-            ->leftJoin('shipments as sh', function ($join) {
-                $join->on('sh.id', '=', 'si.shipment_id')
-                    ->where('sh.status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED);
-            })
-            ->where('poi.purchase_order_id', $poId)
-            ->whereRaw("COALESCE(poi.item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "'")
-            ->selectRaw('COUNT(DISTINCT CASE WHEN sh.id IS NOT NULL THEN poi.id END) as allocated_items')
+            ->whereRaw("COALESCE(item_status, '') != '" . DocumentTermCodes::ITEM_CANCELLED . "'")
+            ->selectRaw('COUNT(*) as total_items')
+            ->selectRaw('SUM(CASE WHEN received_qty >= ordered_qty AND ordered_qty > 0 THEN 1 ELSE 0 END) as full_items')
+            ->selectRaw('SUM(CASE WHEN received_qty > 0 AND received_qty < ordered_qty THEN 1 ELSE 0 END) as partial_items')
+            ->selectRaw('SUM(CASE WHEN received_qty = 0 AND ordered_qty > 0 THEN 1 ELSE 0 END) as pending_items')
             ->first();
 
         $oldStatus = DB::table('purchase_orders')->where('id', $poId)->value('status');
-        $nextEtaDate = self::resolvePoEtaDate($poId);
+        $etaDate = DB::table('purchase_orders')->where('id', $poId)->value('eta_date');
 
         $totalItems = (int) ($summary->total_items ?? 0);
-        $cancelledItems = (int) ($summary->cancelled_items ?? 0);
-        $activeItems = (int) ($summary->active_items ?? 0);
-        $pureWaitingItems = (int) ($summary->pure_waiting_items ?? 0);
-        $itemsWithEtd = (int) ($summary->items_with_etd ?? 0);
-        $overdueItems = (int) ($summary->overdue_items ?? 0);
+        $fullItems = (int) ($summary->full_items ?? 0);
         $partialItems = (int) ($summary->partial_items ?? 0);
-        $closedItems = (int) ($summary->closed_items ?? 0);
-        $allocatedItems = (int) ($allocationSummary->allocated_items ?? 0);
+        $pendingItems = (int) ($summary->pending_items ?? 0);
 
-        $newStatus = DocumentTermCodes::PO_ISSUED;
+        $newStatus = self::PO_STATUS_FULL;
 
-        if ($totalItems > 0 && $cancelledItems === $totalItems) {
-            $newStatus = DocumentTermCodes::PO_CANCELLED;
-        } elseif ($activeItems > 0 && $closedItems === $activeItems) {
-            $newStatus = DocumentTermCodes::PO_CLOSED;
-        } elseif ($overdueItems > 0) {
-            $newStatus = DocumentTermCodes::PO_LATE;
-        } elseif (
-            $activeItems > 0 &&
-            (
-                $itemsWithEtd > 0 ||
-                $allocatedItems > 0 ||
-                $partialItems > 0 ||
-                $closedItems > 0
-            )
-        ) {
-            $newStatus = DocumentTermCodes::PO_OPEN;
-        } elseif ($activeItems > 0 && $pureWaitingItems === $activeItems) {
-            $newStatus = DocumentTermCodes::PO_ISSUED;
+        if ($totalItems === 0) {
+            $newStatus = self::PO_STATUS_FULL;
+        } elseif ($fullItems === $totalItems) {
+            $newStatus = self::PO_STATUS_FULL;
+        } elseif ($partialItems > 0 || ($fullItems > 0 && $pendingItems > 0)) {
+            $newStatus = self::PO_STATUS_PARTIAL;
+        } elseif ($pendingItems === $totalItems) {
+            if ($etaDate && $etaDate < $currentDate) {
+                $newStatus = self::PO_STATUS_DELAYED;
+            } else {
+                $newStatus = self::PO_STATUS_PARTIAL;
+            }
+        }
+
+        $po = DB::table('purchase_orders')->where('id', $poId)->first();
+        if ($po && $po->status === self::PO_STATUS_CANCELLED) {
+            $newStatus = self::PO_STATUS_CANCELLED;
         }
 
         if ($oldStatus !== $newStatus) {
             DB::table('purchase_orders')->where('id', $poId)->update([
-                'eta_date' => $nextEtaDate,
+                'status' => $newStatus,
                 'updated_at' => now(),
                 'updated_by' => $userId,
-            ] + DomainStatus::payload(DomainStatus::GROUP_PO_STATUS, 'status', $newStatus));
+            ]);
 
             self::pushPoStatus(
                 $poId,
                 $oldStatus,
                 $newStatus,
                 $userId,
-                'Status auto-update berdasarkan model monitoring header PO.'
+                'Status auto-update: Full/Partial/Delayed based on receipt & ETA.'
             );
-        } else {
-            DB::table('purchase_orders')->where('id', $poId)->update([
-                'eta_date' => $nextEtaDate,
-                'updated_at' => now(),
-                'updated_by' => $userId,
-            ]);
         }
 
         return $newStatus;
+    }
+
+    public static function refreshAllPoStatuses(): int
+    {
+        $poIds = DB::table('purchase_orders')
+            ->where('status', '!=', self::PO_STATUS_CANCELLED)
+            ->pluck('id');
+
+        $updated = 0;
+        foreach ($poIds as $poId) {
+            $oldStatus = DB::table('purchase_orders')->where('id', $poId)->value('status');
+            self::refreshPoStatusByOutstanding($poId);
+            $newStatus = DB::table('purchase_orders')->where('id', $poId)->value('status');
+            if ($oldStatus !== $newStatus) {
+                $updated++;
+            }
+        }
+
+        return $updated;
     }
 
     public static function resolvePoEtaDate(int $poId): ?string

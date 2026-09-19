@@ -26,13 +26,21 @@ class PurchaseOrderIndexQuery
             )
             ->when(
                 $request->filled('po_number'),
-                fn (Builder $query) => $query->where('po.po_number', 'like', '%' . trim((string) $request->input('po_number')) . '%')
+                fn (Builder $query) => $query->where('po.po_number', 'like', '%'.trim((string) $request->input('po_number')).'%')
             )
             ->when(
                 $request->filled('supplier_code'),
                 fn (Builder $query) => $query->where('s.supplier_code', trim((string) $request->input('supplier_code')))
             )
             ->when($request->filled('supplier_id'), fn (Builder $query) => $query->where('po.supplier_id', (int) $request->input('supplier_id')))
+            ->when(
+                $request->filled('date_from'),
+                fn (Builder $query) => $query->whereDate('po.po_date', '>=', $request->input('date_from'))
+            )
+            ->when(
+                $request->filled('date_to'),
+                fn (Builder $query) => $query->whereDate('po.po_date', '<=', $request->input('date_to'))
+            )
             ->orderByDesc('po.id');
     }
 }

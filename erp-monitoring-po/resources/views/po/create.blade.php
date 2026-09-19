@@ -5,24 +5,7 @@
     $header = 'Create Purchase Order (Manual)';
 @endphp
 
-@section('content')
-    @if (session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
-
-    @if ($errors->any())
-        <div class="alert alert-danger">
-            <strong>Terjadi kesalahan:</strong>
-            <ul class="mb-0 mt-2">
-                @foreach ($errors->all() as $err)
-                    <li>{{ $err }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-
+@push('styles')
     <style>
         .select2-container {
             width: 100% !important;
@@ -186,7 +169,54 @@
         .code-status.text-danger {
             color: #dc3545 !important;
         }
+
+        .remarks-cell {
+            position: relative;
+        }
+
+        .remarks-cell .form-control {
+            display: none;
+        }
+
+        .remarks-cell .remarks-toggle {
+            position: absolute;
+            right: 4px;
+            top: 4px;
+            cursor: pointer;
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+        .remarks-cell .remarks-toggle:hover {
+            color: #495057;
+        }
+
+        .remarks-cell .item-remarks-input.d-none + .remarks-toggle,
+        .remarks-cell textarea.d-none + .remarks-toggle {
+            display: none !important;
+        }
+
+        .remarks-cell textarea:not(.d-none) + .remarks-toggle {
+            display: none !important;
+        }
     </style>
+@endpush
+
+@section('content')
+    @if (session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
+    @endif
+
+    @if ($errors->any())
+        <div class="alert alert-danger">
+            <strong>Terjadi kesalahan:</strong>
+            <ul class="mb-0 mt-2">
+                @foreach ($errors->all() as $err)
+                    <li>{{ $err }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     <form method="POST" action="{{ route('po.store') }}" id="po-form">
         @csrf
@@ -257,10 +287,16 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div>
                     <h3 class="card-title">Data Barang</h3>
-                    <div class="section-caption">Isi kode barang manual, data barang akan terisi otomatis.</div>
+                    <div class="section-caption">Ketik kode barang, gunakan Enter untuk menambah baris, Ctrl+S untuk menyimpan.</div>
                 </div>
                 <button type="button" class="btn btn-sm btn-primary" id="btn-add-item">+ Tambah Barang</button>
             </div>
+
+            <datalist id="item-codes">
+                @foreach ($items as $item)
+                    <option value="{{ $item->item_code }} | {{ $item->item_name }} — {{ $item->unit_name }}"></option>
+                @endforeach
+            </datalist>
 
             <div class="card-body">
                 <div class="table-responsive">
@@ -293,270 +329,21 @@
                 </div>
 
                 <div class="sticky-action-bar d-flex justify-content-end gap-2">
-                    <button type="submit" class="btn btn-success btn-sm">Simpan PO</button>
+                    <button type="submit" class="btn btn-success btn-sm" id="btn-submit">Simpan PO</button>
+                    <button type="submit" name="save_and_new" value="1" class="btn btn-success btn-sm" id="btn-save-and-new">Simpan & Baru</button>
                 </div>
             </div>
         </div>
     </form>
-
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-    <script>
-        (function() {
-            const items = @json($items);
-            const oldItems = @json(old('items', []));
-            const tbody = document.querySelector('#po-items-table tbody');
-            const addBtn = document.getElementById('btn-add-item');
-            const grandTotalText = document.getElementById('grand-total-text');
-            const grandTotalInput = document.getElementById('grand-total-input');
-
-            const itemMap = {};
-            items.forEach(item => {
-                itemMap[String(item.item_code || '').trim().toUpperCase()] = item;
-            });
-
-            function escapeHtml(text) {
-                return String(text ?? '')
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;')
-                    .replace(/'/g, '&#039;');
-            }
-
-            function parseNumber(value) {
-                if (value === null || value === undefined || value === '') return 0;
-                return parseFloat(String(value).replace(/,/g, '')) || 0;
-            }
-
-            function formatNumber(value) {
-                return new Intl.NumberFormat('id-ID', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                }).format(parseNumber(value));
-            }
-
-            function initSupplierSelect() {
-                $('.supplier-select').select2({
-                    width: '100%',
-                    placeholder: '-- Pilih Supplier --',
-                    allowClear: true,
-                    dropdownParent: $(document.body)
-                });
-            }
-
-            function rowTemplate(idx, rowData = {}) {
-                const code = rowData.item_code ?? '';
-                const itemId = rowData.item_id ?? '';
-                const itemName = rowData.item_name ?? '';
-                const unitName = rowData.unit_name ?? '';
-                const qty = rowData.ordered_qty ?? 1;
-                const unitPrice = rowData.unit_price ?? '';
-                const subtotal = parseNumber(qty) * parseNumber(unitPrice);
-
-                return `
-                    <tr>
-                        <td class="row-no row-number">${idx + 1}</td>
-                        <td>
-                            <input type="hidden" class="item-id-input" name="items[${idx}][item_id]" value="${escapeHtml(itemId)}">
-                            <input type="text" class="form-control form-control-sm item-code-input" name="items[${idx}][item_code]" value="${escapeHtml(code)}" autocomplete="off" required>
-                        </td>
-                        <td>
-                            <input type="text" class="form-control form-control-sm item-name-display field-readonly" value="${escapeHtml(itemName)}" readonly>
-                            <input type="hidden" class="item-remarks-input" name="items[${idx}][remarks]" value="${escapeHtml(rowData.remarks ?? '')}">
-                        </td>
-                        <td>
-                            <input type="text" class="form-control form-control-sm item-unit field-readonly" value="${escapeHtml(unitName)}" readonly>
-                        </td>
-                        <td>
-                            <input type="number" step="0.01" min="0.01" class="form-control form-control-sm qty-input"
-                                name="items[${idx}][ordered_qty]" value="${escapeHtml(qty)}" required>
-                        </td>
-                        <td>
-                            <input type="number" step="0.01" min="0" class="form-control form-control-sm price-input"
-                                name="items[${idx}][unit_price]" value="${escapeHtml(unitPrice)}">
-                        </td>
-                        <td>
-                            <input type="text" class="form-control form-control-sm subtotal-display field-readonly"
-                                value="${formatNumber(subtotal)}" readonly>
-                        </td>
-                        <td>
-                            <div class="code-status"></div>
-                        </td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-sm btn-outline-danger btn-remove btn-action">x</button>
-                        </td>
-                    </tr>
-                `;
-            }
-
-            function reindex() {
-                [...tbody.querySelectorAll('tr')].forEach((tr, idx) => {
-                    tr.querySelector('.row-number').textContent = idx + 1;
-                    tr.querySelector('.item-id-input').setAttribute('name', `items[${idx}][item_id]`);
-                    tr.querySelector('.item-code-input').setAttribute('name', `items[${idx}][item_code]`);
-                    tr.querySelector('.qty-input').setAttribute('name', `items[${idx}][ordered_qty]`);
-                    tr.querySelector('.price-input').setAttribute('name', `items[${idx}][unit_price]`);
-                    tr.querySelector('.item-remarks-input').setAttribute('name', `items[${idx}][remarks]`);
-                });
-            }
-
-            function getEnteredCodes(excludeInput = null) {
-                return [...tbody.querySelectorAll('.item-code-input')]
-                    .filter(input => input !== excludeInput)
-                    .map(input => String(input.value || '').trim().toUpperCase())
-                    .filter(Boolean);
-            }
-
-            function isDuplicateCode(code, currentInput) {
-                if (!code) return false;
-                return getEnteredCodes(currentInput).includes(code);
-            }
-
-            function clearItemInfo(tr, statusText = '', statusClass = '') {
-                tr.querySelector('.item-id-input').value = '';
-                tr.querySelector('.item-name-display').value = '';
-                tr.querySelector('.item-unit').value = '';
-
-                const statusEl = tr.querySelector('.code-status');
-                statusEl.className = 'code-status';
-                statusEl.textContent = statusText;
-
-                if (statusClass) {
-                    statusEl.classList.add(statusClass);
-                }
-            }
-
-            function fillItemInfo(tr, item) {
-                tr.querySelector('.item-id-input').value = item.id || '';
-                tr.querySelector('.item-name-display').value = item.item_name || '';
-                tr.querySelector('.item-unit').value = item.unit_name || '';
-
-                const statusEl = tr.querySelector('.code-status');
-                statusEl.className = 'code-status text-success';
-                statusEl.textContent = 'Kode valid';
-            }
-
-            function updateRowSubtotal(tr) {
-                const qty = parseNumber(tr.querySelector('.qty-input').value);
-                const price = parseNumber(tr.querySelector('.price-input').value);
-                const subtotal = qty * price;
-
-                tr.querySelector('.subtotal-display').value = formatNumber(subtotal);
-                updateGrandTotal();
-            }
-
-            function updateGrandTotal() {
-                let total = 0;
-
-                tbody.querySelectorAll('tr').forEach(tr => {
-                    const qty = parseNumber(tr.querySelector('.qty-input').value);
-                    const price = parseNumber(tr.querySelector('.price-input').value);
-                    total += qty * price;
-                });
-
-                grandTotalText.textContent = formatNumber(total);
-                grandTotalInput.value = total;
-            }
-
-            function resolveItemByCode(tr) {
-                const codeInput = tr.querySelector('.item-code-input');
-                const code = String(codeInput.value || '').trim().toUpperCase();
-                codeInput.value = code;
-
-                if (!code) {
-                    clearItemInfo(tr, '');
-                    updateRowSubtotal(tr);
-                    return;
-                }
-
-                if (isDuplicateCode(code, codeInput)) {
-                    clearItemInfo(tr, 'Kode duplikat', 'text-danger');
-                    updateRowSubtotal(tr);
-                    return;
-                }
-
-                const item = itemMap[code];
-
-                if (!item) {
-                    clearItemInfo(tr, 'Kode tidak ditemukan', 'text-danger');
-                    updateRowSubtotal(tr);
-                    return;
-                }
-
-                fillItemInfo(tr, item);
-                updateRowSubtotal(tr);
-            }
-
-            function bindRow(tr) {
-                const codeInput = tr.querySelector('.item-code-input');
-                const qtyInput = tr.querySelector('.qty-input');
-                const priceInput = tr.querySelector('.price-input');
-
-                codeInput.addEventListener('input', function() {
-                    this.value = this.value.toUpperCase();
-                });
-
-                codeInput.addEventListener('change', function() {
-                    resolveItemByCode(tr);
-                });
-
-                codeInput.addEventListener('blur', function() {
-                    resolveItemByCode(tr);
-                });
-
-                qtyInput.addEventListener('input', function() {
-                    updateRowSubtotal(tr);
-                });
-
-                priceInput.addEventListener('input', function() {
-                    updateRowSubtotal(tr);
-                });
-
-                resolveItemByCode(tr);
-                updateRowSubtotal(tr);
-            }
-
-            function addRow(rowData = {}) {
-                const idx = tbody.querySelectorAll('tr').length;
-                tbody.insertAdjacentHTML('beforeend', rowTemplate(idx, rowData));
-                const newRow = tbody.querySelector('tr:last-child');
-                bindRow(newRow);
-                reindex();
-                updateGrandTotal();
-            }
-
-            addBtn.addEventListener('click', function() {
-                addRow({
-                    item_code: '',
-                    item_id: '',
-                    item_name: '',
-                    unit_name: '',
-                    ordered_qty: 1,
-                    unit_price: '',
-                    remarks: ''
-                });
-            });
-
-            tbody.addEventListener('click', function(e) {
-                if (e.target.classList.contains('btn-remove')) {
-                    const rows = tbody.querySelectorAll('tr');
-                    if (rows.length === 1) return;
-
-                    e.target.closest('tr').remove();
-                    reindex();
-                    updateGrandTotal();
-                }
-            });
-
-            initSupplierSelect();
-
-            if (oldItems.length > 0) {
-                oldItems.forEach(item => addRow(item));
-            } else {
-                addRow();
-            }
-        })();
-    </script>
 @endsection
+
+@push('scripts')
+    @vite('resources/js/po-create.js')
+    <script>
+        window.PO_CREATE_CONFIG = {
+            items: @json($items),
+            oldItems: @json(old('items', [])),
+            searchUrl: '{{ route('po.items.search') }}',
+        };
+    </script>
+@endpush

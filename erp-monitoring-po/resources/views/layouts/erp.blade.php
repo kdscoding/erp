@@ -4,6 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'LEMON Internal Monitoring' }}</title>
 
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('lemon/apple-touch-icon.png') }}">
@@ -11,9 +12,14 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('lemon/favicon-16x16.png') }}">
     <link rel="shortcut icon" href="{{ asset('lemon/favicon.ico') }}">
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+
+    @vite('resources/css/app.css')
+    @stack('styles')
 
     <style>
         :root {
@@ -1025,14 +1031,6 @@
                                     <p>Units</p>
                                 </a>
                             </li>
-
-                            <li class="nav-item">
-                                <a href="{{ route('item-categories.index') }}"
-                                    class="nav-link {{ request()->routeIs('item-categories.*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-tags"></i>
-                                    <p>Item Categories</p>
-                                </a>
-                            </li>
                         @endif
 
                         @if ($currentUser?->hasAnyRole(['administrator', 'staff', 'supervisor']))
@@ -1208,8 +1206,7 @@
                         <div class="alert alert-danger">
                             <ul class="mb-0 pl-3">
                                 @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
+                                    <li>{{ $error }}</li> @endforeach
                             </ul>
                         </div>
                     @endif
@@ -1219,11 +1216,12 @@
             </section>
         </div>
 
-        <footer class="main-footer" style="background:#314216;border-top:none;">
-            <span class="footer-note">
-                <strong>LEMON Internal Monitoring</strong> - Tema lemon untuk kebutuhan operasional internal
-            </span>
-        </footer>
+        <footer class="main-footer"
+        style="background:#314216;border-top:none;">
+    <span class="footer-note">
+        <strong>LEMON Internal Monitoring</strong> - Tema lemon untuk kebutuhan operasional internal
+    </span>
+    </footer>
     </div>
 
     <div class="modal fade" id="commandPaletteModal" tabindex="-1" aria-hidden="true">
@@ -1232,25 +1230,20 @@
                 <div class="modal-header">
                     <div>
                         <h5 class="modal-title mb-1">Command Palette</h5>
-                        <div class="doc-meta">Cari modul lebih cepat dengan keyboard shortcut <strong>Ctrl+K</strong>.</div>
+                        <div class="doc-meta">Cari modul lebih cepat dengan keyboard shortcut <strong>Ctrl+K</strong>.
+                        </div>
                     </div>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
-                    <input
-                        type="text"
-                        id="commandPaletteSearch"
-                        class="form-control command-palette-search mb-3"
-                        placeholder="Cari dashboard, monitoring, shipment, receiving, audit..."
-                        autocomplete="off">
+                    <input type="text" id="commandPaletteSearch" class="form-control command-palette-search mb-3"
+                        placeholder="Cari dashboard, monitoring, shipment, receiving, audit..." autocomplete="off">
 
                     <div class="command-palette-list" id="commandPaletteList">
                         @foreach ($commandPaletteItems as $item)
-                            <a href="{{ $item['route'] }}"
-                                class="command-palette-item"
-                                data-command-item
+                            <a href="{{ $item['route'] }}" class="command-palette-item" data-command-item
                                 data-keywords="{{ \Illuminate\Support\Str::lower($item['label'] . ' ' . $item['description']) }}">
                                 <div>
                                     <div class="command-palette-item-label">{{ $item['label'] }}</div>
@@ -1272,8 +1265,11 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/datatables.net/1.13.8/js/dataTables.bootstrap4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    @vite(['resources/js/app.js'])
 
     <script>
         $(function() {
@@ -1367,6 +1363,8 @@
             });
         });
     </script>
-</body>
+
+    @stack('scripts')
+    </body>
 
 </html>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Queries\Dashboard\DashboardQuery;
 use App\Support\DocumentTermCodes;
 use App\Support\DomainStatus;
+use App\Support\ErpFlow;
 use App\Support\StatusQuery;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -38,7 +39,28 @@ class DashboardController extends Controller
             ->orderBy('supplier_name')
             ->get(['id', 'supplier_name', 'supplier_code']);
 
-        $metrics = [
+$metrics = [
+            'po_full' => DB::table('purchase_orders')
+                ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
+                ->when($dateFrom, fn ($query) => $query->whereDate('po_date', '>=', $dateFrom))
+                ->when($dateTo, fn ($query) => $query->whereDate('po_date', '<=', $dateTo))
+                ->where('status', ErpFlow::PO_STATUS_FULL)
+                ->count(),
+
+            'po_partial' => DB::table('purchase_orders')
+                ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
+                ->when($dateFrom, fn ($query) => $query->whereDate('po_date', '>=', $dateFrom))
+                ->when($dateTo, fn ($query) => $query->whereDate('po_date', '<=', $dateTo))
+                ->where('status', ErpFlow::PO_STATUS_PARTIAL)
+                ->count(),
+
+            'po_delayed' => DB::table('purchase_orders')
+                ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
+                ->when($dateFrom, fn ($query) => $query->whereDate('po_date', '>=', $dateFrom))
+                ->when($dateTo, fn ($query) => $query->whereDate('po_date', '<=', $dateTo))
+                ->where('status', ErpFlow::PO_STATUS_DELAYED)
+                ->count(),
+
             'open_po' => DB::table('purchase_orders')
                 ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
                 ->when($dateFrom, fn ($query) => $query->whereDate('po_date', '>=', $dateFrom))
@@ -611,6 +633,18 @@ class DashboardController extends Controller
             ->mapWithKeys(fn ($row) => [$row->month_key => (int) $row->po_count])
             ->toArray();
 
+        $chartPoStatusDist = DB::table('purchase_orders as po')
+            ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
+            ->whereNotIn('po.status', ['Closed', 'Cancelled'])
+            ->select('status')
+            ->selectRaw('COUNT(*) as po_count')
+            ->groupBy('status')
+            ->get()
+            ->mapWithKeys(fn ($row) => [$row->status => (int) $row->po_count])
+            ->toArray();
+
         return view('dashboard', compact(
             'metrics',
             'suppliers',
@@ -641,7 +675,8 @@ class DashboardController extends Controller
             'itemMonitoringList',
             'chartStatusBreakdown',
             'chartSupplierDelay',
-            'chartMonthlyTrend'
+            'chartMonthlyTrend',
+            'chartPoStatusDist'
         ));
     }
 

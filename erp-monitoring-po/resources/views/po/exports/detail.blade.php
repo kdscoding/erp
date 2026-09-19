@@ -38,7 +38,12 @@
                 <td>{{ \App\Support\NumberFormatter::trim($item->ordered_qty) }} {{ $item->unit_name }}</td>
                 <td>{{ \App\Support\NumberFormatter::trim($item->received_qty) }} {{ $item->unit_name }}</td>
                 <td>{{ \App\Support\NumberFormatter::trim($item->outstanding_qty) }} {{ $item->unit_name }}</td>
-                <td>{{ $item->monitoring_status }}</td>
+                <td>{{ $item->monitoring_status }}
+                    @php($helpText = \App\Support\PurchaseOrderItemStatusResolver::statusHelpText($item->monitoring_status))
+                    @if ($helpText)
+                        <br><small>{{ $helpText }}</small>
+                    @endif
+                </td>
                 <td>{{ $item->etd_date ?: '-' }}</td>
                 <td>{{ $item->cancel_reason ?: '-' }}</td>
             </tr>

@@ -5,12 +5,25 @@ namespace App\Queries\PurchaseOrders;
 use App\Support\DocumentTermCodes;
 use App\Support\DomainStatus;
 use App\Support\ErpFlow;
+use App\Support\NumberFormatter;
 use App\Support\StatusQuery;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PurchaseOrderDetailQuery
 {
-    public function get(string $identifier): array
+    protected const SORTABLE_FIELDS = [
+        'item_code' => 'i.item_code',
+        'item_name' => 'i.item_name',
+        'ordered_qty' => 'poi.ordered_qty',
+        'received_qty' => 'poi.received_qty',
+        'outstanding_qty' => 'poi.outstanding_qty',
+        'etd_date' => 'poi.etd_date',
+        'monitoring_status' => 'monitoring_status',
+    ];
+
+    public function get(string $identifier, ?Request $request = null): array
     {
         $currentDateSql = ErpFlow::currentDateExpression();
         $poId = $this->resolvePurchaseOrderId($identifier);
@@ -27,18 +40,29 @@ class PurchaseOrderDetailQuery
             ->join('items as i', 'i.id', '=', 'poi.item_id')
             ->leftJoin('units as u', 'u.id', '=', 'i.unit_id')
             ->select('poi.*', 'i.item_code', 'i.item_name', 'u.unit_name')
-            ->selectRaw("CASE
-                WHEN " . StatusQuery::sqlEquals('poi.item_status', DomainStatus::GROUP_PO_ITEM_STATUS, DocumentTermCodes::ITEM_CANCELLED) . " THEN '" . DocumentTermCodes::ITEM_CANCELLED . "'
-                WHEN " . StatusQuery::sqlEquals('poi.item_status', DomainStatus::GROUP_PO_ITEM_STATUS, DocumentTermCodes::ITEM_FORCE_CLOSED) . " THEN '" . DocumentTermCodes::ITEM_FORCE_CLOSED . "'
-                WHEN poi.outstanding_qty <= 0 THEN '" . DocumentTermCodes::ITEM_CLOSED . "'
-                WHEN poi.received_qty > 0 THEN '" . DocumentTermCodes::ITEM_PARTIAL . "'
-                WHEN poi.etd_date IS NULL THEN '" . DocumentTermCodes::ITEM_WAITING . "'
-                WHEN DATE(poi.etd_date) < {$currentDateSql} THEN '" . DocumentTermCodes::ITEM_LATE . "'
-                ELSE '" . DocumentTermCodes::ITEM_CONFIRMED . "'
+            ->selectRaw('CASE
+                WHEN '.StatusQuery::sqlEquals('poi.item_status', DomainStatus::GROUP_PO_ITEM_STATUS, DocumentTermCodes::ITEM_CANCELLED)." THEN '".DocumentTermCodes::ITEM_CANCELLED."'
+                WHEN ".StatusQuery::sqlEquals('poi.item_status', DomainStatus::GROUP_PO_ITEM_STATUS, DocumentTermCodes::ITEM_FORCE_CLOSED)." THEN '".DocumentTermCodes::ITEM_FORCE_CLOSED."'
+                WHEN poi.outstanding_qty <= 0 THEN '".DocumentTermCodes::ITEM_CLOSED."'
+                WHEN poi.received_qty > 0 THEN '".DocumentTermCodes::ITEM_PARTIAL."'
+                WHEN poi.etd_date IS NULL THEN '".DocumentTermCodes::ITEM_WAITING."'
+                WHEN DATE(poi.etd_date) < {$currentDateSql} THEN '".DocumentTermCodes::ITEM_LATE."'
+                ELSE '".DocumentTermCodes::ITEM_CONFIRMED."'
             END as monitoring_status")
             ->where('poi.purchase_order_id', $poId)
             ->orderBy('poi.id')
             ->get();
+
+        if ($request !== null && $request->filled('sort')) {
+            $sortField = $request->input('sort');
+            $direction = $request->input('direction', 'asc');
+
+            if (array_key_exists($sortField, self::SORTABLE_FIELDS)) {
+                $items = $direction === 'desc'
+                    ? $items->sortByDesc(fn ($item) => $item->{$sortField} ?? '')
+                    : $items->sortBy(fn ($item) => $item->{$sortField} ?? '');
+            }
+        }
 
         $poIsFinal = in_array($po->status, [
             DocumentTermCodes::PO_CLOSED,
@@ -164,7 +188,144 @@ class PurchaseOrderDetailQuery
 
         $poCanCancel = ! $poIsFinal;
 
-        return compact('po', 'items', 'itemSummary', 'histories', 'poCanCancel', 'poIsFinal');
+        $totalOrdered = $items->sum('ordered_qty');
+        $totalReceived = $items->sum('received_qty');
+        $itemUnit = $items->isNotEmpty() ? ($items->first()->unit_name ?? '') : '';
+
+        $trackingData = $this->buildTrackingData($items, $po, $poIsFinal);
+
+        return compact('po', 'items', 'itemSummary', 'histories', 'poCanCancel', 'poIsFinal', 'totalOrdered', 'totalReceived', 'itemUnit', 'trackingData');
+    }
+
+    private function buildTrackingData($items, $po, $poIsFinal): array
+    {
+        $data = [];
+        $poDate = Carbon::parse($po->po_date)->format('d/m/Y');
+        $unitName = $items->isNotEmpty() ? ($items->first()->unit_name ?? '') : '';
+
+        foreach ($items as $item) {
+            $initialTimelineStatus = match (true) {
+                $item->monitoring_status === DocumentTermCodes::ITEM_CANCELLED => DocumentTermCodes::ITEM_CANCELLED,
+                $item->monitoring_status === DocumentTermCodes::ITEM_FORCE_CLOSED => DocumentTermCodes::ITEM_FORCE_CLOSED,
+                $item->etd_date && Carbon::parse($item->etd_date)->isPast() && (float) $item->received_qty <= 0 => DocumentTermCodes::ITEM_LATE,
+                $item->etd_date => DocumentTermCodes::ITEM_CONFIRMED,
+                default => DocumentTermCodes::ITEM_WAITING,
+            };
+
+            $timeline = [];
+
+            $timeline[] = [
+                'date' => $poDate,
+                'description' => 'PO Created',
+                'status' => $initialTimelineStatus,
+                'details' => [
+                    'Qty Order: '.NumberFormatter::trim($item->ordered_qty).' '.$item->unit_name,
+                    'Qty Masuk: 0 '.$item->unit_name,
+                    'Qty Outstanding: '.NumberFormatter::trim($item->ordered_qty).' '.$item->unit_name,
+                ],
+                'ordered_qty' => NumberFormatter::trim($item->ordered_qty),
+                'received_qty' => '0',
+                'outstanding_qty' => NumberFormatter::trim($item->ordered_qty),
+                'shipment_number' => '-',
+                'gr_number' => '-',
+            ];
+
+            $runningReceivedQty = 0;
+            $loopIndex = 0;
+
+            foreach ($item->tracking_rows as $tracking) {
+                $loopIndex++;
+                $shipmentDate = $tracking->shipment_date ? Carbon::parse($tracking->shipment_date)->format('d/m/Y') : '-';
+                $shipmentNumber = $tracking->shipment_number ?: 'Belum ada nomor shipment';
+                $deliveryNoteNumber = $tracking->delivery_note_number ?: '-';
+                $shipmentLabel = 'Pengiriman ke-'.$loopIndex.' | DN '.$deliveryNoteNumber;
+
+                if ($tracking->gr_rows->isEmpty()) {
+                    $shipmentTimelineStatus = $runningReceivedQty > 0
+                        ? DocumentTermCodes::ITEM_PARTIAL
+                        : ($initialTimelineStatus === DocumentTermCodes::ITEM_WAITING
+                            ? DocumentTermCodes::ITEM_CONFIRMED
+                            : $initialTimelineStatus);
+
+                    $outstanding = NumberFormatter::trim(max(0, (float) $item->ordered_qty - $runningReceivedQty));
+
+                    $timeline[] = [
+                        'date' => $shipmentDate,
+                        'description' => $shipmentLabel.' (Belum GR)',
+                        'status' => $shipmentTimelineStatus,
+                        'details' => [
+                            'Qty Order: -',
+                            'Qty Masuk: 0 '.$item->unit_name,
+                            'Qty Outstanding: '.$outstanding.' '.$item->unit_name,
+                            'No Shipment: '.$shipmentNumber,
+                            'No GR: -',
+                        ],
+                        'ordered_qty' => '-',
+                        'received_qty' => '0',
+                        'outstanding_qty' => $outstanding,
+                        'shipment_number' => $shipmentNumber,
+                        'gr_number' => '-',
+                    ];
+                } else {
+                    $grLoopIndex = 0;
+                    foreach ($tracking->gr_rows as $gr) {
+                        $grLoopIndex++;
+                        $runningReceivedQty += (float) ($gr->gr_received_qty ?? 0);
+                        $remainingQty = max(0, (float) $item->ordered_qty - $runningReceivedQty);
+                        $activityLabel = $shipmentLabel.($tracking->gr_rows->count() > 1 ? ' / GR '.$grLoopIndex : '');
+                        $timelineStatus = $remainingQty <= 0
+                            ? DocumentTermCodes::ITEM_CLOSED
+                            : ($runningReceivedQty > 0
+                                ? DocumentTermCodes::ITEM_PARTIAL
+                                : $initialTimelineStatus);
+
+                        $grDate = $gr->receipt_date ? Carbon::parse($gr->receipt_date)->format('d/m/Y') : '-';
+                        $grReceived = NumberFormatter::trim($gr->gr_received_qty ?? 0);
+                        $remaining = NumberFormatter::trim($remainingQty);
+
+                        $timeline[] = [
+                            'date' => $grDate,
+                            'description' => $activityLabel,
+                            'status' => $timelineStatus,
+                            'details' => [
+                                'Qty Order: -',
+                                'Qty Masuk: '.$grReceived.' '.$item->unit_name,
+                                'Qty Outstanding: '.$remaining.' '.$item->unit_name,
+                                'No Shipment: '.$shipmentNumber,
+                                'No GR: '.($gr->gr_number ?: '-'),
+                            ],
+                            'ordered_qty' => '-',
+                            'received_qty' => $grReceived,
+                            'outstanding_qty' => $remaining,
+                            'shipment_number' => $shipmentNumber,
+                            'gr_number' => $gr->gr_number ?: '-',
+                        ];
+                    }
+                }
+            }
+
+            $data[$item->id] = [
+                'itemCode' => $item->item_code,
+                'itemName' => $item->item_name,
+                'orderedQty' => NumberFormatter::trim($item->ordered_qty),
+                'receivedQty' => NumberFormatter::trim($item->received_qty),
+                'outstandingQty' => NumberFormatter::trim($item->outstanding_qty),
+                'unitName' => $item->unit_name,
+                'etdDate' => $item->etd_date,
+                'cancelReason' => $item->cancel_reason,
+                'canUpdateEtd' => $item->can_update_etd && ! $poIsFinal,
+                'canCancel' => $item->can_cancel && ! $poIsFinal,
+                'canForceClose' => $item->can_force_close && ! $poIsFinal,
+                'etdUrl' => $item->can_update_etd && ! $poIsFinal ? route('po.items.schedule', [$item->id]) : null,
+                'cancelUrl' => $item->can_cancel && ! $poIsFinal ? route('po.items.cancel', [$item->id]) : null,
+                'forceCloseUrl' => $item->can_force_close && ! $poIsFinal ? route('po.items.force-close', [$item->id]) : null,
+                'copyUrl' => $item->tracking_rows->isNotEmpty() ? route('po.item.tracking.copy-text', [$po->id, $item->id]) : null,
+                'excelUrl' => $item->tracking_rows->isNotEmpty() ? route('po.item.tracking.export-excel', [$po->id, $item->id]) : null,
+                'timeline' => $timeline,
+            ];
+        }
+
+        return $data;
     }
 
     private function resolvePurchaseOrderId(string $identifier): int

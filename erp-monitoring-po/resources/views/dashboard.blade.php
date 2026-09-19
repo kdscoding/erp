@@ -205,6 +205,32 @@
         </section>
 
         <section>
+            <div class="kpi-section-title">PO Status Overview</div>
+            <div class="kpi-grid">
+                <a href="{{ route('monitoring.index', array_filter(request()->query() + ['status' => 'Full'])) }}" class="kpi-card" style="border-left: 4px solid #9ecb3c;">
+                    <div class="kpi-label">Full Delivered</div>
+                    <div class="kpi-value" style="color: #6f9628;">{{ $metrics['po_full'] }}</div>
+                    <div class="kpi-hint">Semua item PO sudah diterima penuh</div>
+                </a>
+                <a href="{{ route('monitoring.index', array_filter(request()->query() + ['status' => 'Partial'])) }}" class="kpi-card" style="border-left: 4px solid #f59e0b;">
+                    <div class="kpi-label">Partial Delivered</div>
+                    <div class="kpi-value" style="color: #d97706;">{{ $metrics['po_partial'] }}</div>
+                    <div class="kpi-hint">Sebagian item sudah diterima</div>
+                </a>
+                <a href="{{ route('monitoring.index', array_filter(request()->query() + ['status' => 'Delayed'])) }}" class="kpi-card" style="border-left: 4px solid #ef4444;">
+                    <div class="kpi-label">Delayed</div>
+                    <div class="kpi-value" style="color: #dc2626;">{{ $metrics['po_delayed'] }}</div>
+                    <div class="kpi-hint">Melewati ETA, belum diterima penuh</div>
+                </a>
+                <a href="{{ route('monitoring.index', request()->query()) }}" class="kpi-card">
+                    <div class="kpi-label">Total Active PO</div>
+                    <div class="kpi-value">{{ $metrics['open_po'] }}</div>
+                    <div class="kpi-hint">PO aktif (bukan Closed/Cancelled)</div>
+                </a>
+            </div>
+        </section>
+
+        <section>
             <div class="kpi-section-title">Key Metrics</div>
             <div class="kpi-grid">
                 <a href="{{ route('monitoring.index', array_filter(request()->query() + ['mode' => 'po'])) }}" class="kpi-card">
@@ -232,6 +258,12 @@
 
         <section>
             <div class="chart-grid">
+                <article class="chart-card">
+                    <div class="chart-title">PO Status Distribution (Full/Partial/Delayed)</div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chartPoStatusDist"></canvas>
+                    </div>
+                </article>
                 <article class="chart-card">
                     <div class="chart-title">Distribusi Status Item</div>
                     <div class="chart-canvas-wrap">
@@ -327,6 +359,38 @@
                 line: '#dfe6b8',
                 bg: '#f7f8ea',
             };
+
+            const poStatusLabels = @json(array_keys($chartPoStatusDist));
+            const poStatusData = @json(array_values($chartPoStatusDist));
+            const poStatusColors = {
+                'Full': '#9ecb3c',
+                'Partial': '#f59e0b',
+                'Delayed': '#ef4444',
+                'PO Issued': '#6366f1',
+                'Open': '#3b82f6',
+                'Late': '#ef4444',
+            };
+            const poStatusBgColors = poStatusLabels.map(l => poStatusColors[l] || '#9ca3af');
+
+            new Chart(document.getElementById('chartPoStatusDist'), {
+                type: 'doughnut',
+                data: {
+                    labels: poStatusLabels,
+                    datasets: [{
+                        data: poStatusData,
+                        backgroundColor: poStatusBgColors,
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8, font: { size: 11 } } },
+                    },
+                },
+            });
 
             const statusLabels = @json(array_keys($chartStatusBreakdown));
             const statusData = @json(array_values($chartStatusBreakdown));

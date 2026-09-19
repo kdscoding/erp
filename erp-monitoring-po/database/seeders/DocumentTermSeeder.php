@@ -60,6 +60,34 @@ class DocumentTermSeeder extends Seeder
                 'badge_text' => 'text-white',
                 'sort_order' => 50,
             ],
+            // Simplified PO statuses (Full/Partial/Delayed)
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_STATUS,
+                'code' => 'Full',
+                'internal_code' => DomainStatus::PO_FULL,
+                'label' => 'Full Delivered',
+                'badge_class' => 'bg-success',
+                'badge_text' => 'text-white',
+                'sort_order' => 60,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_STATUS,
+                'code' => 'Partial',
+                'internal_code' => DomainStatus::PO_PARTIAL,
+                'label' => 'Partially Delivered',
+                'badge_class' => 'bg-primary',
+                'badge_text' => 'text-white',
+                'sort_order' => 70,
+            ],
+            [
+                'group_key' => DocumentTermCodes::GROUP_PO_STATUS,
+                'code' => 'Delayed',
+                'internal_code' => DomainStatus::PO_DELAYED,
+                'label' => 'Delayed / Overdue',
+                'badge_class' => 'bg-danger',
+                'badge_text' => 'text-white',
+                'sort_order' => 80,
+            ],
 
             // PO item status
             [

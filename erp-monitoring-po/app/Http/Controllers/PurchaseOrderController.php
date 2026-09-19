@@ -6,7 +6,9 @@ use App\Actions\CreatePurchaseOrder;
 use App\Queries\PurchaseOrders\PurchaseOrderDetailQuery;
 use App\Queries\PurchaseOrders\PurchaseOrderIndexQuery;
 use App\Support\DocumentTermCodes;
+use App\Support\DocumentTermStatus;
 use App\Support\DomainStatus;
+use App\Support\ErpFlow;
 use App\Support\PurchaseOrderItemStatusResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +25,18 @@ class PurchaseOrderController extends Controller
 
         $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name', 'supplier_code']);
 
-        return view('po.index', compact('rows', 'suppliers'));
+        $statusCounts = $rows->getCollection()
+            ->groupBy('status')
+            ->mapWithKeys(fn ($group, $key) => [DocumentTermStatus::label('po_status', $key) => $group->count()])
+            ->all();
+
+        $canonicalStatusOrder = ['Full', 'Partial', 'Delayed', 'Open', 'Late', 'Closed', 'Cancelled'];
+
+        $summaryChips = collect($canonicalStatusOrder)
+            ->mapWithKeys(fn ($label) => [$label => $statusCounts[$label] ?? 0])
+            ->all();
+
+        return view('po.index', compact('rows', 'suppliers', 'summaryChips'));
     }
 
     public function create(): View
@@ -39,11 +52,82 @@ class PurchaseOrderController extends Controller
         return view('po.create', compact('suppliers', 'items'));
     }
 
-    public function show(string $id, PurchaseOrderDetailQuery $purchaseOrderDetailQuery): View
+    public function searchItems(Request $request)
+    {
+        $query = trim((string) $request->input('q', ''));
+
+        $items = DB::table('items as i')
+            ->leftJoin('units as u', 'u.id', '=', 'i.unit_id')
+            ->select('i.id', 'i.item_code', 'i.item_name', DB::raw('COALESCE(u.unit_name, "") as unit_name'))
+            ->when($query, fn ($q) => $q->where(function ($sub) use ($query) {
+                $sub->where('i.item_code', 'like', '%'.$query.'%')
+                    ->orWhere('i.item_name', 'like', '%'.$query.'%');
+            }))
+            ->orderBy('i.item_code')
+            ->limit(100)
+            ->get();
+
+        return response()->json($items);
+    }
+
+    public function show(string $id, PurchaseOrderDetailQuery $purchaseOrderDetailQuery, Request $request): View
+    {
+        $data = $purchaseOrderDetailQuery->get($id, $request);
+
+        $sort = $data['sort'] = $request->input('sort', 'item_code');
+        $direction = $data['direction'] = $request->input('direction', 'asc');
+
+        return view('po.show', $data);
+    }
+
+    public function refreshStatus(string $id, PurchaseOrderDetailQuery $purchaseOrderDetailQuery): RedirectResponse
     {
         $data = $purchaseOrderDetailQuery->get($id);
 
-        return view('po.show', $data);
+        ErpFlow::refreshPoStatusByOutstanding((int) $data['po']->id, optional(request()->user())->id);
+
+        return redirect()->route('po.show', $data['po']->po_number)
+            ->with('success', 'Status PO berhasil di-refresh.');
+    }
+
+    public function exportItemTrackingText(string $id, string $itemId, PurchaseOrderDetailQuery $purchaseOrderDetailQuery)
+    {
+        $data = $purchaseOrderDetailQuery->get($id);
+        $item = $data['items']->firstWhere('id', (int) $itemId);
+
+        abort_if($item === null, 404);
+
+        $content = view('po.exports.tracking-copy', [
+            'po' => $data['po'],
+            'item' => $item,
+            'timeline' => $data['trackingData'][$item->id]['timeline'] ?? [],
+            'generatedAt' => now(),
+        ])->render();
+
+        return response($content, 200, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="tracking-copy-'.$item->item_code.'.txt"',
+        ]);
+    }
+
+    public function exportItemTrackingExcel(string $id, string $itemId, PurchaseOrderDetailQuery $purchaseOrderDetailQuery)
+    {
+        $data = $purchaseOrderDetailQuery->get($id);
+        $item = $data['items']->firstWhere('id', (int) $itemId);
+
+        abort_if($item === null, 404);
+
+        $content = view('po.exports.tracking-tsv', [
+            'po' => $data['po'],
+            'item' => $item,
+            'timeline' => $data['trackingData'][$item->id]['timeline'] ?? [],
+            'generatedAt' => now(),
+        ])->render();
+
+        return response($content, 200, [
+            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="tracking-'.$item->item_code.'.xls"',
+        ]);
     }
 
     public function exportIndexExcel(Request $request, PurchaseOrderIndexQuery $purchaseOrderIndexQuery)
@@ -57,7 +141,7 @@ class PurchaseOrderController extends Controller
 
         return response($content, 200, [
             'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="po-monitoring-' . now()->format('Ymd-His') . '.xls"',
+            'Content-Disposition' => 'attachment; filename="po-monitoring-'.now()->format('Ymd-His').'.xls"',
         ]);
     }
 
@@ -71,7 +155,7 @@ class PurchaseOrderController extends Controller
 
         return response($content, 200, [
             'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="po-detail-' . $data['po']->po_number . '.xls"',
+            'Content-Disposition' => 'attachment; filename="po-detail-'.$data['po']->po_number.'.xls"',
         ]);
     }
 
@@ -102,17 +186,26 @@ class PurchaseOrderController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
+        if ($request->input('save_and_new')) {
+            return redirect()
+                ->route('po.create')
+                ->with('success', 'PO berhasil dibuat. Buat PO berikutnya.')
+                ->withInput([
+                    'supplier_id' => $validated['supplier_id'],
+                    'po_date' => $validated['po_date'],
+                ]);
+        }
+
         return redirect()
             ->route('po.index')
-            ->with('success', 'PO berhasil dibuat dengan status ' . DocumentTermCodes::PO_ISSUED . '.');
+            ->with('success', 'PO berhasil dibuat dengan status '.DocumentTermCodes::PO_ISSUED.'.');
     }
 
     public function updateItemSchedule(
         Request $request,
         string $itemId,
         PurchaseOrderItemStatusResolver $purchaseOrderItemStatusResolver
-    ): RedirectResponse
-    {
+    ): RedirectResponse {
         $item = DB::table('purchase_order_items')->where('id', $itemId)->firstOrFail();
         $poStatus = DB::table('purchase_orders')->where('id', $item->purchase_order_id)->value('status');
 
@@ -137,9 +230,9 @@ class PurchaseOrderController extends Controller
             'updated_at' => now(),
         ] + DomainStatus::payload(DomainStatus::GROUP_PO_ITEM_STATUS, 'item_status', $newStatus));
 
-        \App\Support\ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
+        ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
 
-        \App\Support\ErpFlow::audit(
+        ErpFlow::audit(
             'purchase_order_items',
             (int) $itemId,
             'item_schedule_update',
@@ -156,8 +249,7 @@ class PurchaseOrderController extends Controller
         Request $request,
         string $id,
         PurchaseOrderItemStatusResolver $purchaseOrderItemStatusResolver
-    ): RedirectResponse
-    {
+    ): RedirectResponse {
         $validated = $request->validate([
             'item_ids' => 'required|array|min:1',
             'item_ids.*' => 'required|integer',
@@ -215,7 +307,7 @@ class PurchaseOrderController extends Controller
                     'updated_at' => now(),
                 ] + DomainStatus::payload(DomainStatus::GROUP_PO_ITEM_STATUS, 'item_status', $newStatus));
 
-                \App\Support\ErpFlow::audit(
+                ErpFlow::audit(
                     'purchase_order_items',
                     (int) $item->id,
                     'item_schedule_bulk_update',
@@ -232,7 +324,7 @@ class PurchaseOrderController extends Controller
                 throw new \RuntimeException('Tidak ada item aktif yang bisa diupdate dari pilihan tersebut.');
             }
 
-            \App\Support\ErpFlow::refreshPoStatusByOutstanding((int) $id, optional($request->user())->id);
+            ErpFlow::refreshPoStatusByOutstanding((int) $id, optional($request->user())->id);
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -266,7 +358,7 @@ class PurchaseOrderController extends Controller
                 'updated_at' => now(),
             ] + DomainStatus::payload(DomainStatus::GROUP_PO_ITEM_STATUS, 'item_status', DocumentTermCodes::ITEM_CANCELLED));
 
-            \App\Support\ErpFlow::audit(
+            ErpFlow::audit(
                 'purchase_order_items',
                 (int) $itemId,
                 'item_cancelled',
@@ -276,10 +368,11 @@ class PurchaseOrderController extends Controller
                 $request->ip()
             );
 
-            \App\Support\ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
+            ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
+
             return back()->with('error', $e->getMessage());
         }
 
@@ -304,25 +397,26 @@ class PurchaseOrderController extends Controller
             }
 
             DB::table('purchase_order_items')->where('id', $itemId)->update([
-                'cancel_reason' => '[FORCE CLOSE] ' . $validated['cancel_reason'],
+                'cancel_reason' => '[FORCE CLOSE] '.$validated['cancel_reason'],
                 'outstanding_qty' => 0,
                 'updated_at' => now(),
             ] + DomainStatus::payload(DomainStatus::GROUP_PO_ITEM_STATUS, 'item_status', DocumentTermCodes::ITEM_FORCE_CLOSED));
 
-            \App\Support\ErpFlow::audit(
+            ErpFlow::audit(
                 'purchase_order_items',
                 (int) $itemId,
                 'item_force_close',
                 ['item_status' => $item->item_status, 'cancel_reason' => $item->cancel_reason],
-                ['item_status' => DocumentTermCodes::ITEM_FORCE_CLOSED, 'cancel_reason' => '[FORCE CLOSE] ' . $validated['cancel_reason']],
+                ['item_status' => DocumentTermCodes::ITEM_FORCE_CLOSED, 'cancel_reason' => '[FORCE CLOSE] '.$validated['cancel_reason']],
                 optional($request->user())->id,
                 $request->ip()
             );
 
-            \App\Support\ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
+            ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
+
             return back()->with('error', $e->getMessage());
         }
 
@@ -362,12 +456,13 @@ class PurchaseOrderController extends Controller
                     'updated_at' => now(),
                 ] + DomainStatus::payload(DomainStatus::GROUP_PO_ITEM_STATUS, 'item_status', DocumentTermCodes::ITEM_CANCELLED));
 
-            \App\Support\ErpFlow::pushPoStatus((int) $id, (string) $po->status, DocumentTermCodes::PO_CANCELLED, $userId, $validated['cancel_reason']);
-            \App\Support\ErpFlow::audit('purchase_orders', (int) $id, 'po_cancelled', ['status' => $po->status], ['status' => DocumentTermCodes::PO_CANCELLED, 'cancel_reason' => $validated['cancel_reason']], $userId, $request->ip());
+            ErpFlow::pushPoStatus((int) $id, (string) $po->status, DocumentTermCodes::PO_CANCELLED, $userId, $validated['cancel_reason']);
+            ErpFlow::audit('purchase_orders', (int) $id, 'po_cancelled', ['status' => $po->status], ['status' => DocumentTermCodes::PO_CANCELLED, 'cancel_reason' => $validated['cancel_reason']], $userId, $request->ip());
 
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
+
             return back()->with('error', $e->getMessage());
         }
 
@@ -398,5 +493,4 @@ class PurchaseOrderController extends Controller
             && ! in_array($item->item_status, [DocumentTermCodes::ITEM_CLOSED, DocumentTermCodes::ITEM_FORCE_CLOSED, DocumentTermCodes::ITEM_CANCELLED], true)
             && (float) $item->outstanding_qty > 0;
     }
-
 }

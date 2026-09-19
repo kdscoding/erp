@@ -15,6 +15,10 @@ class DomainStatus
     public const PO_CLOSED = 'po_closed';
     public const PO_CANCELLED = 'po_cancelled';
 
+    public const PO_FULL = 'po_full';
+    public const PO_PARTIAL = 'po_partial';
+    public const PO_DELAYED = 'po_delayed';
+
     public const ITEM_WAITING = 'item_waiting';
     public const ITEM_CONFIRMED = 'item_confirmed';
     public const ITEM_LATE = 'item_late';
@@ -39,6 +43,9 @@ class DomainStatus
             self::PO_LATE => 'Late',
             self::PO_CLOSED => 'Closed',
             self::PO_CANCELLED => 'Cancelled',
+            self::PO_FULL => 'Full',
+            self::PO_PARTIAL => 'Partial',
+            self::PO_DELAYED => 'Delayed',
         ],
         self::GROUP_PO_ITEM_STATUS => [
             self::ITEM_WAITING => 'Waiting',

@@ -1,11 +1,13 @@
 <?php
 
+use App\Console\Commands\CheckOverduePOs;
 use Database\Seeders\DocumentTermSeeder;
 use Database\Seeders\MasterDataSeeder;
 use Database\Seeders\ShipmentSampleSeeder;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -36,3 +38,5 @@ Artisan::command('erp:reset-demo', function () {
 
     $this->info('Data transaksi/demo ERP berhasil dibersihkan dan dibuat ulang.');
 })->purpose('Reset transaction/demo ERP data and regenerate sample records');
+
+Schedule::command(CheckOverduePOs::class)->dailyAt('06:00')->timezone('Asia/Jakarta');
