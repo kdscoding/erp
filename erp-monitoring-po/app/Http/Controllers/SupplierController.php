@@ -17,10 +17,7 @@ class SupplierController extends Controller
                 $q = trim((string) $request->input('q'));
                 $query->where(function ($qBuilder) use ($q) {
                     $qBuilder->where('supplier_code', 'like', "%{$q}%")
-                        ->orWhere('supplier_name', 'like', "%{$q}%")
-                        ->orWhere('contact_person', 'like', "%{$q}%")
-                        ->orWhere('phone', 'like', "%{$q}%")
-                        ->orWhere('email', 'like', "%{$q}%");
+                        ->orWhere('supplier_name', 'like', "%{$q}%");
                 });
             })
             ->when($request->filled('status'), fn ($query) => $query->where('status', (int) $request->input('status')))
@@ -37,6 +34,11 @@ class SupplierController extends Controller
         return view('suppliers.index', compact('suppliers', 'stats'));
     }
 
+    public function create(): View
+    {
+        return view('suppliers.create');
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $normalizedCode = strtoupper(trim((string) $request->input('supplier_code')));
@@ -50,27 +52,22 @@ class SupplierController extends Controller
                 Rule::unique('suppliers', 'supplier_code'),
             ],
             'supplier_name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:50',
-            'contact_person' => 'nullable|string|max:100',
-            'address' => 'nullable|string|max:500',
+            'status' => 'boolean',
         ], [
             'supplier_code.required' => 'Kode supplier wajib diisi.',
             'supplier_code.unique' => 'Kode supplier sudah digunakan',
             'supplier_name.required' => 'Nama supplier wajib diisi',
         ]);
 
-        DB::table('suppliers')->insert([
-            'supplier_code' => $normalizedCode,
-            'supplier_name' => trim((string) $validated['supplier_name']),
-            'email' => $validated['email'] ?? null,
-            'phone' => $validated['phone'] ?? null,
-            'contact_person' => $validated['contact_person'] ?? null,
-            'address' => $validated['address'] ?? null,
-            'status' => true,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        DB::transaction(function () use ($normalizedCode, $validated) {
+            DB::table('suppliers')->insert([
+                'supplier_code' => $normalizedCode,
+                'supplier_name' => trim((string) $validated['supplier_name']),
+                'status' => (bool) ($validated['status'] ?? true),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
 
         return redirect()->route('suppliers.index')->with('success', 'Supplier berhasil ditambahkan.');
     }
@@ -97,25 +94,21 @@ class SupplierController extends Controller
                 Rule::unique('suppliers', 'supplier_code')->ignore($supplier->id),
             ],
             'supplier_name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:50',
-            'contact_person' => 'nullable|string|max:100',
-            'address' => 'nullable|string|max:500',
+            'status' => 'required|boolean',
         ], [
             'supplier_code.required' => 'Kode supplier wajib diisi.',
             'supplier_code.unique' => 'Kode supplier sudah digunakan',
             'supplier_name.required' => 'Nama supplier wajib diisi',
         ]);
 
-        DB::table('suppliers')->where('id', $id)->update([
-            'supplier_code' => $normalizedCode,
-            'supplier_name' => trim((string) $validated['supplier_name']),
-            'email' => $validated['email'] ?? null,
-            'phone' => $validated['phone'] ?? null,
-            'contact_person' => $validated['contact_person'] ?? null,
-            'address' => $validated['address'] ?? null,
-            'updated_at' => now(),
-        ]);
+        DB::transaction(function () use ($normalizedCode, $validated, $id) {
+            DB::table('suppliers')->where('id', $id)->update([
+                'supplier_code' => $normalizedCode,
+                'supplier_name' => trim((string) $validated['supplier_name']),
+                'status' => (bool) $validated['status'],
+                'updated_at' => now(),
+            ]);
+        });
 
         return redirect()->route('suppliers.index')->with('success', 'Supplier berhasil diperbarui.');
     }

@@ -1027,18 +1027,10 @@
                             </li>
 
                             <li class="nav-item">
-                                <a href="{{ route('warehouses.index') }}"
-                                    class="nav-link {{ request()->routeIs('warehouses.*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-warehouse"></i>
-                                    <p>Warehouses</p>
-                                </a>
-                            </li>
-
-                            <li class="nav-item">
-                                <a href="{{ route('plants.index') }}"
-                                    class="nav-link {{ request()->routeIs('plants.*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-industry"></i>
-                                    <p>Plants</p>
+                                <a href="{{ route('item-categories.index') }}"
+                                    class="nav-link {{ request()->routeIs('item-categories.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-tags"></i>
+                                    <p>Item Categories</p>
                                 </a>
                             </li>
                         @endif

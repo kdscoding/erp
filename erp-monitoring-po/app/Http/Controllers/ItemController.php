@@ -63,6 +63,19 @@ class ItemController extends Controller
         return view('masters.items.index', compact('rows', 'units', 'categories', 'stats', 'supportsCategoryMaster'));
     }
 
+    public function create(): View
+    {
+        $hasCategoryTable = Schema::hasTable('item_categories');
+        $supportsCategoryMaster = $hasCategoryTable && Schema::hasColumn('items', 'category_id');
+
+        $units = DB::table('units')->orderBy('unit_name')->get();
+        $categories = $supportsCategoryMaster
+            ? DB::table('item_categories')->orderBy('category_name')->get()
+            : collect();
+
+        return view('masters.items.create', compact('units', 'categories', 'supportsCategoryMaster'));
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $normalizedCode = strtoupper(trim((string) $request->input('item_code')));

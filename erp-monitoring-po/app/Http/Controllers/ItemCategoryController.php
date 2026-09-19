@@ -31,7 +31,19 @@ class ItemCategoryController extends Controller
             ->orderBy('c.category_name')
             ->get();
 
-        return view('masters.item-categories.index', compact('rows'));
+        $stats = [
+            'total' => DB::table('item_categories')->count(),
+            'active' => DB::table('item_categories')->where('is_active', true)->count(),
+            'inactive' => DB::table('item_categories')->where('is_active', false)->count(),
+            'used_in_items' => DB::table('items')->whereNotNull('category_id')->distinct('category_id')->count('category_id'),
+        ];
+
+        return view('masters.item-categories.index', compact('rows', 'stats'));
+    }
+
+    public function create(): View
+    {
+        return view('masters.item-categories.create');
     }
 
     public function store(Request $request): RedirectResponse

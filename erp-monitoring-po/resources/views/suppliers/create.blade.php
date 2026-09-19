@@ -1,47 +1,45 @@
 @extends('layouts.erp')
 
-@php($title = 'Edit Supplier')
-@php($header = 'Edit Supplier')
-@php($headerSubtitle = 'Perbarui identitas supplier.')
+@php($title = 'Tambah Supplier')
+@php($header = 'Tambah Supplier')
+@php($headerSubtitle = 'Input data supplier baru.')
 
 @section('content')
     <div class="page-shell">
         <section class="ui-surface">
             <div class="ui-surface-head">
                 <div>
-                    <h3 class="ui-surface-title">Form Edit Supplier</h3>
-                    <div class="ui-surface-subtitle">Kode supplier tidak dapat diubah.</div>
+                    <h3 class="ui-surface-title">Form Supplier</h3>
                 </div>
             </div>
 
             <div class="ui-surface-body">
                 <div class="form-wrapper">
-                    <form method="POST" action="{{ route('suppliers.update', $supplier->id) }}">
+                    <form method="POST" action="{{ route('suppliers.store') }}">
                         @csrf
-                        @method('PUT')
                         <div class="form-group">
                             <label class="field-label">Kode Supplier</label>
                             <input class="form-control form-control-sm" name="supplier_code"
-                                value="{{ old('supplier_code', $supplier->supplier_code) }}" required readonly>
+                                placeholder="Kode unik" value="{{ old('supplier_code') }}" required>
                         </div>
 
                         <div class="form-group">
                             <label class="field-label">Nama Supplier</label>
                             <input class="form-control form-control-sm" name="supplier_name"
-                                placeholder="Nama perusahaan" value="{{ old('supplier_name', $supplier->supplier_name) }}" required>
+                                placeholder="Nama perusahaan" value="{{ old('supplier_name') }}" required>
                         </div>
 
                         <div class="form-group">
                             <label class="field-label">Status</label>
                             <select class="form-control form-control-sm" name="status">
-                                <option value="1" {{ ($supplier->status ?? true) ? 'selected' : '' }}>Aktif</option>
-                                <option value="0" {{ !($supplier->status ?? true) ? 'selected' : '' }}>Nonaktif</option>
+                                <option value="1">Aktif</option>
+                                <option value="0">Nonaktif</option>
                             </select>
                         </div>
 
                         <div class="form-actions">
                             <a href="{{ route('suppliers.index') }}" class="btn btn-light btn-sm">Batal</a>
-                            <button type="submit" class="btn btn-primary btn-sm px-5">Simpan Perubahan</button>
+                            <button type="submit" class="btn btn-primary btn-sm px-5">Simpan Supplier</button>
                         </div>
                     </form>
                 </div>

@@ -78,14 +78,14 @@ class MasterDataValidationTest extends TestCase
         $this->actingAs($user)->put("/suppliers/{$supplierId}", [
             'supplier_code' => ' sup-b ',
             'supplier_name' => 'Supplier Baru',
-            'email' => 'baru@example.com',
+            'status' => 1,
         ])->assertRedirect('/suppliers');
 
         $this->assertDatabaseHas('suppliers', [
             'id' => $supplierId,
             'supplier_code' => 'SUP-B',
             'supplier_name' => 'Supplier Baru',
-            'email' => 'baru@example.com',
+            'status' => 1,
         ]);
     }
 

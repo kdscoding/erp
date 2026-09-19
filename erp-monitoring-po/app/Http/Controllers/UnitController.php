@@ -35,6 +35,11 @@ class UnitController extends Controller
         return view('masters.units.index', compact('rows', 'stats'));
     }
 
+    public function create(): View
+    {
+        return view('masters.units.create');
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $normalizedCode = strtoupper(trim((string) $request->input('unit_code')));

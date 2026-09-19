@@ -5,8 +5,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ItemCategoryController;
-use App\Http\Controllers\PlantController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\MasterDataSeeder;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ShipmentController;
@@ -14,7 +14,6 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TraceabilityController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserManagementController;
-use App\Http\Controllers\WarehouseController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn() => redirect()->route('dashboard'));
@@ -48,29 +47,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::middleware('role:administrator|staff')->group(function () {
         Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
+        Route::get('/suppliers/create', [SupplierController::class, 'create'])->name('suppliers.create');
         Route::post('/suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
         Route::get('/suppliers/{id}/edit', [SupplierController::class, 'edit'])->name('suppliers.edit');
         Route::put('/suppliers/{id}', [SupplierController::class, 'update'])->name('suppliers.update');
         Route::patch('/suppliers/{id}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle-status');
 
-        Route::get('/masters/units', [UnitController::class, 'index'])->name('units.index');
-        Route::post('/masters/units', [UnitController::class, 'store'])->name('units.store');
-        Route::get('/masters/units/{id}/edit', [UnitController::class, 'edit'])->name('units.edit');
-        Route::put('/masters/units/{id}', [UnitController::class, 'update'])->name('units.update');
-        Route::get('/masters/warehouses', [WarehouseController::class, 'index'])->name('warehouses.index');
-        Route::post('/masters/warehouses', [WarehouseController::class, 'store'])->name('warehouses.store');
-        Route::get('/masters/warehouses/{id}/edit', [WarehouseController::class, 'edit'])->name('warehouses.edit');
-        Route::put('/masters/warehouses/{id}', [WarehouseController::class, 'update'])->name('warehouses.update');
-        Route::get('/masters/plants', [PlantController::class, 'index'])->name('plants.index');
-        Route::post('/masters/plants', [PlantController::class, 'store'])->name('plants.store');
-        Route::get('/masters/plants/{id}/edit', [PlantController::class, 'edit'])->name('plants.edit');
-        Route::put('/masters/plants/{id}', [PlantController::class, 'update'])->name('plants.update');
         Route::get('/masters/item-categories', [ItemCategoryController::class, 'index'])->name('item-categories.index');
+        Route::get('/masters/item-categories/create', [ItemCategoryController::class, 'create'])->name('item-categories.create');
         Route::post('/masters/item-categories', [ItemCategoryController::class, 'store'])->name('item-categories.store');
         Route::get('/masters/item-categories/{id}/edit', [ItemCategoryController::class, 'edit'])->name('item-categories.edit');
         Route::put('/masters/item-categories/{id}', [ItemCategoryController::class, 'update'])->name('item-categories.update');
         Route::patch('/masters/item-categories/{id}/toggle-status', [ItemCategoryController::class, 'toggleStatus'])->name('item-categories.toggle-status');
+
+        Route::get('/masters/units', [UnitController::class, 'index'])->name('units.index');
+        Route::get('/masters/units/create', [UnitController::class, 'create'])->name('units.create');
+        Route::post('/masters/units', [UnitController::class, 'store'])->name('units.store');
+        Route::get('/masters/units/{id}/edit', [UnitController::class, 'edit'])->name('units.edit');
+        Route::put('/masters/units/{id}', [UnitController::class, 'update'])->name('units.update');
+
         Route::get('/masters/items', [ItemController::class, 'index'])->name('items.index');
+        Route::get('/masters/items/create', [ItemController::class, 'create'])->name('items.create');
         Route::post('/masters/items', [ItemController::class, 'store'])->name('items.store');
         Route::get('/masters/items/{id}/edit', [ItemController::class, 'edit'])->name('items.edit');
         Route::put('/masters/items/{id}', [ItemController::class, 'update'])->name('items.update');
