@@ -20,6 +20,12 @@
                     <a href="{{ route('po.export-excel', request()->query()) }}" class="btn btn-light btn-sm">
                         <i class="fas fa-file-excel"></i> Export Monitoring
                     </a>
+                    <a href="{{ route('po.import-template') }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-file-download"></i> Template Import
+                    </a>
+                    <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#importPoModal">
+                        <i class="fas fa-file-import"></i> Import Excel
+                    </button>
                     <a href="{{ route('po.create') }}" class="btn btn-primary btn-sm">
                         <i class="fas fa-plus"></i> Buat PO
                     </a>
@@ -57,52 +63,46 @@
             </div>
 
             <div class="po-filter-panel">
-                <button class="po-filter-toggle" type="button" data-toggle="collapse" data-target="#poFilterBody" aria-expanded="true" aria-controls="poFilterBody">
-                    <span><i class="fas fa-sliders-h"></i> Filter cepat</span>
-                    <i class="fas fa-chevron-up po-filter-chevron"></i>
+                <button type="button" class="filter-toggle-btn" id="filterToggle">
+                    <i class="fas fa-sliders-h"></i> <span id="filterToggleText">Tampilkan Filter</span>
                 </button>
-                <div id="poFilterBody" class="collapse show">
-                    <form method="GET" class="po-filter-grid">
-                        <div class="po-field">
-                            <label class="field-label" for="poNumberFilter">Nomor PO</label>
-                            <input type="text" id="poNumberFilter" name="po_number" value="{{ request('po_number') }}" class="form-control form-control-sm" placeholder="Cari nomor PO">
+                <div id="filterSection" style="display:none;">
+                    <form method="GET" class="filter-bar" id="poFilterForm">
+                        <div class="filter-bar-field">
+                            <label for="filterPoNumber">Nomor PO</label>
+                            <input type="text" id="filterPoNumber" name="po_number" value="{{ $filterPoNumber ?? '' }}" class="form-control form-control-sm" placeholder="Cari nomor PO">
                         </div>
-
-                        <div class="po-field">
-                            <label class="field-label" for="supplierFilter">Supplier</label>
-                            <select id="supplierFilter" name="supplier_code" class="form-control form-control-sm supplier-select">
+                        <div class="filter-bar-field">
+                            <label for="filterSupplier">Supplier</label>
+                            <select id="filterSupplier" name="supplier_code" class="form-control form-control-sm supplier-select">
                                 <option value="">Semua supplier</option>
                                 @foreach ($suppliers as $supplier)
-                                    <option value="{{ $supplier->supplier_code }}" @selected(request('supplier_code') === $supplier->supplier_code)>
+                                    <option value="{{ $supplier->supplier_code }}" {{ ($filterSupplierCode ?? '') === $supplier->supplier_code ? 'selected' : '' }}>
                                         {{ $supplier->supplier_code }} - {{ $supplier->supplier_name }}
                                     </option>
                                 @endforeach
                             </select>
                         </div>
-
-                        <div class="po-field">
-                            <label class="field-label" for="dateFromFilter">Dari Tanggal</label>
-                            <input type="date" id="dateFromFilter" name="date_from" value="{{ request('date_from') }}" class="form-control form-control-sm">
+                        <div class="filter-bar-field">
+                            <label for="filterDateFrom">Dari Tanggal</label>
+                            <input type="date" id="filterDateFrom" name="date_from" value="{{ $filterDateFrom ?? '' }}" class="form-control form-control-sm">
                         </div>
-
-                        <div class="po-field">
-                            <label class="field-label" for="dateToFilter">Sampai Tanggal</label>
-                            <input type="date" id="dateToFilter" name="date_to" value="{{ request('date_to') }}" class="form-control form-control-sm">
+                        <div class="filter-bar-field">
+                            <label for="filterDateTo">Sampai Tanggal</label>
+                            <input type="date" id="filterDateTo" name="date_to" value="{{ $filterDateTo ?? '' }}" class="form-control form-control-sm">
                         </div>
-
-                        <div class="po-field">
-                            <label class="field-label" for="statusFilter">Status</label>
-                            <select id="statusFilter" name="status" class="form-control form-control-sm">
+                        <div class="filter-bar-field">
+                            <label for="filterStatus">Status</label>
+                            <select id="filterStatus" name="status" class="form-control form-control-sm">
                                 <option value="">Semua status</option>
                                 @foreach (\App\Support\TermCatalog::options('po_status', \App\Support\DomainStatus::legacyOptions(\App\Support\DomainStatus::GROUP_PO_STATUS)) as $value => $label)
-                                    <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+                                    <option value="{{ $value }}" {{ ($filterStatus ?? '') === $value ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
-
-                        <div class="po-filter-actions">
-                            <button class="btn btn-primary btn-sm w-100" type="submit"><i class="fas fa-search"></i> Terapkan</button>
-                            <a href="{{ route('po.index') }}" class="btn btn-light btn-sm w-100"><i class="fas fa-redo"></i> Reset</a>
+                        <div class="filter-bar-actions">
+                            <button class="btn btn-primary btn-sm" type="submit"><i class="fas fa-search"></i> Terapkan</button>
+                            <a href="{{ route('po.index') }}" class="btn btn-light btn-sm"><i class="fas fa-redo"></i> Reset</a>
                         </div>
                     </form>
                 </div>
@@ -192,12 +192,57 @@
             <div class="po-pagination">{{ $rows->links() }}</div>
         </section>
     </div>
+
+    <div class="modal fade" id="importPoModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <form method="POST" action="{{ route('po.import') }}" enctype="multipart/form-data" class="modal-content">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title">Import Purchase Order</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Tutup">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="field-label" for="poImportFile">File Excel/CSV</label>
+                        <input type="file" id="poImportFile" name="file" class="form-control form-control-sm" accept=".xlsx,.xls,.csv" required>
+                    </div>
+                    <div class="alert alert-info mb-0" style="font-size: 12px;">
+                        Gunakan template yang tersedia. Format mendukung <strong>.xlsx</strong>, <strong>.xls</strong>, dan <strong>.csv</strong>.
+                        Setiap baris barang wajib memiliki kode barang, qty, dan harga yang valid.
+                        <a href="{{ route('po.import-template') }}">Unduh template</a>.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Import PO</button>
+                </div>
+            </form>
+        </div>
+    </div>
  @endsection
 
 @push('scripts')
     @vite('resources/js/po-index.js')
     <script>
         window.PO_INDEX_CONFIG = {};
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const toggle = document.getElementById('filterToggle');
+            const filterSection = document.getElementById('filterSection');
+            const toggleText = document.getElementById('filterToggleText');
+            if (toggle && filterSection) {
+                toggle.addEventListener('click', function () {
+                    const isHidden = filterSection.style.display === 'none';
+                    filterSection.style.display = isHidden ? 'block' : 'none';
+                    if (toggleText) {
+                        toggleText.textContent = isHidden ? 'Sembunyikan Filter' : 'Tampilkan Filter';
+                    }
+                });
+            }
+        });
     </script>
 @endpush
 
@@ -258,8 +303,7 @@
             margin-bottom: 0;
         }
 
-        .po-panel-actions,
-        .po-filter-actions {
+        .po-panel-actions {
             display: flex;
             align-items: flex-end;
             gap: 8px;
@@ -330,48 +374,15 @@
             padding-top: 14px;
         }
 
-        .po-filter-toggle {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border: 0;
-            background: transparent;
-            color: #334155;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .po-filter-toggle span {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .po-filter-chevron {
-            font-size: 11px;
-            transition: transform 0.15s ease;
-        }
-
-        .po-filter-toggle[aria-expanded="false"] .po-filter-chevron {
-            transform: rotate(-90deg);
-        }
-
-        .po-filter-grid {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(150px, auto);
-            gap: 10px;
-            padding-top: 4px;
-        }
-
-        .po-field label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #475569;
-        }
+        .filter-toggle-btn { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1px solid var(--lemon-line); background: #f8f9fa; color: #666; cursor: pointer; margin-bottom: .5rem; }
+        .filter-toggle-btn:hover { background: #e9ecef; color: #333; border-color: #dee2e6; }
+        .filter-toggle-btn i { font-size: 12px; }
+        .filter-bar { display: flex; flex-direction: row; align-items: flex-end; gap: .75rem; flex-wrap: wrap; padding: .5rem 0; }
+        .filter-bar-field { display: flex; flex-direction: column; min-width: 140px; flex: 1; }
+        .filter-bar-field label { font-size: 11px; font-weight: 600; color: #666; margin-bottom: 3px; }
+        .filter-bar-field select, .filter-bar-field input { font-size: 12px; padding: 4px 8px; height: 32px; }
+        .filter-bar-actions { display: flex; gap: .4rem; align-items: flex-end; margin-left: auto; }
+        .filter-bar-actions .btn { height: 32px; font-size: 12px; }
 
         .po-table-panel {
             padding: 18px;
@@ -471,8 +482,12 @@
         }
 
         @media (max-width: 1199.98px) {
-            .po-filter-grid {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
+            .filter-bar {
+                flex-wrap: wrap;
+            }
+            .filter-bar-field {
+                flex: 1 1 calc(33.333% - .5rem);
+                min-width: 140px;
             }
         }
 
@@ -488,13 +503,19 @@
                 flex-direction: column;
             }
 
-            .po-panel-actions,
-            .po-filter-actions {
+            .po-panel-actions {
                 width: 100%;
             }
 
-            .po-panel-actions .btn,
-            .po-filter-actions .btn {
+            .po-panel-actions .btn {
+                flex: 1;
+            }
+
+            .filter-bar-actions {
+                width: 100%;
+            }
+
+            .filter-bar-actions .btn {
                 flex: 1;
             }
 
@@ -502,8 +523,8 @@
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
-            .po-filter-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+            .filter-bar-field {
+                flex: 1 1 calc(50% - .375rem);
             }
 
             .po-search-wrap {
@@ -512,9 +533,19 @@
         }
 
         @media (max-width: 575.98px) {
-            .po-summary-grid,
-            .po-filter-grid {
+            .po-summary-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .filter-bar,
+            .filter-bar-field,
+            .filter-bar-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .filter-bar-field {
+                flex: 1 1 auto;
             }
 
             .po-summary-card {

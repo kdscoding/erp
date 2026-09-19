@@ -1250,6 +1250,7 @@
                 ['label' => 'Purchase Orders', 'description' => 'List dan detail PO aktif', 'route' => route('po.index'), 'roles' => ['administrator', 'staff', 'supervisor']],
                 ['label' => 'Create Draft Shipment', 'description' => 'Susun draft shipment baru', 'route' => route('shipments.create'), 'roles' => ['administrator', 'staff']],
                 ['label' => 'Shipment Worklist', 'description' => 'Lihat draft, shipped, dan partial received', 'route' => route('shipments.index'), 'roles' => ['administrator', 'staff']],
+                ['label' => 'Tracking', 'description' => 'Unified PO & Barang fulfillment tracking', 'route' => route('tracking.index'), 'roles' => ['administrator', 'staff', 'supervisor']],
                 ['label' => 'Open Receiving', 'description' => 'Proses receiving per shipment', 'route' => route('receiving.process'), 'roles' => ['administrator', 'staff']],
                 ['label' => 'Audit Viewer', 'description' => 'Review audit log dan before-after changes', 'route' => route('audit.index'), 'roles' => ['administrator']],
                 ['label' => 'System Parameters', 'description' => 'Pengaturan sistem dan istilah dokumen', 'route' => route('settings.index'), 'roles' => ['administrator']],
@@ -1491,44 +1492,23 @@
                                     <p>Purchase Orders</p>
                                 </a>
                             </li>
+
+                            <li class="nav-item">
+                                <a href="{{ route('tracking.index') }}"
+                                    class="nav-link {{ request()->routeIs('tracking.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-table"></i>
+                                    <p>Tracking</p>
+                                </a>
+                            </li>
                         @endif
 
                         @if ($currentUser?->hasAnyRole(['administrator', 'staff']))
-                            <li class="nav-item has-treeview {{ $shipmentMenuOpen ? 'menu-open' : '' }}">
-                                <a href="#"
-                                    class="nav-link {{ $shipmentMenuOpen ? 'active' : '' }}">
+                            <li class="nav-item">
+                                <a href="{{ route('shipments.index') }}"
+                                    class="nav-link {{ request()->routeIs('shipments.*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-ship"></i>
-                                    <p>
-                                        Shipment
-                                        <i class="right fas fa-angle-left"></i>
-                                    </p>
+                                    <p>Shipment</p>
                                 </a>
-
-                                <ul class="nav nav-treeview">
-                                    <li class="nav-item">
-                                        <a href="{{ route('shipments.index') }}"
-                                            class="nav-link {{ $shipmentWorklistActive ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>Worklist</p>
-                                        </a>
-                                    </li>
-
-                                    <li class="nav-item">
-                                        <a href="{{ route('shipments.create') }}"
-                                            class="nav-link {{ $shipmentDraftActive ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>Create Draft</p>
-                                        </a>
-                                    </li>
-
-                                    <li class="nav-item">
-                                        <a href="{{ route('shipments.history') }}"
-                                            class="nav-link {{ $shipmentArchiveActive ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>Archive</p>
-                                        </a>
-                                    </li>
-                                </ul>
                             </li>
 
                             <li class="nav-item has-treeview {{ $receivingMenuOpen ? 'menu-open' : '' }}">

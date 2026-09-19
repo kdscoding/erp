@@ -8,8 +8,43 @@ export function escapeHtml(text) {
 }
 
 export function parseNumber(value) {
-    if (value === null || value === undefined || value === '') return 0;
-    return parseFloat(String(value).replace(/,/g, '')) || 0;
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    let raw = String(value).trim();
+    if (raw === '') {
+        return null;
+    }
+
+    raw = raw.replace(/\s+/g, '').replace(/[RpIDRrp idr]/g, '');
+    const hasComma = raw.includes(',');
+    const hasDot = raw.includes('.');
+
+    if (hasComma && hasDot) {
+        raw = raw.lastIndexOf(',') > raw.lastIndexOf('.')
+            ? raw.replace(/\./g, '').replace(',', '.')
+            : raw.replace(/,/g, '');
+    } else if (hasComma) {
+        const lastComma = raw.lastIndexOf(',');
+        const fractionalDigits = raw.length - lastComma - 1;
+        raw = fractionalDigits === 3 && /^\d{1,3}(?:,\d{3})+$/.test(raw)
+            ? raw.replace(/,/g, '')
+            : raw.replace(',', '.');
+    } else if (hasDot) {
+        const lastDot = raw.lastIndexOf('.');
+        const fractionalDigits = raw.length - lastDot - 1;
+        if (fractionalDigits === 3 && /^\d{1,3}(?:\.\d{3})+$/.test(raw)) {
+            raw = raw.replace(/\./g, '');
+        }
+    }
+
+    if (!/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(raw)) {
+        return null;
+    }
+
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
 }
 
 export function formatNumber(value) {

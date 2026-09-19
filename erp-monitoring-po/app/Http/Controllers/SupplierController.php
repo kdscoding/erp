@@ -10,6 +10,8 @@ use Illuminate\View\View;
 
 class SupplierController extends Controller
 {
+    protected string $entity = 'supplier';
+
     public function index(Request $request): View
     {
         $suppliers = DB::table('suppliers')
@@ -53,11 +55,7 @@ class SupplierController extends Controller
             ],
             'supplier_name' => 'required|string|max:255',
             'status' => 'boolean',
-        ], [
-            'supplier_code.required' => 'Kode supplier wajib diisi.',
-            'supplier_code.unique' => 'Kode supplier sudah digunakan',
-            'supplier_name.required' => 'Nama supplier wajib diisi',
-        ]);
+        ], validation_messages($this->entity));
 
         DB::transaction(function () use ($normalizedCode, $validated) {
             DB::table('suppliers')->insert([
@@ -95,11 +93,7 @@ class SupplierController extends Controller
             ],
             'supplier_name' => 'required|string|max:255',
             'status' => 'required|boolean',
-        ], [
-            'supplier_code.required' => 'Kode supplier wajib diisi.',
-            'supplier_code.unique' => 'Kode supplier sudah digunakan',
-            'supplier_name.required' => 'Nama supplier wajib diisi',
-        ]);
+        ], validation_messages($this->entity));
 
         DB::transaction(function () use ($normalizedCode, $validated, $id) {
             DB::table('suppliers')->where('id', $id)->update([

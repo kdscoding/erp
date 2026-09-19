@@ -14,7 +14,6 @@ import {
 
 export function initPoCreate(config = {}) {
     const { items = [], oldItems = [], searchUrl = '' } = config;
-    const $ = window.jQuery;
     const tbody = document.querySelector('#po-items-table tbody');
     const addBtn = document.getElementById('btn-add-item');
     const grandTotalText = document.getElementById('grand-total-text');
@@ -85,13 +84,13 @@ export function initPoCreate(config = {}) {
                 return false;
             }
 
-            if (qty < 0.01) {
+            if (qty === null || qty < 0.01) {
                 showAlert('Qty harus lebih besar dari 0.');
                 qtyInput.focus();
                 return false;
             }
 
-            if (price < 0) {
+            if (price !== null && price < 0) {
                 showAlert('Harga tidak boleh bernilai negatif.');
                 priceInput.focus();
                 return false;
@@ -179,11 +178,17 @@ export function initPoCreate(config = {}) {
 
         qtyInput.addEventListener('input', () => updateRowSubtotal(tr, updateGrandTotal));
         qtyInput.addEventListener('blur', function() {
-            this.value = String(this.value || '').replace(/,/g, '').trim();
+            const parsed = parseNumber(this.value);
+            if (parsed !== null) {
+                this.value = String(parsed);
+            }
         });
         priceInput.addEventListener('input', () => updateRowSubtotal(tr, updateGrandTotal));
         priceInput.addEventListener('blur', function() {
-            this.value = String(this.value || '').replace(/,/g, '').trim();
+            const parsed = parseNumber(this.value);
+            if (parsed !== null) {
+                this.value = String(parsed);
+            }
         });
 
         const remarksToggle = tr.querySelector('.remarks-toggle');

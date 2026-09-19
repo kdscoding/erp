@@ -45,6 +45,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/po/export-excel', [PurchaseOrderController::class, 'exportIndexExcel'])->middleware('role:administrator|staff|supervisor')->name('po.export-excel');
     Route::get('/traceability', [TraceabilityController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('traceability.index');
 
+    Route::get('/tracking', [DashboardController::class, 'tracking'])->name('tracking.index');
+
     Route::middleware('role:administrator|staff')->group(function () {
         Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
         Route::get('/suppliers/create', [SupplierController::class, 'create'])->name('suppliers.create');
@@ -77,6 +79,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('/po/create', [PurchaseOrderController::class, 'create'])->name('po.create');
         Route::post('/po', [PurchaseOrderController::class, 'store'])->name('po.store');
+        Route::get('/po/import-template', [PurchaseOrderController::class, 'downloadTemplate'])->name('po.import-template');
+        Route::post('/po/import', [PurchaseOrderController::class, 'import'])->name('po.import');
         Route::patch('/po/items/{itemId}/schedule', [PurchaseOrderController::class, 'updateItemSchedule'])->name('po.items.schedule');
         Route::patch('/po/{id}/items/bulk-schedule', [PurchaseOrderController::class, 'bulkUpdateItemSchedule'])->name('po.items.bulk-schedule');
         Route::post('/po/items/{itemId}/cancel', [PurchaseOrderController::class, 'cancelItem'])->name('po.items.cancel');

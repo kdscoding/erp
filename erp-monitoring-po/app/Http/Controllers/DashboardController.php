@@ -1048,7 +1048,152 @@ $metrics = [
         ]);
     }
 
-    private function resolveDateRange(Request $request): array
+    public function tracking(Request $request): View
+    {
+        $supplierId = $this->resolveSupplierId($request);
+        ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
+        $currentDateSql = $this->currentDateExpression();
+
+        $suppliers = DB::table('suppliers')
+            ->orderBy('supplier_name')
+            ->get(['id', 'supplier_name', 'supplier_code']);
+
+        $filterSupplierId = $supplierId;
+        $filterDateFrom = $dateFrom;
+        $filterDateTo = $dateTo;
+        $filterPoStatus = $request->query('po_status', 'all');
+        $filterItemStatus = $request->query('item_status', 'all');
+
+        $activePoSql = StatusQuery::sqlNotEquals('po.status', DomainStatus::GROUP_PO_STATUS, DocumentTermCodes::PO_CLOSED)
+            . ' AND '
+            . StatusQuery::sqlNotEquals('po.status', DomainStatus::GROUP_PO_STATUS, DocumentTermCodes::PO_CANCELLED);
+        $activeItemSql = StatusQuery::sqlNotEquals('poi.item_status', DomainStatus::GROUP_PO_ITEM_STATUS, DocumentTermCodes::ITEM_CANCELLED);
+
+                $itemRows = DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->join('items as i', 'i.id', '=', 'poi.item_id')
+            ->leftJoin('shipment_items as si', 'si.purchase_order_item_id', '=', 'poi.id')
+            ->leftJoin('shipments as sh', 'sh.id', '=', 'si.shipment_id')
+            ->when($filterSupplierId, fn ($q) => $q->where('po.supplier_id', $filterSupplierId))
+            ->when($filterDateFrom, fn ($q) => $q->whereDate('po.po_date', '>=', $filterDateFrom))
+            ->when($filterDateTo, fn ($q) => $q->whereDate('po.po_date', '<=', $filterDateTo))
+            ->when($filterPoStatus !== 'all', fn ($q) => $q->where('po.status', $filterPoStatus))
+            ->when($filterItemStatus !== 'all', fn ($q) => $q->where('poi.item_status', $filterItemStatus))
+            ->whereRaw($activePoSql)
+            ->whereRaw($activeItemSql)
+            ->select(
+                'po.id as po_id',
+                'po.po_number',
+                'po.po_date',
+                'po.status as po_status',
+                's.supplier_name',
+                's.supplier_code',
+                'i.item_code',
+                'i.item_name',
+                'poi.id as item_id',
+                'poi.ordered_qty',
+                'poi.received_qty',
+                'poi.outstanding_qty',
+                'poi.item_status',
+                'si.shipped_qty as item_shipped_qty',
+                'si.received_qty as item_received_qty',
+                'sh.shipment_number',
+                'sh.shipment_date',
+                'sh.delivery_note_number',
+            )
+            ->orderBy('po.po_number')
+            ->orderBy('i.item_code')
+            ->get()
+            ->map(fn ($row) => [
+                'po_id' => $row->po_id,
+                'po_number' => $row->po_number,
+                'po_date' => $row->po_date ? Carbon::parse($row->po_date)->format('d-m-Y') : null,
+                'po_date_raw' => $row->po_date,
+                'po_status' => $row->po_status,
+                'item_id' => $row->item_id,
+                'item_code' => $row->item_code,
+                'item_name' => $row->item_name,
+                'item_status' => $row->item_status,
+                'supplier_name' => $row->supplier_name,
+                'supplier_code' => $row->supplier_code ?? '-',
+                'ordered_qty' => (float) ($row->ordered_qty ?? 0),
+                'shipped_qty' => (float) ($row->item_shipped_qty ?? 0),
+                'received_qty' => (float) ($row->item_received_qty ?? 0),
+                'outstanding_qty' => (float) ($row->outstanding_qty ?? 0),
+                'stage' => $row->po_status,
+                'ref' => $row->po_number,
+                'ref_type' => 'po.show',
+                'ref_param' => $row->po_number,
+                'shipment_number' => $row->shipment_number ?? null,
+                'shipment_date' => $row->shipment_date ? Carbon::parse($row->shipment_date)->format('d-m-Y') : null,
+                'delivery_note_number' => $row->delivery_note_number ?? null,
+            ])
+            ->groupBy('item_id');
+
+        $itemRows = $itemRows->map(function ($group) {
+            $first = (object) $group->first();
+            $shipments = [];
+            foreach ($group as $row) {
+                $row = (object) $row;
+                if ($row->shipment_number) {
+                    $shipments[] = [
+                        'shipment_number' => $row->shipment_number,
+                        'shipment_date' => $row->shipment_date ? Carbon::parse($row->shipment_date)->format('d-m-Y') : null,
+                        'delivery_note_number' => $row->delivery_note_number ?? null,
+                        'shipped_qty' => (float) ($row->item_shipped_qty ?? 0),
+                        'received_qty' => (float) ($row->item_received_qty ?? 0),
+                        'remaining_qty' => ($row->item_shipped_qty ?? 0) - ($row->item_received_qty ?? 0),
+                    ];
+                }
+            }
+
+            return [
+                'po_id' => $first->po_id,
+                'po_number' => $first->po_number,
+                'po_date' => $first->po_date,
+                'po_status' => $first->po_status,
+                'item_id' => $first->item_id,
+                'item_code' => $first->item_code,
+                'item_name' => $first->item_name,
+                'item_status' => $first->item_status,
+                'supplier_name' => $first->supplier_name,
+                'supplier_code' => $first->supplier_code ?? '-',
+                'ordered_qty' => (float) ($first->ordered_qty ?? 0),
+                'shipped_qty' => (float) ($first->item_shipped_qty ?? 0),
+                'received_qty' => (float) ($first->item_received_qty ?? 0),
+                'outstanding_qty' => (float) ($first->outstanding_qty ?? 0),
+                'stage' => $first->po_status,
+                'stage_class' => match ($first->po_status) {
+                    'PO Issued' => 'stage-confirmed',
+                    'Open' => 'stage-waiting',
+                    'Late' => 'stage-late',
+                    'Closed' => 'stage-closed',
+                    'Cancelled' => 'stage-cancelled',
+                    'Full' => 'stage-closed',
+                    'Partial' => 'stage-partial',
+                    'Delayed' => 'stage-late',
+                    default => 'stage-waiting',
+                },
+                'ref' => $first->po_number,
+                'ref_type' => 'po.show',
+                'ref_param' => $first->po_number,
+                'shipments' => $shipments,
+            ];
+        });
+
+        return view('tracking', compact(
+            'suppliers',
+            'filterSupplierId',
+            'filterDateFrom',
+            'filterDateTo',
+            'filterPoStatus',
+            'filterItemStatus',
+            'itemRows'
+        ));
+    }
+
+private function resolveDateRange(Request $request): array
     {
         $today = Carbon::today();
         $savedView = (string) $request->query('saved_view', 'default');

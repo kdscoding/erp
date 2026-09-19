@@ -54,8 +54,8 @@
 
                             <div class="po-field">
                                 <label class="field-label" for="poDateInput">Tanggal PO <span class="text-danger">*</span></label>
-                                <input type="text" id="poDateInput" class="form-control form-control-sm" name="po_date" value="{{ old('po_date') }}" placeholder="DD-Mmm-YY (e.g. 9-Mar-26)" required>
-                                <small class="po-field-help">Format: DD-Mmm-YY (contoh: 9-Mar-26).</small>
+                                <input type="date" id="poDateInput" class="form-control form-control-sm" name="po_date" value="{{ old('po_date') }}" required>
+                                <small class="po-field-help">Pilih tanggal PO dari kalender.</small>
                             </div>
 
                             <div class="po-field po-field-wide">

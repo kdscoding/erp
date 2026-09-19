@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Support\LabelRegistry;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\View;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -11,7 +13,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(LabelRegistry::class, function () {
+            LabelRegistry::init();
+            return new LabelRegistry();
+        });
     }
 
     /**
@@ -19,6 +24,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        View::composer('*', function ($view) {
+            $view->with('labelRegistry', app(LabelRegistry::class));
+        });
+
+        View::composer('components.*', function ($view) {
+            $view->with('labels', app(LabelRegistry::class));
+        });
     }
 }

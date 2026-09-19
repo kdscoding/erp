@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\CreatePurchaseOrder;
+use App\Imports\PurchaseOrderImport;
 use App\Queries\PurchaseOrders\PurchaseOrderDetailQuery;
 use App\Queries\PurchaseOrders\PurchaseOrderIndexQuery;
 use App\Support\DocumentTermCodes;
@@ -13,7 +14,12 @@ use App\Support\PurchaseOrderItemStatusResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PurchaseOrderController extends Controller
 {
@@ -59,7 +65,13 @@ class PurchaseOrderController extends Controller
             ->values()
             ->all();
 
-        return view('po.index', compact('rows', 'suppliers', 'summaryChips'));
+        $filterPoNumber = $request->query('po_number', '');
+        $filterSupplierCode = $request->query('supplier_code', '');
+        $filterDateFrom = $request->query('date_from', '');
+        $filterDateTo = $request->query('date_to', '');
+        $filterStatus = $request->query('status', '');
+
+        return view('po.index', compact('rows', 'suppliers', 'summaryChips', 'filterPoNumber', 'filterSupplierCode', 'filterDateFrom', 'filterDateTo', 'filterStatus'));
     }
 
     public function create(): View
@@ -120,7 +132,7 @@ class PurchaseOrderController extends Controller
     public function update(Request $request, string $id): RedirectResponse
     {
         $validated = $request->validate([
-            'po_number' => 'required|string|max:100|unique:purchase_orders,po_number,' . (int) $id,
+            'po_number' => 'required|string|max:100|unique:purchase_orders,po_number,'.(int) $id,
             'po_date' => 'required|date',
             'supplier_id' => 'required|integer|exists:suppliers,id',
             'notes' => 'nullable|string|max:500',
@@ -268,6 +280,58 @@ class PurchaseOrderController extends Controller
         return redirect()
             ->route('po.index')
             ->with('success', 'PO berhasil dibuat dengan status '.DocumentTermCodes::PO_ISSUED.'.');
+    }
+
+    public function downloadTemplate(): BinaryFileResponse
+    {
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('PO Import');
+
+        $columns = ['po_number', 'po_date', 'supplier_code', 'currency', 'notes', 'item_code', 'ordered_qty', 'unit_price', 'etd_date', 'remarks'];
+        foreach ($columns as $index => $col) {
+            $sheet->setCellValueByColumnAndRow($index + 1, 1, $col);
+        }
+        foreach ($columns as $index => $col) {
+            $sheet->setCellValueByColumnAndRow($index + 1, 2, '');
+        }
+        $highestColumn = $sheet->getHighestColumn();
+        $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
+        for ($col = 1; $col <= $highestColumnIndex; $col++) {
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($col))->setAutoSize(true);
+        }
+
+        $tempPath = storage_path('app/temp/'.uniqid('po_template_', true).'.xlsx');
+
+        if (! is_dir(dirname($tempPath))) {
+            mkdir(dirname($tempPath), 0775, true);
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        return response()->download($tempPath, 'po-import-template.xlsx')->deleteFileAfterSend(true);
+    }
+
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file'],
+        ], [
+            'file.required' => 'File wajib dipilih.',
+        ]);
+
+        $import = new PurchaseOrderImport;
+
+        try {
+            $import->handle($request->file('file'));
+        } catch (ValidationException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        $message = "Import berhasil. {$import->inserted} PO ditambahkan.";
+
+        return redirect()->route('po.index')->with('success', $message);
     }
 
     public function updateItemSchedule(

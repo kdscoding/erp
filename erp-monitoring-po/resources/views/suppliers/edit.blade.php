@@ -1,69 +1,77 @@
 @extends('layouts.erp')
 
-@php($title = 'Edit Supplier')
-@php($header = 'Edit Supplier')
-@php($headerSubtitle = 'Perbarui identitas supplier.')
+@php
+    $entity = 'supplier';
+    $title = 'Edit ' . entity_label($entity, 'singular');
+    $header = $title;
+    $headerSubtitle = 'Perbarui identitas supplier.';
+@endphp
 
 @section('content')
     <div class="page-shell">
-        <section class="ui-surface">
-            <div class="ui-surface-head">
-                <div>
-                    <h3 class="ui-surface-title">Form Edit Supplier</h3>
-                    <div class="ui-surface-subtitle">Kode supplier tidak dapat diubah.</div>
+        <x-ui.page-header
+            :entity="$entity"
+            :title="$title"
+            :subtitle="$headerSubtitle"
+            :actions="[
+                ['label' => 'Kembali', 'url' => route('suppliers.index'), 'class' => 'btn btn-light btn-sm'],
+            ]"
+        />
+
+        <div class="form-wrapper">
+            <form method="POST" action="{{ route('suppliers.update', $supplier->id) }}">
+                @csrf
+                @method('PUT')
+
+                <x-ui.form-field
+                    :module="$entity"
+                    name="supplier_code"
+                    :value="$supplier->supplier_code"
+                    :attributes="['readonly' => true]"
+                    :required="true"
+                />
+
+                <x-ui.form-field
+                    :module="$entity"
+                    name="supplier_name"
+                    :value="$supplier->supplier_name"
+                    :required="true"
+                />
+
+                <x-ui.form-field
+                    :module="$entity"
+                    name="status"
+                    type="select"
+                    :value="$supplier->status ?? true"
+                    :required="true"
+                />
+
+                <div class="form-actions">
+                    <a href="{{ route('suppliers.index') }}" class="btn btn-light btn-sm">Batal</a>
+                    <button type="submit" class="btn btn-primary btn-sm px-5">Simpan Perubahan</button>
                 </div>
-            </div>
-
-            <div class="ui-surface-body">
-                <div class="form-wrapper">
-                    <form method="POST" action="{{ route('suppliers.update', $supplier->id) }}">
-                        @csrf
-                        @method('PUT')
-                        <div class="form-group">
-                            <label class="field-label">Kode Supplier</label>
-                            <input class="form-control form-control-sm" name="supplier_code"
-                                value="{{ old('supplier_code', $supplier->supplier_code) }}" required readonly>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="field-label">Nama Supplier</label>
-                            <input class="form-control form-control-sm" name="supplier_name"
-                                placeholder="Nama perusahaan" value="{{ old('supplier_name', $supplier->supplier_name) }}" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="field-label">Status</label>
-                            <select class="form-control form-control-sm" name="status">
-                                <option value="1" {{ ($supplier->status ?? true) ? 'selected' : '' }}>Aktif</option>
-                                <option value="0" {{ !($supplier->status ?? true) ? 'selected' : '' }}>Nonaktif</option>
-                            </select>
-                        </div>
-
-                        <div class="form-actions">
-                            <a href="{{ route('suppliers.index') }}" class="btn btn-light btn-sm">Batal</a>
-                            <button type="submit" class="btn btn-primary btn-sm px-5">Simpan Perubahan</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </section>
+            </form>
+        </div>
     </div>
-    <style>
-        .form-wrapper {
-            max-width: 540px;
-            margin: 24px auto;
-            padding: 24px;
-        }
-        .form-wrapper .form-group {
-            margin-bottom: 20px;
-        }
-        .form-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            margin-top: 28px;
-            padding-top: 20px;
-            border-top: 1px solid var(--lemon-line, #dfe6b8);
-        }
-    </style>
 @endsection
+
+@push('styles')
+<style>
+    .form-wrapper {
+        max-width: 540px;
+        margin: 24px auto;
+        padding: 24px;
+    }
+    .form-wrapper .form-group {
+        margin-bottom: 20px;
+    }
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 28px;
+        padding-top: 20px;
+        border-top: 1px solid var(--lemon-line, #dfe6b8);
+    }
+</style>
+@endpush
