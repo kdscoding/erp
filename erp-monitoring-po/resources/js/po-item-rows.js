@@ -42,35 +42,33 @@ export function rowTemplate(idx, rowData = {}) {
             <td class="row-no row-number">${idx + 1}</td>
             <td>
                 <input type="hidden" class="item-id-input" name="items[${idx}][item_id]" value="${escapeHtml(itemId)}">
-                <input type="text" class="form-control form-control-sm item-code-input" name="items[${idx}][item_code]" value="${escapeHtml(code)}" autocomplete="off" list="item-codes" required>
-            </td>
-            <td>
-                <input type="text" class="form-control form-control-sm item-name-display field-readonly" value="${escapeHtml(itemName)}" readonly>
-                <div class="remarks-cell">
-                    <textarea class="form-control form-control-sm item-remarks-input d-none" name="items[${idx}][remarks]" rows="2">${escapeHtml(remarks)}</textarea>
-                    <i class="fas fa-sticky-note remarks-toggle" style="display: ${remarks ? 'inline-block' : 'none'};"></i>
+                <input type="text" class="form-control form-control-sm item-code-input po-item-code-input" name="items[${idx}][item_code]" value="${escapeHtml(code)}" autocomplete="off" list="item-codes" required aria-label="Kode barang">
+                <div class="po-item-meta">
+                    <input type="text" class="form-control form-control-sm item-name-display field-readonly po-item-name-display" value="${escapeHtml(itemName)}" readonly aria-label="Nama barang">
+                    <small class="po-item-unit field-readonly" style="color: #64748b; font-size: 11px;">${escapeHtml(unitName)}</small>
                 </div>
+                <div class="po-remarks-cell remarks-cell">
+                    <textarea class="form-control form-control-sm item-remarks-input d-none" name="items[${idx}][remarks]" rows="2" aria-label="Catatan barang">${escapeHtml(remarks)}</textarea>
+                    <i class="fas fa-sticky-note remarks-toggle" style="display: ${remarks ? 'inline-block' : 'none'};" title="Catatan"></i>
+                </div>
+                <div class="po-code-status code-status"></div>
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm item-unit field-readonly" value="${escapeHtml(unitName)}" readonly>
+                <input type="text" inputmode="decimal" class="form-control form-control-sm qty-input"
+                    name="items[${idx}][ordered_qty]" value="${escapeHtml(qty)}" required aria-label="Qty">
             </td>
             <td>
-                <input type="number" step="0.01" min="0.01" class="form-control form-control-sm qty-input"
-                    name="items[${idx}][ordered_qty]" value="${escapeHtml(qty)}" required>
-            </td>
-            <td>
-                <input type="number" step="0.01" min="0" class="form-control form-control-sm price-input"
-                    name="items[${idx}][unit_price]" value="${escapeHtml(unitPrice)}">
+                <input type="text" inputmode="decimal" class="form-control form-control-sm price-input"
+                    name="items[${idx}][unit_price]" value="${escapeHtml(unitPrice)}" aria-label="Harga">
             </td>
             <td>
                 <input type="text" class="form-control form-control-sm subtotal-display field-readonly"
-                    value="${formatNumber(subtotal)}" readonly>
-            </td>
-            <td>
-                <div class="code-status"></div>
+                    value="${formatNumber(subtotal)}" readonly aria-label="Subtotal">
             </td>
             <td class="text-center">
-                <button type="button" class="btn btn-sm btn-outline-danger btn-remove btn-action">x</button>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-remove btn-action" aria-label="Hapus barang">
+                    <i class="fas fa-trash-alt"></i><span class="sr-only">Hapus</span>
+                </button>
             </td>
         </tr>
     `;
@@ -102,10 +100,10 @@ export function isDuplicateCode(tbody, code, currentInput) {
 export function clearItemInfo(tr, statusText = '', statusClass = '') {
     tr.querySelector('.item-id-input').value = '';
     tr.querySelector('.item-name-display').value = '';
-    tr.querySelector('.item-unit').value = '';
+    tr.querySelector('.item-unit').textContent = '';
 
     const statusEl = tr.querySelector('.code-status');
-    statusEl.className = 'code-status';
+    statusEl.className = 'po-code-status code-status';
     statusEl.textContent = statusText;
 
     if (statusClass) {
@@ -116,10 +114,10 @@ export function clearItemInfo(tr, statusText = '', statusClass = '') {
 export function fillItemInfo(tr, item) {
     tr.querySelector('.item-id-input').value = item.id || '';
     tr.querySelector('.item-name-display').value = item.item_name || '';
-    tr.querySelector('.item-unit').value = item.unit_name || '';
+    tr.querySelector('.item-unit').textContent = item.unit_name || '';
 
     const statusEl = tr.querySelector('.code-status');
-    statusEl.className = 'code-status text-success';
+    statusEl.className = 'po-code-status code-status text-success';
     statusEl.textContent = 'Kode valid';
 }
 

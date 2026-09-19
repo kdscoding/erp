@@ -16,6 +16,7 @@
         href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap4.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
 
     @vite('resources/css/app.css')
@@ -1216,6 +1217,16 @@
                 border-left: 0;
             }
         }
+
+        .dt-buttons {
+            margin-bottom: 10px;
+        }
+
+        .dt-buttons .btn {
+            margin-right: 5px;
+            padding: 4px 10px;
+            font-size: 12px;
+        }
     </style>
 </head>
 
@@ -1703,8 +1714,12 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/js/adminlte.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/datatables.net/1.13.8/js/dataTables.bootstrap4.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap4.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     @vite(['resources/js/app.js'])
@@ -1727,12 +1742,15 @@
 
             $('table.data-table-advanced').each(function() {
                 if (!$.fn.DataTable.isDataTable(this)) {
-                    $(this).DataTable({
+                    var table = $(this);
+                    var exportTitle = table.data('export-title') || 'export';
+                    var dt = table.DataTable({
+                        dom: 'Bfrtip',
                         paging: true,
                         pageLength: 10,
                         lengthMenu: [
-                            [10, 25, 50, 100],
-                            [10, 25, 50, 100]
+                            [10, 25, 50, 100, -1],
+                            [10, 25, 50, 100, 'Semua']
                         ],
                         ordering: true,
                         autoWidth: false,
@@ -1749,6 +1767,36 @@
                                 next: "Berikutnya"
                             }
                         }
+                    });
+
+                    new $.fn.dataTable.Buttons(dt, {
+                        buttons: [
+                            {
+                                extend: 'copy',
+                                text: '<i class="far fa-copy"></i> Salin',
+                                className: 'btn-sm btn-outline-secondary',
+                                exportOptions: {
+                                    columns: ':not(:last-child)'
+                                }
+                            },
+                            {
+                                extend: 'excel',
+                                text: '<i class="far fa-file-excel"></i> Export Excel',
+                                className: 'btn-sm btn-outline-success',
+                                exportOptions: {
+                                    columns: ':not(:last-child)',
+                                    modifier: {
+                                        page: 'all'
+                                    }
+                                },
+                                filename: exportTitle,
+                                messageTop: exportTitle
+                            }
+                        ]
+                    });
+
+                    table.DataTable().on('draw.dt', function () {
+                        table.closest('.dataTables_wrapper').find('.dt-buttons').css('margin-bottom', '10px');
                     });
                 }
             });

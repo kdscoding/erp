@@ -20,6 +20,9 @@
         <a href="{{ route('po.export-detail-excel', $po->po_number) }}" class="btn btn-sm btn-outline-success">
             <i class="fas fa-file-excel"></i> Export Excel
         </a>
+        <button class="btn btn-sm btn-outline-info" data-toggle="modal" data-target="#editHeaderModal">
+            <i class="fas fa-edit"></i> Edit Header PO
+        </button>
         @if ($poCanCancel)
             <button class="btn btn-sm btn-outline-danger" data-toggle="modal" data-target="#cancelPoModal">
                 <i class="fas fa-times"></i> Batalkan PO
@@ -114,7 +117,8 @@
                         <thead>
                             <tr>
                                 <th style="min-width: 70px;">
-                                    <input type="checkbox" id="bulkSelectAll" @disabled($poIsFinal)>
+                                    <input type="checkbox" id="bulkSelectAll" @if($poIsFinal) disabled @endif>
+                                    <span id="bulkSelectedCount" class="po-bulk-count"></span>
                                 </th>
                                 @php
                                     $sortableHeaders = [
@@ -159,7 +163,7 @@
                                                 value="{{ $item->id }}"
                                                 class="bulk-item-checkbox"
                                                 form="bulkEtdForm"
-                                                @disabled(!$item->can_update_etd || $poIsFinal)>
+                                                @if(!$item->can_update_etd || $poIsFinal) disabled @endif>
                                         </td>
                                         <td class="align-top">{{ $item->item_code }}</td>
                                         <td class="align-top">
@@ -332,8 +336,8 @@
                             @endforeach
                         </div>
                     @endif
-                @endforeach
-                
+                    @endforeach
+
             </div>
         </div>
 
@@ -344,7 +348,7 @@
                 </div>
                 <div class="card-body">
                     <button class="btn btn-danger btn-sm w-100" data-toggle="modal" data-target="#cancelPoModal"
-                        @disabled(!$poCanCancel)>
+                        @if(!$poCanCancel) disabled @endif>
                         Batalkan PO
                     </button>
                     @if (!$poCanCancel)
@@ -480,7 +484,54 @@
             </form>
         </div>
     </div>
-@endsection
+
+    {{-- Modal: Edit Header PO --}}
+    <div class="modal fade" id="editHeaderModal" tabindex="-1">
+        <div class="modal-dialog">
+            <form method="POST" action="{{ route('po.update', $po->id) }}" class="modal-content" id="editHeaderForm">
+                @csrf
+                @method('PUT')
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Header PO {{ $po->po_number }}</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label" for="editPoNumber">Nomor PO *</label>
+                        <input type="text" class="form-control form-control-sm" id="editPoNumber" name="po_number"
+                            value="{{ $po->po_number }}" required>
+                    </div>
+                    <div class="form-group mt-2">
+                        <label class="form-label" for="editPoDate">Tanggal PO *</label>
+                        <input type="date" class="form-control form-control-sm" id="editPoDate" name="po_date"
+                            value="{{ \Carbon\Carbon::parse($po->po_date)->format('Y-m-d') }}" required>
+                    </div>
+                    <div class="form-group mt-2">
+                        <label class="form-label" for="editSupplierId">Supplier *</label>
+                        <select class="form-control form-control-sm supplier-select" id="editSupplierId" name="supplier_id" required>
+                            <option value="">-- Pilih supplier --</option>
+                            @foreach ($suppliers as $supplier)
+                                <option value="{{ $supplier->id }}" {{ (int) $po->supplier_id === (int) $supplier->id ? 'selected' : '' }}>
+                                    {{ $supplier->supplier_code }} - {{ $supplier->supplier_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="form-group mt-2">
+                        <label class="form-label" for="editNotes">Catatan</label>
+                        <input type="text" class="form-control form-control-sm" id="editNotes" name="notes"
+                            value="{{ $po->notes ?? '' }}" placeholder="Catatan internal (opsional)">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Tutup</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    @endsection
 
 @push('scripts')
     @vite('resources/js/po-show.js')
@@ -515,6 +566,164 @@
         }
         .timeline-node:last-child:before {
             display: none;
+        }
+
+        .po-page {
+            --po-primary: #2563eb;
+            --po-primary-soft: #eff6ff;
+            --po-border: #e2e8f0;
+            --po-muted: #64748b;
+            --po-surface: #ffffff;
+        }
+
+        .po-show-header-card {
+            border: 1px solid var(--po-border);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        }
+
+        .po-toolbar-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .po-quick-actions .btn {
+            white-space: nowrap;
+        }
+
+        .po-card-compact {
+            padding: 16px 18px;
+        }
+
+        .po-card-compact .card-header {
+            padding: 12px 16px;
+        }
+
+        .po-header-grid > div {
+            padding: 4px 0;
+        }
+
+        .po-header-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--po-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 2px;
+        }
+
+        .po-header-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .po-item-table-wrap {
+            border: 1px solid var(--po-border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .po-item-table {
+            margin-bottom: 0;
+            font-size: 12.5px;
+        }
+
+        .po-item-table thead th {
+            padding: 10px 12px;
+            border-bottom-width: 1px;
+            background: #f8fafc;
+            color: #475569;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .po-item-table tbody td {
+            padding: 8px 12px;
+            vertical-align: middle;
+            font-size: 12px;
+        }
+
+        .po-item-table tbody tr.table-danger {
+            background-color: #fef2f2;
+        }
+
+        .po-item-table tbody tr.table-warning {
+            background-color: #fffbeb;
+        }
+
+        .po-item-table tbody tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        .po-item-actions .btn {
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .po-tracking-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            color: var(--po-muted);
+        }
+
+        .po-bulk-count {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--po-primary);
+            margin-left: 8px;
+        }
+
+        .po-edit-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @media (max-width: 1199.98px) {
+            .po-header-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .po-header-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .po-quick-actions .btn {
+                flex: 1;
+                justify-content: center;
+            }
+
+            .po-item-table thead th,
+            .po-item-table tbody td {
+                padding: 6px 8px;
+                font-size: 11px;
+            }
+
+            .po-item-actions .btn {
+                padding: 2px 5px;
+                font-size: 10px;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .po-header-grid {
+                grid-template-columns: 1fr !important;
+            }
         }
     </style>
 @endpush

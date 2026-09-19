@@ -19,21 +19,44 @@ class PurchaseOrderController extends Controller
 {
     public function index(Request $request, PurchaseOrderIndexQuery $purchaseOrderIndexQuery): View
     {
-        $rows = $purchaseOrderIndexQuery->base($request)
+        $baseQuery = $purchaseOrderIndexQuery->base($request);
+        $rows = $baseQuery
             ->paginate(20)
             ->withQueryString();
 
         $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name', 'supplier_code']);
 
-        $statusCounts = $rows->getCollection()
+        $statusCounts = $purchaseOrderIndexQuery->base($request)
+            ->get()
             ->groupBy('status')
-            ->mapWithKeys(fn ($group, $key) => [DocumentTermStatus::label('po_status', $key) => $group->count()])
+            ->mapWithKeys(fn ($group, $key) => [
+                DomainStatus::legacyValue(DomainStatus::GROUP_PO_STATUS, (string) $key) => $group->count(),
+            ])
             ->all();
 
-        $canonicalStatusOrder = ['Full', 'Partial', 'Delayed', 'Open', 'Late', 'Closed', 'Cancelled'];
+        $canonicalStatusOrder = [
+            DocumentTermCodes::PO_ISSUED,
+            DocumentTermCodes::PO_OPEN,
+            DocumentTermCodes::PO_LATE,
+            DocumentTermCodes::PO_CLOSED,
+            DocumentTermCodes::PO_CANCELLED,
+            'Full',
+            'Partial',
+            'Delayed',
+        ];
 
         $summaryChips = collect($canonicalStatusOrder)
-            ->mapWithKeys(fn ($label) => [$label => $statusCounts[$label] ?? 0])
+            ->map(fn ($status) => [
+                'value' => $status,
+                'label' => DocumentTermStatus::label(DomainStatus::GROUP_PO_STATUS, $status),
+                'count' => $statusCounts[$status] ?? 0,
+            ])
+            ->prepend([
+                'value' => '',
+                'label' => 'Total',
+                'count' => array_sum($statusCounts),
+            ])
+            ->values()
             ->all();
 
         return view('po.index', compact('rows', 'suppliers', 'summaryChips'));
@@ -77,7 +100,53 @@ class PurchaseOrderController extends Controller
         $sort = $data['sort'] = $request->input('sort', 'item_code');
         $direction = $data['direction'] = $request->input('direction', 'asc');
 
+        $data['suppliers'] = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name', 'supplier_code']);
+
         return view('po.show', $data);
+    }
+
+    public function edit(string $id, PurchaseOrderDetailQuery $purchaseOrderDetailQuery): View
+    {
+        $data = $purchaseOrderDetailQuery->get($id);
+
+        $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name', 'supplier_code']);
+
+        return view('po.show', array_merge($data, [
+            'suppliers' => $suppliers,
+            'editing' => true,
+        ]));
+    }
+
+    public function update(Request $request, string $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'po_number' => 'required|string|max:100|unique:purchase_orders,po_number,' . (int) $id,
+            'po_date' => 'required|date',
+            'supplier_id' => 'required|integer|exists:suppliers,id',
+            'notes' => 'nullable|string|max:500',
+        ], [
+            'required' => ':attribute wajib diisi.',
+            'po_number.unique' => 'Nomor PO sudah digunakan oleh PO lain.',
+        ]);
+
+        DB::table('purchase_orders')->where('id', (int) $id)->update([
+            'po_number' => $validated['po_number'],
+            'po_date' => $validated['po_date'],
+            'supplier_id' => $validated['supplier_id'],
+            'notes' => $validated['notes'] ?? null,
+            'updated_at' => now(),
+            'updated_by' => optional($request->user())->id,
+        ]);
+
+        ErpFlow::audit('purchase_orders', (int) $id, 'po_header_update',
+            ['po_number', 'po_date', 'supplier_id', 'notes'],
+            [$validated['po_number'], $validated['po_date'], $validated['supplier_id'], $validated['notes'] ?? null],
+            optional($request->user())->id,
+            $request->ip()
+        );
+
+        return redirect()->route('po.show', $validated['po_number'])
+            ->with('success', 'Header PO berhasil diperbarui.');
     }
 
     public function refreshStatus(string $id, PurchaseOrderDetailQuery $purchaseOrderDetailQuery): RedirectResponse
@@ -232,6 +301,12 @@ class PurchaseOrderController extends Controller
 
         ErpFlow::refreshPoStatusByOutstanding((int) $item->purchase_order_id, optional($request->user())->id);
 
+        $newEta = ErpFlow::resolvePoEtaDate((int) $item->purchase_order_id);
+        DB::table('purchase_orders')->where('id', $item->purchase_order_id)->update([
+            'eta_date' => $newEta,
+            'updated_at' => now(),
+        ]);
+
         ErpFlow::audit(
             'purchase_order_items',
             (int) $itemId,
@@ -325,6 +400,12 @@ class PurchaseOrderController extends Controller
             }
 
             ErpFlow::refreshPoStatusByOutstanding((int) $id, optional($request->user())->id);
+
+            $newEta = ErpFlow::resolvePoEtaDate((int) $id);
+            DB::table('purchase_orders')->where('id', $id)->update([
+                'eta_date' => $newEta,
+                'updated_at' => now(),
+            ]);
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();

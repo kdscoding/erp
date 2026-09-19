@@ -73,15 +73,16 @@
             </div>
 
             <div class="table-wrap table-responsive">
-                <table class="table table-hover ui-table data-table-advanced">
+                <table class="table table-hover ui-table data-table-advanced" data-export-title="items">
                     <thead>
-                        <tr>
-                            <th>Kode</th>
-                            <th>Nama Barang</th>
-                            <th>Kategori</th>
-                            <th>Unit</th>
-                            <th>Status</th>
-                            <th class="text-end">Aksi</th>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Nama Barang</th>
+                                <th>Kategori</th>
+                                <th>Unit</th>
+                                <th>Terakhir Diubah</th>
+                                <th>Status</th>
+                                <th class="text-end">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -90,9 +91,6 @@
                                 <td><div class="doc-number">{{ $row->item_code }}</div></td>
                                 <td>
                                     <div class="supplier-name">{{ $row->item_name }}</div>
-                                    @if($row->updated_at)
-                                        <small class="text-muted">{{ \Carbon\Carbon::parse($row->updated_at)->diffForHumans() }}</small>
-                                    @endif
                                 </td>
                                 <td>
                                     @if (($row->category_name ?? null) || ($row->category ?? null))
@@ -102,6 +100,13 @@
                                     @endif
                                 </td>
                                 <td>{{ $row->unit_name ?: '-' }}</td>
+                                <td>
+                                    @if($row->updated_at)
+                                        <small class="text-muted">{{ \Carbon\Carbon::parse($row->updated_at)->diffForHumans() }}</small>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
                                 <td>
                                     <form action="{{ route('items.toggle-status', $row->id) }}" method="POST" class="d-inline status-toggle-form">
                                         @csrf
@@ -125,7 +130,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6">
+                                <td colspan="7">
                                     <div class="empty-state">
                                         <div class="empty-icon">📦</div>
                                         <div class="empty-title">Belum ada data item</div>
@@ -150,7 +155,9 @@
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Import Item dari Excel</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Tutup">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
@@ -163,7 +170,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary btn-sm">Import</button>
                 </div>
             </form>

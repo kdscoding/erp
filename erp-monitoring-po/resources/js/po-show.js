@@ -3,6 +3,7 @@ export function initPoShow(config) {
     const $ = window.jQuery;
 
     initBulkSelect();
+    initEditHeader();
 
     if (typeof $ !== 'undefined') {
         const actionModal = document.getElementById('itemActionModal');
@@ -72,6 +73,13 @@ export function initPoShow(config) {
     function initBulkSelect() {
         const bulkSelectAll = document.getElementById('bulkSelectAll');
         const bulkCheckboxes = Array.from(document.querySelectorAll('.bulk-item-checkbox'));
+        const bulkCountEl = document.getElementById('bulkSelectedCount');
+
+        function updateBulkCount() {
+            if (!bulkCountEl) return;
+            const checked = bulkCheckboxes.filter(cb => cb.checked && !cb.disabled).length;
+            bulkCountEl.textContent = checked > 0 ? `(${checked} terpilih)` : '';
+        }
 
         if (bulkSelectAll && bulkCheckboxes.length > 0) {
             bulkSelectAll.addEventListener('change', function() {
@@ -80,7 +88,65 @@ export function initPoShow(config) {
                         checkbox.checked = bulkSelectAll.checked;
                     }
                 });
+                updateBulkCount();
             });
+
+            bulkCheckboxes.forEach(cb => {
+                cb.addEventListener('change', updateBulkCount);
+            });
+        }
+    }
+
+    function initEditHeader() {
+        const editForm = document.getElementById('editHeaderForm');
+        if (!editForm) return;
+
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(editForm);
+            formData.append('_method', 'PUT');
+            formData.append('_token', csrfToken);
+
+            fetch(editForm.action, {
+                method: 'POST',
+                body: new URLSearchParams(formData),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                redirect: 'follow'
+            })
+            .then(response => {
+                if (response.ok || response.type === 'redirect') {
+                    window.location.href = response.url || editForm.action;
+                } else {
+                    return response.text().then(text => {
+                        const div = document.createElement('div');
+                        div.innerHTML = text;
+                        const errors = div.querySelectorAll('.invalid-feedback, .alert-danger');
+                        if (errors.length > 0) {
+                            alert(Array.from(errors).map(e => e.textContent).join('\n'));
+                        } else {
+                            alert('Gagal memperbarui header PO.');
+                        }
+                    });
+                }
+            })
+            .catch(() => {
+                editForm.requestSubmit();
+            });
+        });
+
+        if (typeof $ !== 'undefined' && $.fn.select2) {
+            const supplierSelect = document.getElementById('editSupplierId');
+            if (supplierSelect && !$(supplierSelect).data('select2')) {
+                $(supplierSelect).select2({
+                    width: '100%',
+                    placeholder: '-- Pilih supplier --',
+                    allowClear: true,
+                    dropdownParent: $('#editHeaderModal'),
+                });
+            }
         }
     }
 
@@ -164,7 +230,33 @@ export function initPoShow(config) {
     const refreshBtn = document.getElementById('refreshStatusBtn');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', function() {
-            window.location.href = refreshUrl;
+            fetch(refreshUrl, {
+                method: 'PATCH',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                redirect: 'follow',
+            })
+            .then(response => {
+                if (response.ok || response.type === 'redirect') {
+                    window.location.href = response.url || refreshUrl;
+                } else {
+                    return response.text().then(text => {
+                        const div = document.createElement('div');
+                        div.innerHTML = text;
+                        const errors = div.querySelectorAll('.invalid-feedback, .alert-danger');
+                        if (errors.length > 0) {
+                            alert(Array.from(errors).map(e => e.textContent).join('\n'));
+                        } else {
+                            alert('Gagal me-refresh status PO.');
+                        }
+                    });
+                }
+            })
+            .catch(() => {
+                window.location.href = refreshUrl;
+            });
         });
     }
 }

@@ -3,7 +3,7 @@ export function initPoIndex(config) {
     const $ = window.jQuery;
 
     if (typeof $.fn !== 'undefined' && $.fn.select2) {
-        $('.supplier-select').each(function() {
+        $('.supplier-select').each(function () {
             if (!$(this).data('select2')) {
                 $(this).select2({
                     width: '100%',
@@ -17,15 +17,15 @@ export function initPoIndex(config) {
 
     const searchInput = document.getElementById('po-table-search');
     if (searchInput) {
-        searchInput.addEventListener('input', function() {
+        searchInput.addEventListener('input', function () {
             const term = String(this.value || '').toLowerCase().trim();
-            const tbody = document.querySelector('.ui-table tbody');
+            const tbody = document.querySelector('#po-table tbody');
             if (!tbody) return;
 
             tbody.querySelectorAll('tr').forEach(tr => {
-                const poNumber = tr.querySelector('td .doc-number')?.textContent?.toLowerCase() || '';
-                const supplierCode = tr.querySelector('td:nth-child(3) .doc-number')?.textContent?.toLowerCase() || '';
-                const supplierName = tr.querySelector('td:nth-child(3) .doc-meta')?.textContent?.toLowerCase() || '';
+                const poNumber = tr.querySelector('.po-doc-link')?.textContent?.toLowerCase() || '';
+                const supplierCode = tr.querySelectorAll('td')[1]?.querySelector('.po-doc-link')?.textContent?.toLowerCase() || '';
+                const supplierName = tr.querySelectorAll('td')[1]?.querySelector('.po-doc-meta')?.textContent?.toLowerCase() || '';
 
                 const match = !term || poNumber.includes(term) || supplierCode.includes(term) || supplierName.includes(term);
                 tr.style.display = match ? '' : 'none';

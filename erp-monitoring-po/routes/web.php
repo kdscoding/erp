@@ -99,6 +99,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::get('/po/{id}', [PurchaseOrderController::class, 'show'])->middleware('role:administrator|staff|supervisor')->name('po.show');
+    Route::get('/po/{id}/edit', [PurchaseOrderController::class, 'edit'])->middleware('role:administrator|staff|supervisor')->name('po.edit');
+    Route::put('/po/{id}', [PurchaseOrderController::class, 'update'])->middleware('role:administrator|staff|supervisor')->name('po.update');
     Route::patch('/po/{id}/refresh-status', [PurchaseOrderController::class, 'refreshStatus'])->middleware('role:administrator|staff|supervisor')->name('po.refresh-status');
     Route::get('/po/{id}/item/{itemId}/tracking/copy-text', [PurchaseOrderController::class, 'exportItemTrackingText'])->middleware('role:administrator|staff|supervisor')->name('po.item.tracking.copy-text');
     Route::get('/po/{id}/item/{itemId}/tracking/export-excel', [PurchaseOrderController::class, 'exportItemTrackingExcel'])->middleware('role:administrator|staff|supervisor')->name('po.item.tracking.export-excel');

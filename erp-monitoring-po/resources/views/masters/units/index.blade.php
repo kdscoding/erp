@@ -40,34 +40,39 @@
             </div>
 
             <div class="table-wrap table-responsive">
-                <table class="table table-hover ui-table data-table-advanced">
+                <table class="table table-hover ui-table data-table-advanced" data-export-title="units">
                     <thead>
-                        <tr>
-                            <th>Kode</th>
-                            <th>Nama Unit</th>
-                            <th class="text-end">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($rows as $row)
                             <tr>
-                                <td><div class="doc-number">{{ $row->unit_code }}</div></td>
-                                <td>
-                                    <div class="unit-name">{{ $row->unit_name }}</div>
-                                    @if($row->updated_at)
-                                        <small class="text-muted">{{ \Carbon\Carbon::parse($row->updated_at)->diffForHumans() }}</small>
-                                    @endif
-                                </td>
-                                <td class="text-end">
-                                    <div class="action-stack">
-                                        <a href="{{ route('units.edit', $row->id) }}"
-                                            class="btn btn-sm btn-outline-primary" title="Edit">✏️</a>
-                                    </div>
-                                </td>
+                                <th>Kode</th>
+                                <th>Nama Unit</th>
+                                <th>Terakhir Diubah</th>
+                                <th class="text-end">Aksi</th>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="3">
+                        </thead>
+                        <tbody>
+                            @forelse($rows as $row)
+                                <tr>
+                                    <td><div class="doc-number">{{ $row->unit_code }}</div></td>
+                                    <td>
+                                        <div class="unit-name">{{ $row->unit_name }}</div>
+                                    </td>
+                                    <td>
+                                        @if($row->updated_at)
+                                            <small class="text-muted">{{ \Carbon\Carbon::parse($row->updated_at)->diffForHumans() }}</small>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="action-stack">
+                                            <a href="{{ route('units.edit', $row->id) }}"
+                                                class="btn btn-sm btn-outline-primary" title="Edit">✏️</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4">
                                     <div class="empty-state">
                                         <div class="empty-icon">📦</div>
                                         <div class="empty-title">Belum ada data unit</div>

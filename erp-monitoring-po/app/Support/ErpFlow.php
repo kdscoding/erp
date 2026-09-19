@@ -10,6 +10,8 @@ class ErpFlow
     public const PO_STATUS_PARTIAL = 'Partial';
     public const PO_STATUS_DELAYED = 'Delayed';
     public const PO_STATUS_CANCELLED = 'Cancelled';
+    public const PO_STATUS_OPEN = 'Open';
+    public const PO_STATUS_CLOSED = 'Closed';
 
     public static function currentDateExpression(): string
     {
@@ -91,17 +93,13 @@ class ErpFlow
         $newStatus = self::PO_STATUS_FULL;
 
         if ($totalItems === 0) {
-            $newStatus = self::PO_STATUS_FULL;
+            $newStatus = self::PO_STATUS_CLOSED;
         } elseif ($fullItems === $totalItems) {
-            $newStatus = self::PO_STATUS_FULL;
+            $newStatus = self::PO_STATUS_CLOSED;
         } elseif ($partialItems > 0 || ($fullItems > 0 && $pendingItems > 0)) {
-            $newStatus = self::PO_STATUS_PARTIAL;
+            $newStatus = self::PO_STATUS_OPEN;
         } elseif ($pendingItems === $totalItems) {
-            if ($etaDate && $etaDate < $currentDate) {
-                $newStatus = self::PO_STATUS_DELAYED;
-            } else {
-                $newStatus = self::PO_STATUS_PARTIAL;
-            }
+            $newStatus = self::PO_STATUS_OPEN;
         }
 
         $po = DB::table('purchase_orders')->where('id', $poId)->first();

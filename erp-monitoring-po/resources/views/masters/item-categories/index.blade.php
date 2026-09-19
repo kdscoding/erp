@@ -67,52 +67,57 @@
             </div>
 
             <div class="table-wrap table-responsive">
-                <table class="table table-hover ui-table data-table-advanced">
+                <table class="table table-hover ui-table data-table-advanced" data-export-title="item_categories">
                     <thead>
-                        <tr>
-                            <th>Kode</th>
-                            <th>Nama Kategori</th>
-                            <th>Status</th>
-                            <th class="text-end">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($rows as $row)
-                            <tr class="{{ !$row->is_active ? 'row-inactive' : '' }}">
-                                <td><div class="doc-number">{{ $row->category_code }}</div></td>
-                                <td>
-                                    <div class="category-name">{{ $row->category_name }}</div>
-                                    @if($row->description)
-                                        <small class="text-muted">{{ $row->description }}</small>
-                                    @endif
-                                    @if($row->updated_at)
-                                        <small class="text-muted">{{ \Carbon\Carbon::parse($row->updated_at)->diffForHumans() }}</small>
-                                    @endif
-                                </td>
-                                <td>
-                                    <form action="{{ route('item-categories.toggle-status', $row->id) }}" method="POST" class="d-inline status-toggle-form">
-                                        @csrf
-                                        @method('PATCH')
-                                        <label class="status-toggle">
-                                            <input type="checkbox" name="status" {{ $row->is_active ? 'checked' : '' }}
-                                                onchange="this.form.submit()">
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                        <span class="status-text {{ $row->is_active ? 'text-success' : 'text-muted' }}">
-                                            {{ $row->is_active ? 'Aktif' : 'Nonaktif' }}
-                                        </span>
-                                    </form>
-                                </td>
-                                <td class="text-end">
-                                    <div class="action-stack">
-                                        <a href="{{ route('item-categories.edit', $row->id) }}"
-                                            class="btn btn-sm btn-outline-primary" title="Edit">✏️</a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
                             <tr>
-                                <td colspan="4">
+                                <th>Kode</th>
+                                <th>Nama Kategori</th>
+                                <th>Terakhir Diubah</th>
+                                <th>Status</th>
+                                <th class="text-end">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($rows as $row)
+                                <tr class="{{ !$row->is_active ? 'row-inactive' : '' }}">
+                                    <td><div class="doc-number">{{ $row->category_code }}</div></td>
+                                    <td>
+                                        <div class="category-name">{{ $row->category_name }}</div>
+                                        @if($row->description)
+                                            <small class="text-muted">{{ $row->description }}</small>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($row->updated_at)
+                                            <small class="text-muted">{{ \Carbon\Carbon::parse($row->updated_at)->diffForHumans() }}</small>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <form action="{{ route('item-categories.toggle-status', $row->id) }}" method="POST" class="d-inline status-toggle-form">
+                                            @csrf
+                                            @method('PATCH')
+                                            <label class="status-toggle">
+                                                <input type="checkbox" name="status" {{ $row->is_active ? 'checked' : '' }}
+                                                    onchange="this.form.submit()">
+                                                <span class="toggle-slider"></span>
+                                            </label>
+                                            <span class="status-text {{ $row->is_active ? 'text-success' : 'text-muted' }}">
+                                                {{ $row->is_active ? 'Aktif' : 'Nonaktif' }}
+                                            </span>
+                                        </form>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="action-stack">
+                                            <a href="{{ route('item-categories.edit', $row->id) }}"
+                                                class="btn btn-sm btn-outline-primary" title="Edit">✏️</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5">
                                     <div class="empty-state">
                                         <div class="empty-icon">📦</div>
                                         <div class="empty-title">Belum ada data kategori</div>

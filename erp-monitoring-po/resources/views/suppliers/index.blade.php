@@ -67,49 +67,54 @@
             </div>
 
             <div class="table-wrap table-responsive">
-                <table class="table table-hover ui-table data-table-advanced">
+                <table class="table table-hover ui-table data-table-advanced" data-export-title="suppliers">
                     <thead>
-                        <tr>
-                            <th>Kode</th>
-                            <th>Nama Supplier</th>
-                            <th>Status</th>
-                            <th class="text-end">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($suppliers as $supplier)
-                            <tr class="{{ !$supplier->status ? 'row-inactive' : '' }}">
-                                <td><div class="doc-number">{{ $supplier->supplier_code }}</div></td>
-                                <td>
-                                    <div class="supplier-name">{{ $supplier->supplier_name }}</div>
-                                    @if($supplier->updated_at)
-                                        <small class="text-muted">{{ \Carbon\Carbon::parse($supplier->updated_at)->diffForHumans() }}</small>
-                                    @endif
-                                </td>
-                                <td>
-                                    <form action="{{ route('suppliers.toggle-status', $supplier->id) }}" method="POST" class="d-inline status-toggle-form">
-                                        @csrf
-                                        @method('PATCH')
-                                        <label class="status-toggle">
-                                            <input type="checkbox" name="status" {{ $supplier->status ? 'checked' : '' }}
-                                                onchange="this.form.submit()">
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                        <span class="status-text {{ $supplier->status ? 'text-success' : 'text-muted' }}">
-                                            {{ $supplier->status ? 'Aktif' : 'Nonaktif' }}
-                                        </span>
-                                    </form>
-                                </td>
-                                <td class="text-end">
-                                    <div class="action-stack">
-                                        <a href="{{ route('suppliers.edit', $supplier->id) }}"
-                                            class="btn btn-sm btn-outline-primary" title="Edit">✏️</a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
                             <tr>
-                                <td colspan="4">
+                                <th>Kode</th>
+                                <th>Nama Supplier</th>
+                                <th>Terakhir Diubah</th>
+                                <th>Status</th>
+                                <th class="text-end">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($suppliers as $supplier)
+                                <tr class="{{ !$supplier->status ? 'row-inactive' : '' }}">
+                                    <td><div class="doc-number">{{ $supplier->supplier_code }}</div></td>
+                                    <td>
+                                        <div class="supplier-name">{{ $supplier->supplier_name }}</div>
+                                    </td>
+                                    <td>
+                                        @if($supplier->updated_at)
+                                            <small class="text-muted">{{ \Carbon\Carbon::parse($supplier->updated_at)->diffForHumans() }}</small>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <form action="{{ route('suppliers.toggle-status', $supplier->id) }}" method="POST" class="d-inline status-toggle-form">
+                                            @csrf
+                                            @method('PATCH')
+                                            <label class="status-toggle">
+                                                <input type="checkbox" name="status" {{ $supplier->status ? 'checked' : '' }}
+                                                    onchange="this.form.submit()">
+                                                <span class="toggle-slider"></span>
+                                            </label>
+                                            <span class="status-text {{ $supplier->status ? 'text-success' : 'text-muted' }}">
+                                                {{ $supplier->status ? 'Aktif' : 'Nonaktif' }}
+                                            </span>
+                                        </form>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="action-stack">
+                                            <a href="{{ route('suppliers.edit', $supplier->id) }}"
+                                                class="btn btn-sm btn-outline-primary" title="Edit">✏️</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5">
                                     <div class="empty-state">
                                         <div class="empty-icon">📦</div>
                                         <div class="empty-title">Belum ada data supplier</div>
