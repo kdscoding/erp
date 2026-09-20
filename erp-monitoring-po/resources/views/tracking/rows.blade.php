@@ -48,18 +48,18 @@
             <span class="stage-badge {{ $itemStatusClass }}" style="font-size:10px;">{{ $item['monitoring_status'] ?? $item['item_status'] ?? '-' }}</span>
         </td>
         <td class="text-center">
-            <span class="shipment-progress-badge {{ $item['progress_class'] ?? 'progress-none' }}" title="Shipment Progress">
-                <i class="fas {{ $item['progress_class'] === 'progress-fully' ? 'fas fa-check-circle' : ($item['progress_class'] === 'progress-partial' ? 'fas fa-truck-loading' : 'fas fa-box') }}"></i>
-                <span>{{ $item['shipment_progress'] }}</span>
-            </span>
-        </td>
-        <td class="text-center">
-            <span class="progress-bar-cell">
-                <div class="progress progress-sm" style="width:80px;">
-                    <div class="progress-bar {{ $item['progress_class'] === 'progress-fully' ? 'bg-success' : ($item['progress_class'] === 'progress-partial' ? 'bg-warning' : 'bg-secondary') }}" role="progressbar" style="width: {{ $item['progress_percent'] }}%"></div>
-                </div>
-                <small class="text-muted">{{ $item['progress_percent'] }}%</small>
-            </span>
+            <div class="d-flex align-items-center justify-content-center gap-2 flex-wrap">
+                <span class="shipment-progress-badge {{ $item['progress_class'] ?? 'progress-none' }}" title="Shipment Progress">
+                    <i class="fas {{ $item['progress_class'] === 'progress-fully' ? 'fas fa-check-circle' : ($item['progress_class'] === 'progress-partial' ? 'fas fa-truck-loading' : 'fas fa-box') }}"></i>
+                    <span>{{ $item['shipment_progress'] }}</span>
+                </span>
+                <span class="progress-bar-cell">
+                    <div class="progress progress-sm" style="width:80px;">
+                        <div class="progress-bar {{ $item['progress_class'] === 'progress-fully' ? 'bg-success' : ($item['progress_class'] === 'progress-partial' ? 'bg-warning' : 'bg-secondary') }}" role="progressbar" style="width: {{ $item['progress_percent'] }}%"></div>
+                    </div>
+                    <small class="text-muted">{{ $item['progress_percent'] }}%</small>
+                </span>
+            </div>
         </td>
         <td class="text-center">
             @if(!empty($item['shipments']))
@@ -73,7 +73,7 @@
     </tr>
     @if(!empty($item['shipments']))
         <tr class="detail-row" id="detail-{{ $item['item_id'] }}" style="display:none;">
-            <td colspan="15">
+            <td colspan="14">
                 <table class="detail-shipment-table">
                     <thead>
                         <tr>
@@ -109,6 +109,6 @@
     @endif
 @empty
     <tr>
-        <td colspan="15" class="text-center text-muted">Belum ada data PO pada filter ini.</td>
+        <td colspan="14" class="text-center text-muted">Belum ada data PO pada filter ini.</td>
     </tr>
 @endforelse

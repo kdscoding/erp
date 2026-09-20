@@ -281,7 +281,7 @@
                                     \App\Support\DocumentTermCodes::SHIPMENT_CANCELLED => 'stage-cancelled',
                                     default => 'stage-waiting',
                                 })
-                                <tr class="{{ $focusedShipmentId === (int) $r->id ? 'table-success' : '' }}" data-shipment-number="{{ strtolower($r->shipment_number ?? '') }}" data-supplier="{{ strtolower($r->supplier_name ?? '') }}" data-po="{{ strtolower($r->po_numbers ?? '') }}" data-delivery-note="{{ strtolower($r->delivery_note_number ?? '') }}" data-invoice="{{ strtolower($r->invoice_number ?? '') }}" data-status="{{ strtolower($r->status ?? '') }}" onclick="navigateToDetail({{ $r->id }})" style="cursor:pointer">
+                                <tr class="{{ $focusedShipmentId === (int) $r->id ? 'table-success' : '' }}" data-shipment-number="{{ strtolower($r->shipment_number ?? '') }}" data-supplier="{{ strtolower($r->supplier_name ?? '') }}" data-po="{{ strtolower($r->po_numbers ?? '') }}" data-delivery-note="{{ strtolower($r->delivery_note_number ?? '') }}" data-invoice="{{ strtolower($r->invoice_number ?? '') }}" data-status="{{ strtolower($r->status ?? '') }}">
                                     <td onclick="event.stopPropagation()"><input type="checkbox" class="row-checkbox" value="{{ $r->id }}" onchange="updateBatchToolbar()"></td>
                                     <td>
                                         <div class="doc-number">{{ $r->shipment_number }}</div>
@@ -306,7 +306,6 @@
                                     </td>
                                     <td class="text-end" onclick="event.stopPropagation()">
                                         <div class="action-stack">
-                                            <a href="{{ route('shipments.show', $r->id) }}" class="btn btn-sm btn-outline-primary inline-action-btn" title="View" onclick="event.stopPropagation()"><i class="fas fa-eye"></i></a>
                                             @if ($r->status === \App\Support\DocumentTermCodes::SHIPMENT_DRAFT)
                                                 <a href="{{ route('shipments.edit', $r->id) }}" class="btn btn-sm btn-outline-primary inline-action-btn" title="Edit" onclick="event.stopPropagation()"><i class="fas fa-edit"></i></a>
                                                 <a href="{{ route('shipments.export-excel', $r->id) }}" class="btn btn-sm btn-outline-success inline-action-btn" title="Export" onclick="event.stopPropagation()"><i class="fas fa-download"></i></a>
@@ -513,7 +512,7 @@
                         <thead><tr><th>Shipment</th><th>Supplier</th><th>PO</th><th>DN</th><th>Invoice</th><th>Status</th><th>Progress</th><th class="text-end">Aksi</th></tr></thead>
                         <tbody>
                             @forelse ($archiveRowsData ?? [] as $r)
-                                <tr onclick="navigateToDetail({{ $r->id }})" style="cursor:pointer">
+                                <tr>
                                     <td><div class="doc-number">{{ $r->shipment_number }}</div><div class="doc-meta">{{ \Carbon\Carbon::parse($r->shipment_date)->format('d-m-Y') }}</div></td>
                                     <td>{{ $r->supplier_name ?: '-' }}</td>
                                     <td>{{ $r->po_numbers ?: '-' }}<br><span class="doc-meta">{{ $r->po_count }} PO • {{ $r->line_count }} line</span></td>
@@ -521,7 +520,7 @@
                                     <td>{{ $r->invoice_number ?: '-' }}</td>
                                     <td><x-status-badge :status="$r->status" scope="shipment" /></td>
                                     <td><div class="doc-number">{{ \App\Support\NumberFormatter::trim($r->total_received_qty ?? 0) }} / {{ \App\Support\NumberFormatter::trim($r->total_shipped_qty ?? 0) }}</div><div class="doc-meta">Open {{ \App\Support\NumberFormatter::trim($r->total_open_qty ?? 0) }}</div></td>
-                                    <td class="text-end"><div class="action-stack"><a href="{{ route('shipments.show', $r->id) }}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation()">View</a></div></td>
+                                    <td class="text-end"></td>
                                 </tr>
                             @empty
                                 <tr><td colspan="8" class="text-center text-muted">Belum ada arsip.</td></tr>
@@ -538,7 +537,7 @@
     </div>
 
     <script>
-        function navigateToDetail(id) { window.location.href = '{{ route('shipments.show', ':id') }}'.replace(':id', id); }
+
         function toggleAllRows(checked) { document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = checked); updateBatchToolbar(); }
         function updateBatchToolbar() {
             const c = document.querySelectorAll('.row-checkbox:checked');

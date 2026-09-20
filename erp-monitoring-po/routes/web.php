@@ -92,7 +92,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/shipments/process', [ShipmentController::class, 'index'])->defaults('view', 'worklist')->name('shipments.process');
         Route::get('/shipments/create', [ShipmentController::class, 'index'])->defaults('view', 'draft')->name('shipments.create');
         Route::get('/shipments/history', [ShipmentController::class, 'index'])->defaults('view', 'history')->name('shipments.history');
-        Route::get('/shipments/{id}', [ShipmentController::class, 'show'])->name('shipments.show');
         Route::get('/shipments/{id}/edit', [ShipmentController::class, 'edit'])->name('shipments.edit');
         Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
         Route::put('/shipments/{id}', [ShipmentController::class, 'update'])->name('shipments.update');

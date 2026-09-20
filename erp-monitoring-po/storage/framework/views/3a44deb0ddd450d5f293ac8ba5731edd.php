@@ -1,5 +1,5 @@
-<?php ($title = 'Suppliers'); ?>
-<?php ($header = 'Suppliers'); ?>
+<?php ($title = 'Item Categories'); ?>
+<?php ($header = 'Item Categories'); ?>
 <?php ($headerSubtitle = ''); ?>
 
 <?php $__env->startSection('content'); ?>
@@ -11,7 +11,7 @@
                 <form method="GET" class="filter-row">
                     <div class="filter-search">
                         <input class="form-control form-control-sm" name="q" value="<?php echo e(request('q')); ?>"
-                            placeholder="Cari kode atau nama supplier..." autofocus>
+                            placeholder="Cari kode atau nama kategori..." autofocus>
                     </div>
                     <div class="filter-segmented">
                         <button type="submit" name="status" value=""
@@ -52,7 +52,7 @@
                     <a href="<?php echo e(request()->fullUrlWithQuery(['status' => null])); ?>" class="tag-remove">×</a>
                 </span>
             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-            <a href="<?php echo e(route('suppliers.index')); ?>" class="tag-clear">Reset semua</a>
+            <a href="<?php echo e(route('item-categories.index')); ?>" class="tag-clear">Reset semua</a>
         </div>
         <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
@@ -60,67 +60,70 @@
         <section class="ui-surface">
             <div class="ui-surface-head">
                 <div>
-                    <h3 class="ui-surface-title">Daftar Supplier</h3>
+                    <h3 class="ui-surface-title">Daftar Kategori</h3>
                 </div>
             </div>
 
             <div class="table-wrap table-responsive">
-                <table class="table table-hover ui-table data-table-advanced" data-export-title="suppliers">
-<thead>
-                        <tr>
+                <table class="table table-hover ui-table data-table-advanced" data-export-title="item_categories">
+                    <thead>
+                            <tr>
                                 <th>Kode</th>
-                                <th>Nama Supplier</th>
+                                <th>Nama Kategori</th>
                                 <th>Terakhir Diubah</th>
                                 <th>Status</th>
                                 <th class="text-end">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__empty_1 = true; $__currentLoopData = $rows; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
-                            <tr class="<?php echo e(!$row->status ? 'row-inactive' : ''); ?>">
-                                <td><div class="doc-number"><?php echo e($row->supplier_code); ?></div></td>
-                                <td>
-                                    <div class="supplier-name"><?php echo e($row->supplier_name); ?></div>
-                                </td>
-                                <td>
-                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($row->updated_at): ?>
-                                        <small class="text-muted"><?php echo e(\Carbon\Carbon::parse($row->updated_at)->diffForHumans()); ?></small>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                                </td>
-                                <td>
-                                    <form action="<?php echo e(route('suppliers.toggle-status', $row->id)); ?>" method="POST" class="d-inline status-toggle-form">
-                                        <?php echo csrf_field(); ?>
-                                        <?php echo method_field('PATCH'); ?>
-                                        <label class="status-toggle">
-                                            <input type="checkbox" name="status" <?php echo e($row->status ? 'checked' : ''); ?>
-
-                                                onchange="this.form.submit()">
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                        <span class="status-text <?php echo e($row->status ? 'text-success' : 'text-muted'); ?>">
-                                            <?php echo e($row->status ? 'Aktif' : 'Nonaktif'); ?>
-
-                                        </span>
-                                    </form>
-                                </td>
-                                <td class="text-end">
-                                    <div class="action-stack">
-                                        <a href="<?php echo e(route('suppliers.edit', $row->id)); ?>"
-                                            class="btn btn-sm btn-outline-primary" title="Edit">✏️</a>
-                                    </div>
-                                </td>
                             </tr>
-                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
-                            <tr>
-                                <td colspan="5">
+                        </thead>
+                        <tbody>
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__empty_1 = true; $__currentLoopData = $rows; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
+                                <tr class="<?php echo e(!$row->is_active ? 'row-inactive' : ''); ?>">
+                                    <td><div class="doc-number"><?php echo e($row->category_code); ?></div></td>
+                                    <td>
+                                        <div class="category-name"><?php echo e($row->category_name); ?></div>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($row->description): ?>
+                                            <small class="text-muted"><?php echo e($row->description); ?></small>
+                                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($row->updated_at): ?>
+                                            <small class="text-muted"><?php echo e(\Carbon\Carbon::parse($row->updated_at)->diffForHumans()); ?></small>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <form action="<?php echo e(route('item-categories.toggle-status', $row->id)); ?>" method="POST" class="d-inline status-toggle-form">
+                                            <?php echo csrf_field(); ?>
+                                            <?php echo method_field('PATCH'); ?>
+                                            <label class="status-toggle">
+                                                <input type="checkbox" name="status" <?php echo e($row->is_active ? 'checked' : ''); ?>
+
+                                                    onchange="this.form.submit()">
+                                                <span class="toggle-slider"></span>
+                                            </label>
+                                            <span class="status-text <?php echo e($row->is_active ? 'text-success' : 'text-muted'); ?>">
+                                                <?php echo e($row->is_active ? 'Aktif' : 'Nonaktif'); ?>
+
+                                            </span>
+                                        </form>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="action-stack">
+                                            <a href="<?php echo e(route('item-categories.edit', $row->id)); ?>"
+                                                class="btn btn-sm btn-outline-primary" title="Edit">✏️</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                                <tr>
+                                    <td colspan="5">
                                     <div class="empty-state">
-                                        <div class="empty-icon">🏢</div>
-                                        <div class="empty-title">Belum ada data supplier</div>
-                                        <div class="empty-subtitle">Mulai tambah supplier baru untuk melihat data di sini.</div>
-                                        <a href="<?php echo e(route('suppliers.create')); ?>" class="btn btn-primary btn-sm px-4 mt-2">
-                                            ⚕ Tambah Supplier
+                                        <div class="empty-icon">📦</div>
+                                        <div class="empty-title">Belum ada data kategori</div>
+                                        <div class="empty-subtitle">Mulai tambah kategori baru untuk melihat data di sini.</div>
+                                        <a href="<?php echo e(route('item-categories.create')); ?>" class="btn btn-primary btn-sm px-4 mt-2">
+                                            ⚕ Tambah Kategori
                                         </a>
                                     </div>
                                 </td>
@@ -129,11 +132,11 @@
                     </tbody>
                 </table>
             </div>
-         </section>
-     </div>
+        </section>
+    </div>
 
     
-    <a href="<?php echo e(route('suppliers.create')); ?>" class="fab-add" title="Tambah Supplier">
+    <a href="<?php echo e(route('item-categories.create')); ?>" class="fab-add" title="Tambah Kategori">
         <span class="fab-icon">+</span>
         <span class="fab-label">Tambah</span>
     </a>
@@ -233,7 +236,7 @@
             opacity: 0.8;
         }
 
-        .supplier-name {
+        .category-name {
             font-weight: 500;
         }
 
@@ -414,5 +417,4 @@
         }
     </style>
 <?php $__env->stopSection(); ?>
-
-<?php echo $__env->make('layouts.erp', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\laragon\www\erp\erp-monitoring-po\resources\views/masters/suppliers/index.blade.php ENDPATH**/ ?>
+<?php echo $__env->make('layouts.erp', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\laragon\www\erp\erp-monitoring-po\resources\views/masters/item-categories/index.blade.php ENDPATH**/ ?>

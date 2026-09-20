@@ -1,7 +1,7 @@
 @extends('layouts.erp')
 
-@php($title = 'Tambah Supplier')
-@php($header = 'Tambah Supplier')
+@php($title = ' TAMBAH SUPPLIER')
+@php($header = ' TAMBAH SUPPLIER')
 @php($headerSubtitle = 'Input data supplier baru.')
 
 @section('content')
@@ -30,32 +30,11 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="field-label">Alamat</label>
-                            <input class="form-control form-control-sm" name="address"
-                                placeholder="Alamat lengkap supplier"
-                                value="{{ old('address') }}">
-                        </div>
-
-                        <div class="form-group">
-                            <label class="field-label">Telepon</label>
-                            <input class="form-control form-control-sm" name="phone"
-                                placeholder="No. telepon supplier"
-                                value="{{ old('phone') }}">
-                        </div>
-
-                        <div class="form-group">
-                            <label class="field-label">Email</label>
-                            <input class="form-control form-control-sm" name="email"
-                                type="email"
-                                placeholder="Email supplier"
-                                value="{{ old('email') }}">
-                        </div>
-
-                        <div class="form-group">
-                            <label class="field-label">Kontak</label>
-                            <input class="form-control form-control-sm" name="contact_person"
-                                placeholder="Nama PIC supplier"
-                                value="{{ old('contact_person') }}">
+                            <label class="field-label">Status</label>
+                            <select class="form-control form-control-sm" name="status">
+                                <option value="1" {{ old('status', 1) == 1 ? 'selected' : '' }}>Aktif</option>
+                                <option value="0" {{ old('status', 1) == 0 ? 'selected' : '' }}>Nonaktif</option>
+                            </select>
                         </div>
 
                         <div class="form-actions">

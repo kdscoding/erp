@@ -1,47 +1,43 @@
-@extends('layouts.erp')
+<?php ($title = ' TAMBAH SUPPLIER'); ?>
+<?php ($header = ' TAMBAH SUPPLIER'); ?>
+<?php ($headerSubtitle = 'Input data supplier baru.'); ?>
 
-@php($title = 'Edit Supplier')
-@php($header = 'Edit Supplier')
-@php($headerSubtitle = 'Perbarui data supplier.')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
     <div class="page-shell">
         <section class="ui-surface">
             <div class="ui-surface-head">
                 <div>
-                    <h3 class="ui-surface-title">Form Edit Supplier</h3>
-                    <div class="ui-surface-subtitle">Kode supplier tidak dapat diubah.</div>
+                    <h3 class="ui-surface-title">Form Supplier</h3>
                 </div>
             </div>
 
             <div class="ui-surface-body">
                 <div class="form-wrapper">
-                    <form method="POST" action="{{ route('suppliers.update', $supplier->id) }}">
-                        @csrf
-                        @method('PUT')
+                    <form method="POST" action="<?php echo e(route('suppliers.store')); ?>">
+                        <?php echo csrf_field(); ?>
                         <div class="form-group">
                             <label class="field-label">Kode Supplier</label>
                             <input class="form-control form-control-sm" name="supplier_code"
-                                value="{{ old('supplier_code', $supplier->supplier_code) }}" required readonly>
+                                placeholder="Kode unik" value="<?php echo e(old('supplier_code')); ?>" required>
                         </div>
 
                         <div class="form-group">
                             <label class="field-label">Nama Supplier</label>
                             <input class="form-control form-control-sm" name="supplier_name"
-                                placeholder="Nama perusahaan supplier" value="{{ old('supplier_name', $supplier->supplier_name) }}" required>
+                                placeholder="Nama perusahaan supplier" value="<?php echo e(old('supplier_name')); ?>" required>
                         </div>
 
                         <div class="form-group">
                             <label class="field-label">Status</label>
                             <select class="form-control form-control-sm" name="status">
-                                <option value="1" {{ old('status', $supplier->status) == 1 ? 'selected' : '' }}>Aktif</option>
-                                <option value="0" {{ old('status', $supplier->status) == 0 ? 'selected' : '' }}>Nonaktif</option>
+                                <option value="1" <?php echo e(old('status', 1) == 1 ? 'selected' : ''); ?>>Aktif</option>
+                                <option value="0" <?php echo e(old('status', 1) == 0 ? 'selected' : ''); ?>>Nonaktif</option>
                             </select>
                         </div>
 
                         <div class="form-actions">
-                            <a href="{{ route('suppliers.index') }}" class="btn btn-light btn-sm">Batal</a>
-                            <button type="submit" class="btn btn-primary btn-sm px-5">Simpan Perubahan</button>
+                            <a href="<?php echo e(route('suppliers.index')); ?>" class="btn btn-light btn-sm">Batal</a>
+                            <button type="submit" class="btn btn-primary btn-sm px-5">Simpan Supplier</button>
                         </div>
                     </form>
                 </div>
@@ -66,4 +62,5 @@
             border-top: 1px solid var(--lemon-line, #dfe6b8);
         }
     </style>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('layouts.erp', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\laragon\www\erp\erp-monitoring-po\resources\views/masters/suppliers/create.blade.php ENDPATH**/ ?>

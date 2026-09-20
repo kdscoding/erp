@@ -1272,21 +1272,8 @@
                         'route' => route('po.show', $po->po_number),
                     ]);
 
-                $recentShipmentPaletteItems = \Illuminate\Support\Facades\DB::table('shipments as sh')
-                    ->leftJoin('suppliers as s', 's.id', '=', 'sh.supplier_id')
-                    ->select('sh.id', 'sh.shipment_number', 'sh.delivery_note_number', 'sh.status', 's.supplier_name')
-                    ->orderByDesc('sh.id')
-                    ->limit(5)
-                    ->get()
-                    ->map(fn ($shipment) => [
-                        'label' => 'Shipment · ' . $shipment->shipment_number,
-                        'description' => trim(($shipment->supplier_name ?: 'Tanpa Supplier') . ' | DN ' . ($shipment->delivery_note_number ?: '-') . ' | Status ' . ($shipment->status ?: '-')),
-                        'route' => route('shipments.show', $shipment->id),
-                    ]);
-
                 $dynamicCommandPaletteItems = $dynamicCommandPaletteItems
-                    ->concat($recentPoPaletteItems)
-                    ->concat($recentShipmentPaletteItems);
+                    ->concat($recentPoPaletteItems);
             }
 
             if ($currentUser?->hasAnyRole(['administrator', 'staff'])) {
@@ -1320,7 +1307,7 @@
             $receivingMode = (string) (request()->route()?->defaults['mode'] ?? request('mode', 'process'));
 
             $shipmentStatus = null;
-            if (request()->routeIs('shipments.show') || request()->routeIs('shipments.edit')) {
+            if (request()->routeIs('shipments.edit')) {
                 $shipmentId = (int) request()->route('id');
                 if ($shipmentId > 0) {
                     $shipmentStatus = \Illuminate\Support\Facades\DB::table('shipments')

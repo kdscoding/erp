@@ -153,7 +153,6 @@
                                 <th class="text-center">Status PO</th>
                                 <th class="text-center">Status Barang</th>
                                 <th class="text-center">Shipment Progress</th>
-                                <th class="text-center">Progress %</th>
                                 <th class="text-center">Aksi</th>
                             </tr>
                         </thead>
@@ -210,18 +209,18 @@
                                         <span class="stage-badge <?php echo e($itemStatusClass); ?>" style="font-size:10px;"><?php echo e($item['monitoring_status'] ?? $item['item_status'] ?? '-'); ?></span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="shipment-progress-badge <?php echo e($item['progress_class'] ?? 'progress-none'); ?>" title="Shipment Progress">
-                                            <i class="fas <?php echo e($item['progress_class'] === 'progress-fully' ? 'fas fa-check-circle' : ($item['progress_class'] === 'progress-partial' ? 'fas fa-truck-loading' : 'fas fa-box')); ?>"></i>
-                                            <span><?php echo e($item['shipment_progress']); ?></span>
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="progress-bar-cell">
-                                            <div class="progress progress-sm" style="width:80px;">
-                                                <div class="progress-bar <?php echo e($item['progress_class'] === 'progress-fully' ? 'bg-success' : ($item['progress_class'] === 'progress-partial' ? 'bg-warning' : 'bg-secondary')); ?>" role="progressbar" style="width: <?php echo e($item['progress_percent']); ?>%"></div>
-                                            </div>
-                                            <small class="text-muted"><?php echo e($item['progress_percent']); ?>%</small>
-                                        </span>
+                                        <div class="d-flex align-items-center justify-content-center gap-2 flex-wrap">
+                                            <span class="shipment-progress-badge <?php echo e($item['progress_class'] ?? 'progress-none'); ?>" title="Shipment Progress">
+                                                <i class="fas <?php echo e($item['progress_class'] === 'progress-fully' ? 'fas fa-check-circle' : ($item['progress_class'] === 'progress-partial' ? 'fas fa-truck-loading' : 'fas fa-box')); ?>"></i>
+                                                <span><?php echo e($item['shipment_progress']); ?></span>
+                                            </span>
+                                            <span class="progress-bar-cell">
+                                                <div class="progress progress-sm" style="width:80px;">
+                                                    <div class="progress-bar <?php echo e($item['progress_class'] === 'progress-fully' ? 'bg-success' : ($item['progress_class'] === 'progress-partial' ? 'bg-warning' : 'bg-secondary')); ?>" role="progressbar" style="width: <?php echo e($item['progress_percent']); ?>%"></div>
+                                                </div>
+                                                <small class="text-muted"><?php echo e($item['progress_percent']); ?>%</small>
+                                            </span>
+                                        </div>
                                     </td>
                                     <td class="text-center">
                                         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($item['shipments'])): ?>
@@ -235,7 +234,7 @@
                                 </tr>
                                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($item['shipments'])): ?>
                                     <tr class="detail-row" id="detail-<?php echo e($item['item_id']); ?>" style="display:none;">
-                                        <td colspan="15">
+                                        <td colspan="14">
                                             <table class="detail-shipment-table">
                                                 <thead>
                                                     <tr>
@@ -271,7 +270,7 @@
                                 <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                                 <tr>
-                                    <td colspan="15" class="text-center text-muted">Belum ada data PO pada filter ini.</td>
+                                    <td colspan="14" class="text-center text-muted">Belum ada data PO pada filter ini.</td>
                                 </tr>
                             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                         </tbody>
@@ -305,7 +304,7 @@
             const paginationWrap = document.getElementById('tracking-pagination');
             if (!tbody || !paginationWrap) return;
 
-            tbody.innerHTML = '<tr><td colspan="15" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Memuat data...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Memuat data...</td></tr>';
 
             const queryString = new URLSearchParams(params).toString();
             const url = '<?php echo e(route('tracking.data')); ?>?' + queryString;
@@ -318,7 +317,7 @@
                     bindPaginationEvents();
                 })
                 .catch(function () {
-                    tbody.innerHTML = '<tr><td colspan="15" class="text-center text-muted py-4">Gagal memuat data. Silakan coba lagi.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted py-4">Gagal memuat data. Silakan coba lagi.</td></tr>';
                 });
         }
 

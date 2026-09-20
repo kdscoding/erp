@@ -17,11 +17,7 @@ class SupplierController extends Controller
                 $q = trim((string) $request->input('q'));
                 $query->where(function ($qBuilder) use ($q) {
                     $qBuilder->where('s.supplier_code', 'like', "%{$q}%")
-                        ->orWhere('s.supplier_name', 'like', "%{$q}%")
-                        ->orWhere('s.address', 'like', "%{$q}%")
-                        ->orWhere('s.phone', 'like', "%{$q}%")
-                        ->orWhere('s.email', 'like', "%{$q}%")
-                        ->orWhere('s.contact_person', 'like', "%{$q}%");
+                        ->orWhere('s.supplier_name', 'like', "%{$q}%");
                 });
             })
             ->when($request->filled('status'), fn ($query) => $query->where('s.status', (int) $request->input('status')))
@@ -50,24 +46,18 @@ class SupplierController extends Controller
         $v = $request->validate([
             'supplier_code' => ['required', 'string', 'max:50', Rule::unique('suppliers', 'supplier_code')],
             'supplier_name' => 'required|string|max:255',
-            'address' => 'nullable|string|max:500',
-            'phone' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:255',
-            'contact_person' => 'nullable|string|max:255',
+            'status' => 'required|boolean',
         ], [
             'supplier_code.required' => 'Kode supplier wajib diisi.',
             'supplier_code.unique' => 'Kode supplier sudah digunakan.',
             'supplier_name.required' => 'Nama supplier wajib diisi.',
+            'status.required' => 'Status supplier wajib dipilih.',
         ]);
 
         DB::table('suppliers')->insert([
             'supplier_code' => $normalizedCode,
             'supplier_name' => trim((string) $v['supplier_name']),
-            'address' => $v['address'] ?? null,
-            'phone' => $v['phone'] ?? null,
-            'email' => $v['email'] ?? null,
-            'contact_person' => $v['contact_person'] ?? null,
-            'status' => true,
+            'status' => (bool) $v['status'],
             'updated_at' => now(),
             'created_at' => now(),
         ]);
@@ -92,23 +82,18 @@ class SupplierController extends Controller
         $v = $request->validate([
             'supplier_code' => ['required', 'string', 'max:50', Rule::unique('suppliers', 'supplier_code')->ignore($supplier->id)],
             'supplier_name' => 'required|string|max:255',
-            'address' => 'nullable|string|max:500',
-            'phone' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:255',
-            'contact_person' => 'nullable|string|max:255',
+            'status' => 'required|boolean',
         ], [
             'supplier_code.required' => 'Kode supplier wajib diisi.',
             'supplier_code.unique' => 'Kode supplier sudah digunakan.',
             'supplier_name.required' => 'Nama supplier wajib diisi.',
+            'status.required' => 'Status supplier wajib dipilih.',
         ]);
 
         DB::table('suppliers')->where('id', $id)->update([
             'supplier_code' => $normalizedCode,
             'supplier_name' => trim((string) $v['supplier_name']),
-            'address' => $v['address'] ?? null,
-            'phone' => $v['phone'] ?? null,
-            'email' => $v['email'] ?? null,
-            'contact_person' => $v['contact_person'] ?? null,
+            'status' => (bool) $v['status'],
             'updated_at' => now(),
         ]);
 

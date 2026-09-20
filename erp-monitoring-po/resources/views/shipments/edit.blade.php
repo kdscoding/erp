@@ -34,7 +34,6 @@
                 <p class="page-section-subtitle">Draft masih bisa direvisi sebelum dikonfirmasi. &nbsp;<span class="doc-meta">Supplier: {{ $shipment->supplier_name ?? '-' }} &nbsp;|&nbsp; Kode: {{ $shipment->supplier_code ?? '-' }}</span></p>
             </div>
             <div class="page-actions">
-                <a href="{{ route('shipments.show', $shipment->id) }}" class="btn btn-sm btn-light">View</a>
                 <a href="{{ route('shipments.export-excel', $shipment->id) }}" class="btn btn-sm btn-outline-success">Export</a>
                 <form method="POST" action="{{ route('shipments.cancel-draft', $shipment->id) }}" style="display:inline">
                     @csrf @method('PATCH')
@@ -127,7 +126,7 @@
 
             <div class="sticky-action-bar d-flex justify-content-between align-items-center">
                 <div class="d-flex gap-2">
-                    <a href="{{ route('shipments.show', $shipment->id) }}" class="btn btn-sm btn-light"><i class="fas fa-arrow-left"></i> Back</a>
+                    <a href="{{ route('shipments.index') }}" class="btn btn-sm btn-light"><i class="fas fa-arrow-left"></i> Back</a>
                 </div>
                 <div class="page-actions">
                     <button type="button" class="btn btn-light btn-sm" onclick="if(confirm('Simpan?')) document.getElementById('editForm').submit()">Preview</button>

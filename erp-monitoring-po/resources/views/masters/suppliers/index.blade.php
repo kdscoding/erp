@@ -68,14 +68,10 @@
 
             <div class="table-wrap table-responsive">
                 <table class="table table-hover ui-table data-table-advanced" data-export-title="suppliers">
-                    <thead>
-                            <tr>
+<thead>
+                        <tr>
                                 <th>Kode</th>
                                 <th>Nama Supplier</th>
-                                <th>Alamat</th>
-                                <th>Telepon</th>
-                                <th>Email</th>
-                                <th>Kontak</th>
                                 <th>Terakhir Diubah</th>
                                 <th>Status</th>
                                 <th class="text-end">Aksi</th>
@@ -88,16 +84,6 @@
                                 <td>
                                     <div class="supplier-name">{{ $row->supplier_name }}</div>
                                 </td>
-                                <td>
-                                    @if($row->address)
-                                        <small class="text-muted">{{ $row->address }}</small>
-                                    @else
-                                        <span class="text-muted">-</span>
-                                    @endif
-                                </td>
-                                <td>{{ $row->phone ?: '-' }}</td>
-                                <td>{{ $row->email ?: '-' }}</td>
-                                <td>{{ $row->contact_person ?: '-' }}</td>
                                 <td>
                                     @if($row->updated_at)
                                         <small class="text-muted">{{ \Carbon\Carbon::parse($row->updated_at)->diffForHumans() }}</small>
@@ -128,7 +114,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9">
+                                <td colspan="5">
                                     <div class="empty-state">
                                         <div class="empty-icon">🏢</div>
                                         <div class="empty-title">Belum ada data supplier</div>

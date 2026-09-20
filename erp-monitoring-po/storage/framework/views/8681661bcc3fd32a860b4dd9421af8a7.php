@@ -1,5 +1,5 @@
-<?php ($title = 'Suppliers'); ?>
-<?php ($header = 'Suppliers'); ?>
+<?php ($title = 'Items'); ?>
+<?php ($header = 'Items'); ?>
 <?php ($headerSubtitle = ''); ?>
 
 <?php $__env->startSection('content'); ?>
@@ -11,7 +11,7 @@
                 <form method="GET" class="filter-row">
                     <div class="filter-search">
                         <input class="form-control form-control-sm" name="q" value="<?php echo e(request('q')); ?>"
-                            placeholder="Cari kode atau nama supplier..." autofocus>
+                            placeholder="Cari kode atau nama item..." autofocus>
                     </div>
                     <div class="filter-segmented">
                         <button type="submit" name="status" value=""
@@ -52,7 +52,7 @@
                     <a href="<?php echo e(request()->fullUrlWithQuery(['status' => null])); ?>" class="tag-remove">×</a>
                 </span>
             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-            <a href="<?php echo e(route('suppliers.index')); ?>" class="tag-clear">Reset semua</a>
+            <a href="<?php echo e(route('items.index')); ?>" class="tag-clear">Reset semua</a>
         </div>
         <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
@@ -60,16 +60,24 @@
         <section class="ui-surface">
             <div class="ui-surface-head">
                 <div>
-                    <h3 class="ui-surface-title">Daftar Supplier</h3>
+                    <h3 class="ui-surface-title">Daftar Item</h3>
+                </div>
+                <div class="surface-actions">
+                    <a href="<?php echo e(route('items.template')); ?>" class="btn btn-sm btn-outline-secondary">Template Excel</a>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#importItemModal">
+                        Import Excel
+                    </button>
                 </div>
             </div>
 
             <div class="table-wrap table-responsive">
-                <table class="table table-hover ui-table data-table-advanced" data-export-title="suppliers">
-<thead>
-                        <tr>
+                <table class="table table-hover ui-table data-table-advanced" data-export-title="items">
+                    <thead>
+                            <tr>
                                 <th>Kode</th>
-                                <th>Nama Supplier</th>
+                                <th>Nama Barang</th>
+                                <th>Kategori</th>
+                                <th>Unit</th>
                                 <th>Terakhir Diubah</th>
                                 <th>Status</th>
                                 <th class="text-end">Aksi</th>
@@ -77,11 +85,19 @@
                     </thead>
                     <tbody>
                         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__empty_1 = true; $__currentLoopData = $rows; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
-                            <tr class="<?php echo e(!$row->status ? 'row-inactive' : ''); ?>">
-                                <td><div class="doc-number"><?php echo e($row->supplier_code); ?></div></td>
+                            <tr class="<?php echo e(!$row->active ? 'row-inactive' : ''); ?>">
+                                <td><div class="doc-number"><?php echo e($row->item_code); ?></div></td>
                                 <td>
-                                    <div class="supplier-name"><?php echo e($row->supplier_name); ?></div>
+                                    <div class="supplier-name"><?php echo e($row->item_name); ?></div>
                                 </td>
+                                <td>
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(($row->category_name ?? null) || ($row->category ?? null)): ?>
+                                        <span class="badge bg-primary"><?php echo e($row->category_name ?? $row->category); ?></span>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                </td>
+                                <td><?php echo e($row->unit_name ?: '-'); ?></td>
                                 <td>
                                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($row->updated_at): ?>
                                         <small class="text-muted"><?php echo e(\Carbon\Carbon::parse($row->updated_at)->diffForHumans()); ?></small>
@@ -90,37 +106,37 @@
                                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                 </td>
                                 <td>
-                                    <form action="<?php echo e(route('suppliers.toggle-status', $row->id)); ?>" method="POST" class="d-inline status-toggle-form">
+                                    <form action="<?php echo e(route('items.toggle-status', $row->id)); ?>" method="POST" class="d-inline status-toggle-form">
                                         <?php echo csrf_field(); ?>
                                         <?php echo method_field('PATCH'); ?>
                                         <label class="status-toggle">
-                                            <input type="checkbox" name="status" <?php echo e($row->status ? 'checked' : ''); ?>
+                                            <input type="checkbox" name="status" <?php echo e($row->active ? 'checked' : ''); ?>
 
                                                 onchange="this.form.submit()">
                                             <span class="toggle-slider"></span>
                                         </label>
-                                        <span class="status-text <?php echo e($row->status ? 'text-success' : 'text-muted'); ?>">
-                                            <?php echo e($row->status ? 'Aktif' : 'Nonaktif'); ?>
+                                        <span class="status-text <?php echo e($row->active ? 'text-success' : 'text-muted'); ?>">
+                                            <?php echo e($row->active ? 'Aktif' : 'Nonaktif'); ?>
 
                                         </span>
                                     </form>
                                 </td>
                                 <td class="text-end">
                                     <div class="action-stack">
-                                        <a href="<?php echo e(route('suppliers.edit', $row->id)); ?>"
+                                        <a href="<?php echo e(route('items.edit', $row->id)); ?>"
                                             class="btn btn-sm btn-outline-primary" title="Edit">✏️</a>
                                     </div>
                                 </td>
                             </tr>
                         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                             <tr>
-                                <td colspan="5">
+                                <td colspan="7">
                                     <div class="empty-state">
-                                        <div class="empty-icon">🏢</div>
-                                        <div class="empty-title">Belum ada data supplier</div>
-                                        <div class="empty-subtitle">Mulai tambah supplier baru untuk melihat data di sini.</div>
-                                        <a href="<?php echo e(route('suppliers.create')); ?>" class="btn btn-primary btn-sm px-4 mt-2">
-                                            ⚕ Tambah Supplier
+                                        <div class="empty-icon">📦</div>
+                                        <div class="empty-title">Belum ada data item</div>
+                                        <div class="empty-subtitle">Mulai tambah item baru untuk melihat data di sini.</div>
+                                        <a href="<?php echo e(route('items.create')); ?>" class="btn btn-primary btn-sm px-4 mt-2">
+                                            ⚕ Tambah Item
                                         </a>
                                     </div>
                                 </td>
@@ -133,7 +149,36 @@
      </div>
 
     
-    <a href="<?php echo e(route('suppliers.create')); ?>" class="fab-add" title="Tambah Supplier">
+    <div class="modal fade" id="importItemModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <form method="POST" action="<?php echo e(route('items.import')); ?>" enctype="multipart/form-data" class="modal-content">
+                <?php echo csrf_field(); ?>
+                <div class="modal-header">
+                    <h5 class="modal-title">Import Item dari Excel</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Tutup">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="field-label">File Excel</label>
+                        <input type="file" name="file" class="form-control form-control-sm" accept=".xlsx,.xls" required>
+                    </div>
+                    <div class="alert alert-info" style="font-size: 12px;">
+                        Kolom yang diharapkan: <strong>item_code</strong>, <strong>item_name</strong>, <strong>category_code</strong>, <strong>unit_code</strong>, <strong>specification</strong>.
+                        Unduh <a href="<?php echo e(route('items.template')); ?>">template</a> terlebih dahulu.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    
+    <a href="<?php echo e(route('items.create')); ?>" class="fab-add" title="Tambah Item">
         <span class="fab-icon">+</span>
         <span class="fab-label">Tambah</span>
     </a>
@@ -415,4 +460,4 @@
     </style>
 <?php $__env->stopSection(); ?>
 
-<?php echo $__env->make('layouts.erp', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\laragon\www\erp\erp-monitoring-po\resources\views/masters/suppliers/index.blade.php ENDPATH**/ ?>
+<?php echo $__env->make('layouts.erp', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\laragon\www\erp\erp-monitoring-po\resources\views/masters/items/index.blade.php ENDPATH**/ ?>

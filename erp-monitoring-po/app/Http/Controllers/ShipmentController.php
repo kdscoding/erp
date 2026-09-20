@@ -227,36 +227,6 @@ class ShipmentController extends Controller
         ));
     }
 
-    public function show(string $id): View
-    {
-        $shipment = $this->shipmentHeaderQuery()
-            ->where('sh.id', $id)
-            ->firstOrFail();
-
-        $lines = $this->shipmentLineQuery((int) $shipment->id)->get();
-
-        $totalShippedQty = (float) $lines->sum('shipped_qty');
-        $totalReceivedQty = (float) $lines->sum('received_qty');
-        $receivingPercent = $totalShippedQty > 0
-            ? (int) round(($totalReceivedQty / $totalShippedQty) * 100)
-            : 0;
-
-        $poNumbers = $lines->pluck('po_number')
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-
-        return view('shipments.show', compact(
-            'shipment',
-            'lines',
-            'receivingPercent',
-            'totalShippedQty',
-            'totalReceivedQty',
-            'poNumbers'
-        ));
-    }
-
     public function edit(string $id): View
     {
         $shipment = $this->shipmentHeaderQuery()
