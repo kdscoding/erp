@@ -1,6 +1,8 @@
 @extends('layouts.erp')
 
 @php($title = 'Shipment')
+@php($header = 'Shipments')
+@php($headerSubtitle = 'Kelola dokumen shipment, filter, dan proses pengiriman.')
 
 @php($tab = request('tab', 'worklist'))
 @php($isWorklist = $tab === 'worklist')
@@ -100,6 +102,27 @@
     .kanban-card .card-actions { margin-top: .3rem; display: flex; gap: .2rem; }
     .kanban-card .card-actions .btn { padding: 2px 5px; font-size: 9px; border-radius: 5px; }
     @media (max-width: 767.98px) { .kanban-columns { flex-direction: column; } .kanban-column { min-width: 0; } }
+
+    .stage-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+    .stage-waiting { background: #f0f0f0; color: #666; }
+    .stage-confirmed { background: #fff3cd; color: #856404; }
+    .stage-shipped { background: #cce5ff; color: #004085; }
+    .stage-partial { background: #d1ecf1; color: #0c5460; }
+    .stage-closed { background: #d4edda; color: #155724; }
+    .stage-late { background: #f8d7da; color: #721c24; }
+    .stage-cancelled { background: #e2e3e5; color: #383d41; }
+
+    .filter-toggle-btn { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1px solid var(--lemon-line); background: #f8f9fa; color: #666; cursor: pointer; margin-bottom: .5rem; }
+    .filter-toggle-btn:hover { background: #e9ecef; color: #333; border-color: #dee2e6; }
+    .filter-toggle-btn i { font-size: 12px; }
+    .filter-bar { display: flex; flex-direction: row; align-items: flex-end; gap: .75rem; flex-wrap: wrap; padding: .5rem 0; }
+    .filter-bar-field { display: flex; flex-direction: column; min-width: 140px; flex: 1; }
+    .filter-bar-field label { font-size: 11px; font-weight: 600; color: #666; margin-bottom: 3px; }
+    .filter-bar-field select, .filter-bar-field input { font-size: 12px; padding: 4px 8px; height: 32px; }
+    .filter-bar-actions { display: flex; gap: .4rem; align-items: flex-end; margin-left: auto; }
+    .filter-bar-actions .btn { height: 32px; font-size: 12px; }
+    .po-search-wrap { display: flex; align-items: center; gap: 6px; }
+    .po-search-wrap i { font-size: 12px; color: #7a8660; }
 </style>
 @endpush
 
@@ -144,46 +167,51 @@
             </section>
 
             <section class="ui-surface">
-                <div class="ui-surface-head">
-                    <div>
-                        <h3 class="ui-surface-title">Filter Shipments</h3>
-                        <div class="ui-surface-subtitle">Cari berdasarkan supplier, delivery note, invoice, atau keyword.</div>
+                <div class="ui-surface-body">
+                    <button type="button" class="filter-toggle-btn" id="filterToggle">
+                        <i class="fas fa-sliders-h"></i> <span id="filterToggleText">Tampilkan Filter</span>
+                    </button>
+                    <div id="filterSection" style="display:none;">
+                        <form method="GET" class="filter-bar" id="shipmentFilterForm">
+                            <div class="filter-bar-field">
+                                <label for="filterSupplier">Supplier</label>
+                                <select id="filterSupplier" name="supplier_id" class="form-control form-control-sm">
+                                    <option value="">Semua Supplier</option>
+                                    @foreach ($suppliers as $supplier)
+                                        <option value="{{ $supplier->id }}" {{ (int) (request('supplier_id') ?? 0) === $supplier->id ? 'selected' : '' }}>
+                                            {{ $supplier->supplier_name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="filter-bar-field">
+                                <label for="filterDeliveryNote">Delivery Note</label>
+                                <input type="text" id="filterDeliveryNote" name="delivery_note_number" value="{{ request('delivery_note_number') }}" class="form-control form-control-sm">
+                            </div>
+                            <div class="filter-bar-field">
+                                <label for="filterInvoice">Invoice</label>
+                                <input type="text" id="filterInvoice" name="invoice_number" value="{{ request('invoice_number') }}" class="form-control form-control-sm">
+                            </div>
+                            <div class="filter-bar-field">
+                                <label for="filterKeyword">Keyword</label>
+                                <input type="text" id="filterKeyword" name="keyword" value="{{ request('keyword') }}" class="form-control form-control-sm">
+                            </div>
+                            <div class="filter-bar-field">
+                                <label for="filterStatus">Status</label>
+                                <select id="filterStatus" name="status" class="form-control form-control-sm">
+                                    <option value="">Semua Status</option>
+                                    @foreach (\App\Support\DocumentTermCodes::shipmentStatuses() as $status)
+                                        <option value="{{ $status }}" {{ request('status') === $status ? 'selected' : '' }}>{{ $status }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="filter-bar-actions">
+                                <button class="btn btn-primary btn-sm" type="submit"><i class="fas fa-search"></i> Terapkan</button>
+                                <a href="{{ route('shipments.index', ['tab' => 'worklist']) }}" class="btn btn-light btn-sm"><i class="fas fa-redo"></i> Reset</a>
+                            </div>
+                        </form>
                     </div>
                 </div>
-                <form method="GET" class="filter-grid">
-                    <div class="span-3">
-                        <label class="field-label">Supplier</label>
-                        <select name="supplier_id" class="form-control form-control-sm">
-                            <option value="">Semua Supplier</option>
-                            @foreach ($suppliers as $supplier)
-                                <option value="{{ $supplier->id }}" @selected((int) request('supplier_id') === (int) $supplier->id)>{{ $supplier->supplier_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="span-2">
-                        <label class="field-label">Delivery Note</label>
-                        <input type="text" name="delivery_note_number" value="{{ request('delivery_note_number') }}" class="form-control form-control-sm" placeholder="No surat jalan">
-                    </div>
-                    <div class="span-2">
-                        <label class="field-label">Invoice</label>
-                        <input type="text" name="invoice_number" value="{{ request('invoice_number') }}" class="form-control form-control-sm" placeholder="No invoice">
-                    </div>
-                    <div class="span-2">
-                        <label class="field-label">Keyword</label>
-                        <input type="text" name="keyword" value="{{ request('keyword') }}" class="form-control form-control-sm" placeholder="Shipment / PO / supplier">
-                    </div>
-                    <div class="span-2">
-                        <label class="field-label">Status</label>
-                        <select name="status" class="form-control form-control-sm">
-                            <option value="">Semua Status</option>
-                            @foreach (\App\Support\DocumentTermCodes::shipmentStatuses() as $status)
-                                <option value="{{ $status }}" @selected(request('status') === $status)>{{ $status }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="span-1"><button class="btn btn-primary btn-sm w-100">Apply</button></div>
-                    <div class="span-1"><a href="{{ route('shipments.index', ['tab' => 'worklist']) }}" class="btn btn-light btn-sm w-100">Reset</a></div>
-                </form>
             </section>
 
             <section class="ui-surface">
@@ -194,7 +222,16 @@
                     </div>
                     <div class="page-actions">
                         <a href="{{ route('shipments.index', ['tab' => 'create']) }}" class="btn btn-success btn-sm">+ New Draft</a>
-                        <a href="{{ route('shipments.template') }}" class="btn btn-light btn-sm">Template</a>
+                        <a href="{{ route('shipments.bulk-template') }}" class="btn btn-light btn-sm">Bulk Template</a>
+                        <form method="POST" action="{{ route('shipments.bulk-import') }}" enctype="multipart/form-data" class="d-inline-block ml-2" style="display:inline-flex;align-items:center;gap:.35rem">
+                            @csrf
+                            <input type="file" name="file" class="form-control form-control-sm" accept=".xlsx,.xls,.csv" style="display:inline-block;width:auto" required>
+                            <button type="submit" class="btn btn-primary btn-sm">Bulk Import</button>
+                        </form>
+                    </div>
+                    <div class="po-search-wrap">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="shipment-search" class="form-control form-control-sm" placeholder="Cari shipment, supplier, PO..." aria-label="Cari shipment">
                     </div>
                 </div>
 
@@ -210,7 +247,7 @@
                 </div>
 
                 <div class="table-wrap table-responsive">
-                    <table class="table table-hover ui-table">
+                    <table class="table table-hover ui-table" id="shipment-table">
                         <thead>
                             <tr>
                                 <th style="width:36px"><input type="checkbox" id="selectAllRows" onchange="toggleAllRows(this.checked)"></th>
@@ -220,7 +257,15 @@
                         </thead>
                         <tbody>
                             @forelse ($activeRowsData ?? [] as $r)
-                                <tr class="{{ $focusedShipmentId === (int) $r->id ? 'table-success' : '' }}" onclick="navigateToDetail({{ $r->id }})" style="cursor:pointer">
+                                @php($stageClass = match($r->status) {
+                                    \App\Support\DocumentTermCodes::SHIPMENT_DRAFT => 'stage-waiting',
+                                    \App\Support\DocumentTermCodes::SHIPMENT_SHIPPED => 'stage-shipped',
+                                    \App\Support\DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED => 'stage-partial',
+                                    \App\Support\DocumentTermCodes::SHIPMENT_RECEIVED => 'stage-closed',
+                                    \App\Support\DocumentTermCodes::SHIPMENT_CANCELLED => 'stage-cancelled',
+                                    default => 'stage-waiting',
+                                })
+                                <tr class="{{ $focusedShipmentId === (int) $r->id ? 'table-success' : '' }}" data-shipment-number="{{ strtolower($r->shipment_number ?? '') }}" data-supplier="{{ strtolower($r->supplier_name ?? '') }}" data-po="{{ strtolower($r->po_numbers ?? '') }}" data-delivery-note="{{ strtolower($r->delivery_note_number ?? '') }}" data-invoice="{{ strtolower($r->invoice_number ?? '') }}" data-status="{{ strtolower($r->status ?? '') }}" onclick="navigateToDetail({{ $r->id }})" style="cursor:pointer">
                                     <td onclick="event.stopPropagation()"><input type="checkbox" class="row-checkbox" value="{{ $r->id }}" onchange="updateBatchToolbar()"></td>
                                     <td>
                                         <div class="doc-number">{{ $r->shipment_number }}</div>
@@ -230,7 +275,7 @@
                                     <td>{{ $r->po_numbers ?: '-' }}<br><span class="doc-meta">{{ $r->po_count }} PO • {{ $r->line_count }} line</span></td>
                                     <td>{{ $r->delivery_note_number ?: '-' }}</td>
                                     <td>{{ $r->invoice_number ?: '-' }}@if ($r->invoice_date)<br><span class="doc-meta">{{ \Carbon\Carbon::parse($r->invoice_date)->format('d-m-Y') }}</span>@endif</td>
-                                    <td><a href="#" onclick="event.preventDefault(); event.stopPropagation();"><x-status-badge :status="$r->status" scope="shipment" /></a></td>
+                                    <td><span class="stage-badge {{ $stageClass }}">{{ $r->status }}</span></td>
                                     <td>
                                         @php($rcv = (float)($r->total_received_qty ?? 0))
                                         @php($shp = (float)($r->total_shipped_qty ?? 0))
@@ -461,6 +506,44 @@
             if (c.length > 0) { t.classList.add('visible'); document.getElementById('batchCount').textContent = c.length + ' selected'; document.getElementById('bulkMarkShipped').disabled = false; document.getElementById('bulkExport').disabled = false; document.getElementById('bulkCancel').disabled = false; }
             else { t.classList.remove('visible'); }
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const toggle = document.getElementById('filterToggle');
+            const filterSection = document.getElementById('filterSection');
+            const toggleText = document.getElementById('filterToggleText');
+            if (toggle && filterSection) {
+                toggle.addEventListener('click', function () {
+                    const isHidden = filterSection.style.display === 'none';
+                    filterSection.style.display = isHidden ? 'block' : 'none';
+                    if (toggleText) { toggleText.textContent = isHidden ? 'Sembunyikan Filter' : 'Tampilkan Filter'; }
+                });
+            }
+
+            const searchInput = document.getElementById('shipment-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    const query = this.value.toLowerCase().trim();
+                    const rows = document.querySelectorAll('#shipment-table tbody > tr');
+                    rows.forEach(function (row) {
+                        const shipmentNum = row.getAttribute('data-shipment-number') || '';
+                        const supplier = row.getAttribute('data-supplier') || '';
+                        const po = row.getAttribute('data-po') || '';
+                        const deliveryNote = row.getAttribute('data-delivery-note') || '';
+                        const invoice = row.getAttribute('data-invoice') || '';
+                        const status = row.getAttribute('data-status') || '';
+                        const matches = !query ||
+                            shipmentNum.includes(query) ||
+                            supplier.includes(query) ||
+                            po.includes(query) ||
+                            deliveryNote.includes(query) ||
+                            invoice.includes(query) ||
+                            status.includes(query);
+                        row.style.display = matches ? '' : 'none';
+                    });
+                });
+            }
+        });
+
         window.toggleCandidateCheckboxes = (checked) => { document.querySelectorAll('.candidate-item-checkbox').forEach(cb => cb.checked = checked); };
         window.toggleDraftCheckboxes = (checked) => { document.querySelectorAll('.draft-item-checkbox').forEach(cb => cb.checked = checked); };
         window.clearCandidateChecks = () => { document.querySelectorAll('.candidate-item-checkbox').forEach(cb => cb.checked = false); };

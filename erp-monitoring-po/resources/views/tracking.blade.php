@@ -2,7 +2,6 @@
 
 @php($title = 'Tracking')
 @php($header = 'Fulfillment Tracking')
-@php($headerSubtitle = 'Monitoring terpadu untuk Purchase Order — kode barang, supplier, dan sisa pesanan.')
 
 @section('content')
     <style>
@@ -103,8 +102,7 @@
         <section class="ui-surface">
             <div class="ui-surface-head">
                 <div>
-                    <h3 class="ui-surface-title">Unified Tracking Table</h3>
-                    <div class="ui-surface-subtitle">Konsolidasi PO — status pemenuhan, qty dikirim, dan sisa pesanan secara real-time.</div>
+                    <h3 class="ui-surface-title">Fulfillment Tracking Table</h3>
                 </div>
                 <div class="po-search-wrap">
                     <i class="fas fa-search"></i>
@@ -124,7 +122,7 @@
                                 <th class="text-end">Ordered</th>
                                 <th class="text-end">Dikirim</th>
                                 <th class="text-end">Diterima</th>
-                                <th class="text-end">Sisa</th>
+                                <th class="text-end">Outstanding</th>
                                 <th class="text-center">Status PO</th>
                                 <th class="text-center">Status Barang</th>
                                 <th class="text-center">Aksi</th>
@@ -132,7 +130,7 @@
                     </thead>
                     <tbody>
                         @forelse($itemRows as $item)
-                            <tr data-po-id="{{ $item['po_id'] }}" data-po-number="{{ strtolower($item['po_number'] ?? '') }}" data-item-code="{{ strtolower($item['item_code'] ?? '') }}" data-item-name="{{ strtolower($item['item_name'] ?? '') }}" data-status-po="{{ strtolower($item['stage'] ?? '') }}" data-status-barang="{{ strtolower($item['item_status'] ?? '') }}" data-supplier="{{ strtolower($item['supplier_name'] ?? '') }}">
+                            <tr data-po-id="{{ $item['po_id'] }}" data-po-number="{{ strtolower($item['po_number'] ?? '') }}" data-item-code="{{ strtolower($item['item_code'] ?? '') }}" data-item-name="{{ strtolower($item['item_name'] ?? '') }}" data-status-po="{{ strtolower($item['stage'] ?? '') }}" data-status-barang="{{ strtolower($item['monitoring_status'] ?? $item['item_status'] ?? '') }}" data-supplier="{{ strtolower($item['supplier_name'] ?? '') }}">
                                 <td>
                                     <a href="{{ route($item['ref_type'], $item['ref_param']) }}" class="doc-number text-decoration-none">
                                         {{ $item['po_number'] }}
@@ -164,28 +162,32 @@
                                         {{ $item['stage'] }}
                                     </span>
                                 </td>
-                                <td class="text-center">
-                                    <span class="badge badge-dark" style="font-size:10px;">{{ $item['item_status'] ?? '-' }}</span>
-                                </td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleDetail('detail-{{ $item['item_id'] }}')">
-                                        <i class="fas fa-chevron-down" id="icon-{{ $item['item_id'] }}"></i> Detail
-                                    </button>
-                                </td>
+<td class="text-center">
+                                     <span class="badge badge-dark" style="font-size:10px;">{{ $item['monitoring_status'] ?? $item['item_status'] ?? '-' }}</span>
+                                 </td>
+<td class="text-center">
+                                     @if(!empty($item['shipments']))
+                                         <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleDetail('detail-{{ $item['item_id'] }}')">
+                                             <i class="fas fa-chevron-down" id="icon-{{ $item['item_id'] }}"></i> Detail
+                                         </button>
+                                     @else
+                                         <span class="text-muted small">-</span>
+                                     @endif
+                                 </td>
                             </tr>
                             @if(!empty($item['shipments']))
                                 <tr class="detail-row" id="detail-{{ $item['item_id'] }}" style="display:none;">
                                     <td colspan="12">
                                         <table class="detail-shipment-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Shipment</th>
-                                                    <th>Tanggal</th>
-                                                    <th>DN</th>
-                                                    <th class="text-end">Shipped</th>
-                                                    <th class="text-end">Received</th>
-                                                    <th class="text-end">Sisa</th>
-                                                </tr>
+<thead>
+                                                    <tr>
+                                                        <th>Shipment</th>
+                                                        <th>Tanggal</th>
+                                                        <th>DN</th>
+                                                        <th class="text-end">Shipped</th>
+                                                        <th class="text-end">Received</th>
+                                                        <th class="text-end">Outstanding</th>
+                                                    </tr>
                                             </thead>
                                             <tbody>
                                                 @foreach($item['shipments'] as $shipment)

@@ -18,7 +18,7 @@ $module = $module ?? (request()->route()->getPrefix() ?? 'default');
 $filterFields = $fields ?: \App\Support\LabelRegistry::filterFields($module);
 $contextFields = $filterFields[$context] ?? $filterFields;
 $formAction = $action ?? request()->url();
-$hasActiveFilters = request()->query()->count() > 0;
+$hasActiveFilters = count(request()->query()) > 0;
 ?>
 
 @if ($hasActiveFilters)
@@ -59,7 +59,7 @@ $hasActiveFilters = request()->query()->count() > 0;
             @switch ($fieldType)
                 @case ('select')
                     <select name="{{ $fieldName }}" id="filter_{{ $fieldName }}" class="form-control form-control-sm" {{ $fieldAttributes }}>
-                        @if (isset($fieldOptions['placeholder']) || empty($fieldOptions))
+                        @if (is_array($fieldOptions) && (isset($fieldOptions['placeholder']) || empty($fieldOptions)))
                             <option value="">{{ $fieldOptions['placeholder'] ?? 'Semua' }}</option>
                         @endif
                         @if (isset($field['dynamic_options']))

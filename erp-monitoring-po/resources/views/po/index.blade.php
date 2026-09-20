@@ -3,8 +3,6 @@
 @php
     $title = 'Purchase Orders';
     $header = 'Purchase Orders';
-    $headerSubtitle = 'Kontrol dokumen purchase order dari satu tampilan.';
-    $poSummary = $summaryChips ?? [];
 @endphp
 
 @section('content')
@@ -13,8 +11,6 @@
             <div class="po-panel-head">
                 <div>
                     <div class="po-eyebrow">PROCUREMENT / PURCHASE ORDER</div>
-                    <h2 class="po-panel-title">Kontrol Purchase Order</h2>
-                    <p class="po-panel-subtitle">Pantau status, percepat pencarian, dan kelola dokumen PO tanpa berpindah halaman.</p>
                 </div>
                 <div class="po-panel-actions">
                     <a href="{{ route('po.export-excel', request()->query()) }}" class="btn btn-light btn-sm">
@@ -32,34 +28,67 @@
                 </div>
             </div>
 
-            <div class="po-summary-grid">
-                @foreach ($poSummary as $chip)
-                    @php
-                        $filterQuery = request()->query();
-                        if ($chip['value'] !== '') {
-                            $filterQuery['status'] = $chip['value'];
-                        } else {
-                            unset($filterQuery['status']);
-                        }
+            <div class="po-summary-tabs">
+                <div class="po-summary-tab-list" role="tablist">
+                    <button role="tab" class="po-summary-tab is-active" data-tab="po-status" aria-selected="true">PO Status</button>
+                    <button role="tab" class="po-summary-tab" data-tab="item-status" aria-selected="false">Item Status</button>
+                </div>
+                <div class="po-summary-tab-panels">
+                    <div role="tabpanel" class="po-summary-tab-panel is-active" id="po-status-panel">
+                        <div class="po-summary-grid">
+                            @foreach ($poStatusChips as $chip)
+                                @php
+                                    $filterQuery = request()->query();
+                                    if ($chip['value'] !== '') {
+                                        $filterQuery['po_status'] = $chip['value'];
+                                    } else {
+                                        unset($filterQuery['po_status']);
+                                    }
 
-                        $summaryTone = match ($chip['value']) {
-                            'Late', 'Delayed' => 'danger',
-                            'Partial' => 'primary',
-                            'Closed' => 'success',
-                            'Cancelled' => 'secondary',
-                            default => 'warning',
-                        };
-                    @endphp
-                    <a href="{{ route('po.index', $filterQuery) }}" class="po-summary-card po-summary-{{ $summaryTone }} @if (request('status') === (string) $chip['value']) is-active @endif">
-                        <span class="po-summary-icon">
-                            <i class="fas {{ $chip['value'] === '' ? 'fas fa-boxes' : 'fas fa-filter' }}"></i>
-                        </span>
-                        <span class="po-summary-copy">
-                            <small>{{ $chip['label'] }}</small>
-                            <strong>{{ (int) ($chip['count'] ?? 0) }}</strong>
-                        </span>
-                    </a>
-                @endforeach
+                                    $summaryTone = match ($chip['value']) {
+                                        'Late', 'Delayed' => 'danger',
+                                        'Partial' => 'primary',
+                                        'Closed' => 'success',
+                                        'Cancelled' => 'secondary',
+                                        default => 'warning',
+                                    };
+                                @endphp
+                                <a href="{{ route('po.index', $filterQuery) }}" class="po-summary-card po-summary-{{ $summaryTone }} @if (request('po_status') === (string) $chip['value']) is-active @endif">
+                                    <span class="po-summary-icon">
+                                        <i class="fas {{ $chip['value'] === '' ? 'fas fa-boxes' : 'fas fa-filter' }}"></i>
+                                    </span>
+                                    <span class="po-summary-copy">
+                                        <span class="po-summary-label">{{ $chip['label'] ?? ucfirst(strtolower($chip['value'] ?? 'Semua')) }}</span>
+                                        <strong>{{ (int) ($chip['count'] ?? 0) }}</strong>
+                                    </span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                    <div role="tabpanel" class="po-summary-tab-panel" id="item-status-panel" hidden>
+                        <div class="po-summary-grid">
+                            @foreach ($itemStatusChips as $chip)
+                                @php
+                                    $filterQuery = request()->query();
+                                    if ($chip['value'] !== '') {
+                                        $filterQuery['item_status'] = $chip['value'];
+                                    } else {
+                                        unset($filterQuery['item_status']);
+                                    }
+                                @endphp
+                                <a href="{{ route('po.index', $filterQuery) }}" class="po-summary-card po-summary-secondary @if (request('item_status') === (string) $chip['value']) is-active @endif">
+                                    <span class="po-summary-icon">
+                                        <i class="fas {{ $chip['value'] === '' ? 'fas fa-layer-group' : 'fas fa-filter' }}"></i>
+                                    </span>
+                                    <span class="po-summary-copy">
+                                        <span class="po-summary-label">{{ $chip['label'] ?? ucfirst(strtolower($chip['value'] ?? 'Semua')) }}</span>
+                                        <strong>{{ (int) ($chip['count'] ?? 0) }}</strong>
+                                    </span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="po-filter-panel">
@@ -92,11 +121,20 @@
                             <input type="date" id="filterDateTo" name="date_to" value="{{ $filterDateTo ?? '' }}" class="form-control form-control-sm">
                         </div>
                         <div class="filter-bar-field">
-                            <label for="filterStatus">Status</label>
-                            <select id="filterStatus" name="status" class="form-control form-control-sm">
-                                <option value="">Semua status</option>
+                            <label for="filterPoStatus">PO Status</label>
+                            <select id="filterPoStatus" name="po_status" class="form-control form-control-sm">
+                                <option value="">Semua PO Status</option>
                                 @foreach (\App\Support\TermCatalog::options('po_status', \App\Support\DomainStatus::legacyOptions(\App\Support\DomainStatus::GROUP_PO_STATUS)) as $value => $label)
-                                    <option value="{{ $value }}" {{ ($filterStatus ?? '') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                    <option value="{{ $value }}" {{ ($filterPoStatus ?? '') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="filter-bar-field">
+                            <label for="filterItemStatus">Item Status</label>
+                            <select id="filterItemStatus" name="item_status" class="form-control form-control-sm">
+                                <option value="">Semua Item Status</option>
+                                @foreach (\App\Support\TermCatalog::options('po_item_status', \App\Support\DomainStatus::legacyOptions(\App\Support\DomainStatus::GROUP_PO_ITEM_STATUS)) as $value => $label)
+                                    <option value="{{ $value }}" {{ ($filterItemStatus ?? '') === $value ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -315,6 +353,43 @@
             grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
             gap: 10px;
             margin: 18px 0;
+        }
+
+        .po-summary-tabs {
+            margin: 18px 0;
+        }
+
+        .po-summary-tab-list {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--po-border);
+            margin-bottom: 12px;
+            padding-bottom: 0;
+        }
+
+        .po-summary-tab {
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--po-muted);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: color 0.15s ease, border-color 0.15s ease;
+        }
+
+        .po-summary-tab:hover {
+            color: #0f172a;
+        }
+
+        .po-summary-tab.is-active {
+            color: #1d4ed8;
+            border-bottom-color: #1d4ed8;
+        }
+
+        .po-summary-tab-panel[hidden] {
+            display: none;
         }
 
         .po-summary-card {
@@ -553,4 +628,37 @@
             }
         }
     </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tabList = document.querySelector('.po-summary-tab-list');
+            if (!tabList) return;
+
+            const tabs = tabList.querySelectorAll('.po-summary-tab');
+            const panels = document.querySelectorAll('.po-summary-tab-panel');
+
+            tabs.forEach(function (tab) {
+                tab.addEventListener('click', function () {
+                    const targetId = this.dataset.tab + '-panel';
+
+                    tabs.forEach(function (t) {
+                        t.classList.remove('is-active');
+                        t.setAttribute('aria-selected', 'false');
+                    });
+                    panels.forEach(function (p) {
+                        p.hidden = true;
+                        p.classList.remove('is-active');
+                    });
+
+                    this.classList.add('is-active');
+                    this.setAttribute('aria-selected', 'true');
+
+                    const targetPanel = document.getElementById(targetId);
+                    if (targetPanel) {
+                        targetPanel.hidden = false;
+                        targetPanel.classList.add('is-active');
+                    }
+                });
+            });
+        });
+    </script>
 @endpush

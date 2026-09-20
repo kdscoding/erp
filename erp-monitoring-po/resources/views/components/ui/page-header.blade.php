@@ -54,7 +54,7 @@ $entitySingular = \App\Support\LabelRegistry::entity($entity, 'singular');
                         $actionIcon = $action['icon'] ?? '';
                         $actionAttrs = $action['attributes'] ?? [];
                     @endphp
-                    <a href="{{ $actionUrl }}" class="{{ $actionClass }}" {{ $actionAttrs }}>
+                    <a href="{{ $actionUrl }}" class="{{ $actionClass }}" {{ $actionAttrs ? \Illuminate\Support\Arr::toHtmlAttributes($actionAttrs) : '' }}>
                         @if ($actionIcon)
                             <i class="{{ $actionIcon }}"></i>
                         @endif

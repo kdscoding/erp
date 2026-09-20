@@ -6,11 +6,10 @@ use App\Queries\Dashboard\DashboardQuery;
 use App\Support\DocumentTermCodes;
 use App\Support\DomainStatus;
 use App\Support\ErpFlow;
+use App\Support\NumberFormatter;
 use App\Support\StatusQuery;
 use Carbon\Carbon;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -1064,6 +1063,8 @@ $metrics = [
         $filterPoStatus = $request->query('po_status', 'all');
         $filterItemStatus = $request->query('item_status', 'all');
 
+        $currentDateSql = ErpFlow::currentDateExpression();
+
         $activePoSql = StatusQuery::sqlNotEquals('po.status', DomainStatus::GROUP_PO_STATUS, DocumentTermCodes::PO_CLOSED)
             . ' AND '
             . StatusQuery::sqlNotEquals('po.status', DomainStatus::GROUP_PO_STATUS, DocumentTermCodes::PO_CANCELLED);
@@ -1096,6 +1097,7 @@ $metrics = [
                 'poi.received_qty',
                 'poi.outstanding_qty',
                 'poi.item_status',
+                'poi.etd_date',
                 'si.shipped_qty as item_shipped_qty',
                 'si.received_qty as item_received_qty',
                 'sh.shipment_number',
@@ -1115,6 +1117,7 @@ $metrics = [
                 'item_code' => $row->item_code,
                 'item_name' => $row->item_name,
                 'item_status' => $row->item_status,
+                'etd_date' => $row->etd_date,
                 'supplier_name' => $row->supplier_name,
                 'supplier_code' => $row->supplier_code ?? '-',
                 'ordered_qty' => (float) ($row->ordered_qty ?? 0),
@@ -1131,7 +1134,7 @@ $metrics = [
             ])
             ->groupBy('item_id');
 
-        $itemRows = $itemRows->map(function ($group) {
+        $itemRows = $itemRows->map(function ($group) use ($currentDateSql) {
             $first = (object) $group->first();
             $shipments = [];
             foreach ($group as $row) {
@@ -1148,6 +1151,17 @@ $metrics = [
                 }
             }
 
+            // Compute monitoring_status matching PO page logic
+            $monitoringStatus = match (true) {
+                $first->item_status === DocumentTermCodes::ITEM_CANCELLED => DocumentTermCodes::ITEM_CANCELLED,
+                $first->item_status === DocumentTermCodes::ITEM_FORCE_CLOSED => DocumentTermCodes::ITEM_FORCE_CLOSED,
+                (float) $first->outstanding_qty <= 0 => DocumentTermCodes::ITEM_CLOSED,
+                (float) $first->received_qty > 0 => DocumentTermCodes::ITEM_PARTIAL,
+                empty($first->etd_date) => DocumentTermCodes::ITEM_WAITING,
+                Carbon::parse($first->etd_date)->format('Y-m-d') < Carbon::today()->format('Y-m-d') => DocumentTermCodes::ITEM_LATE,
+                default => DocumentTermCodes::ITEM_CONFIRMED,
+            };
+
             return [
                 'po_id' => $first->po_id,
                 'po_number' => $first->po_number,
@@ -1157,6 +1171,7 @@ $metrics = [
                 'item_code' => $first->item_code,
                 'item_name' => $first->item_name,
                 'item_status' => $first->item_status,
+                'monitoring_status' => $monitoringStatus,
                 'supplier_name' => $first->supplier_name,
                 'supplier_code' => $first->supplier_code ?? '-',
                 'ordered_qty' => (float) ($first->ordered_qty ?? 0),

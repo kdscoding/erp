@@ -1,55 +1,73 @@
-@extends('layouts.erp')
-
 @php
     $entity = 'supplier';
-    $title = 'Tambah ' . entity_label($entity, 'singular');
+    $title = label($entity, 'create_title', ' tambah Supplier');
     $header = $title;
-    $headerSubtitle = 'Input data supplier baru.';
+    $headerSubtitle = label($entity, 'entity.create_subtitle', 'Input data supplier baru.');
 @endphp
 
-@section('content')
-    <div class="page-shell">
-        <x-ui.page-header
-            :entity="$entity"
-            :title="$title"
-            :subtitle="$headerSubtitle"
-            :actions="[
-                ['label' => 'Kembali', 'url' => route('suppliers.index'), 'class' => 'btn btn-light btn-sm'],
-            ]"
-        />
+<x-ui.page-header
+    :entity="$entity"
+    :actions="[
+        ['label' => 'Kembali', 'url' => route('suppliers.index'), 'class' => 'btn btn-light btn-sm'],
+    ]"
+/>
 
+<section class="ui-surface">
+    <div class="ui-surface-head">
+        <div>
+            <h3 class="ui-surface-title">Form Supplier</h3>
+        </div>
+    </div>
+
+    <div class="ui-surface-body">
         <div class="form-wrapper">
             <form method="POST" action="{{ route('suppliers.store') }}">
                 @csrf
-                <x-ui.form-field
-                    :module="$entity"
-                    name="supplier_code"
-                    :required="true"
-                />
+                <div class="form-group">
+                    <label class="field-label">Kode Supplier</label>
+                    <input class="form-control form-control-sm" name="supplier_code"
+                        placeholder="Kode unik (contoh: SUP-001)" value="{{ old('supplier_code') }}" required>
+                </div>
 
-                <x-ui.form-field
-                    :module="$entity"
-                    name="supplier_name"
-                    :required="true"
-                />
+                <div class="form-group">
+                    <label class="field-label">Nama Supplier</label>
+                    <input class="form-control form-control-sm" name="supplier_name"
+                        placeholder="Nama perusahaan supplier" value="{{ old('supplier_name') }}" required>
+                </div>
 
-                <x-ui.form-field
-                    :module="$entity"
-                    name="status"
-                    type="select"
-                    :required="true"
-                />
+                <div class="form-group">
+                    <label class="field-label">alamat</label>
+                    <input class="form-control form-control-sm" name="address"
+                        placeholder="alamat supplier" value="{{ old('address') }}">
+                </div>
+
+                <div class="form-group">
+                    <label class="field-label">Telepon</label>
+                    <input class="form-control form-control-sm" name="phone"
+                        placeholder="Nomor telepon" value="{{ old('phone') }}">
+                </div>
+
+                <div class="form-group">
+                    <label class="field-label">Email</label>
+                    <input class="form-control form-control-sm" name="email"
+                        placeholder="email@contoh.com" value="{{ old('email') }}">
+                </div>
+
+                <div class="form-group">
+                    <label class="field-label">Contact Person</label>
+                    <input class="form-control form-control-sm" name="contact_person"
+                        placeholder="Nama contact person" value="{{ old('contact_person') }}">
+                </div>
 
                 <div class="form-actions">
                     <a href="{{ route('suppliers.index') }}" class="btn btn-light btn-sm">Batal</a>
-                    <button type="submit" class="btn btn-primary btn-sm px-5">{{ action_label($entity, 'create') }}</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-5">Simpan Supplier</button>
                 </div>
             </form>
         </div>
     </div>
-@endsection
+</section>
 
-@push('styles')
 <style>
     .form-wrapper {
         max-width: 540px;
@@ -68,4 +86,3 @@
         border-top: 1px solid var(--lemon-line, #dfe6b8);
     }
 </style>
-@endpush

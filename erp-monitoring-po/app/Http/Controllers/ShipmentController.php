@@ -4,12 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Actions\StoreShipmentDraft;
 use App\Actions\UpdateShipmentDraft;
+use App\Imports\ShipmentDraftBulkImport;
 use App\Support\DocumentTermCodes;
 use App\Support\DomainStatus;
 use App\Support\ErpFlow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -42,7 +42,7 @@ class ShipmentController extends Controller
             $request->session()->put(
                 'shipment_shipped_qty',
                 collect($request->input('shipped_qty', []))
-                    ->mapWithKeys(fn($qty, $itemId) => [(int) $itemId => (float) $qty])
+                    ->mapWithKeys(fn ($qty, $itemId) => [(int) $itemId => (float) $qty])
                     ->all()
             );
         }
@@ -53,6 +53,7 @@ class ShipmentController extends Controller
                 collect($request->input('invoice_unit_price', []))
                     ->mapWithKeys(function ($price, $itemId) {
                         $normalized = ($price === null || $price === '') ? null : (float) $price;
+
                         return [(int) $itemId => $normalized];
                     })
                     ->all()
@@ -63,7 +64,7 @@ class ShipmentController extends Controller
             $request->session()->put(
                 'shipment_selected_items',
                 collect($request->input('selected_items', []))
-                    ->map(fn($id) => (int) $id)
+                    ->map(fn ($id) => (int) $id)
                     ->filter()
                     ->unique()
                     ->values()
@@ -76,7 +77,7 @@ class ShipmentController extends Controller
                 ? $request->input('selected_items', [])
                 : $request->session()->get('shipment_selected_items', [])
         )
-            ->map(fn($id) => (int) $id)
+            ->map(fn ($id) => (int) $id)
             ->filter()
             ->values();
 
@@ -87,20 +88,20 @@ class ShipmentController extends Controller
         $activeRows = $this->shipmentWorklistBaseQuery()
             ->when(
                 $request->filled('supplier_id'),
-                fn($q) => $q->where('sh.supplier_id', $request->integer('supplier_id'))
+                fn ($q) => $q->where('sh.supplier_id', $request->integer('supplier_id'))
             )
             ->when(
                 $request->filled('delivery_note_number'),
-                fn($q) => $q->where('sh.delivery_note_number', 'like', '%' . $request->string('delivery_note_number') . '%')
+                fn ($q) => $q->where('sh.delivery_note_number', 'like', '%'.$request->string('delivery_note_number').'%')
             )
             ->when(
                 $request->filled('invoice_number'),
-                fn($q) => $q->where('sh.invoice_number', 'like', '%' . $request->string('invoice_number') . '%')
+                fn ($q) => $q->where('sh.invoice_number', 'like', '%'.$request->string('invoice_number').'%')
             )
             ->when(
                 $request->filled('keyword'),
                 function ($q) use ($request) {
-                    $keyword = '%' . $request->string('keyword') . '%';
+                    $keyword = '%'.$request->string('keyword').'%';
                     $q->where(function ($inner) use ($keyword) {
                         $inner->where('sh.shipment_number', 'like', $keyword)
                             ->orWhere('sh.delivery_note_number', 'like', $keyword)
@@ -113,7 +114,7 @@ class ShipmentController extends Controller
             )
             ->when(
                 $request->filled('status'),
-                fn($q) => $q->where('sh.status', $request->string('status'))
+                fn ($q) => $q->where('sh.status', $request->string('status'))
             )
             ->whereIn('sh.status', [
                 DocumentTermCodes::SHIPMENT_DRAFT,
@@ -122,9 +123,9 @@ class ShipmentController extends Controller
             ])
             ->orderByRaw("
                 CASE sh.status
-                    WHEN '" . DocumentTermCodes::SHIPMENT_DRAFT . "' THEN 1
-                    WHEN '" . DocumentTermCodes::SHIPMENT_SHIPPED . "' THEN 2
-                    WHEN '" . DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED . "' THEN 3
+                    WHEN '".DocumentTermCodes::SHIPMENT_DRAFT."' THEN 1
+                    WHEN '".DocumentTermCodes::SHIPMENT_SHIPPED."' THEN 2
+                    WHEN '".DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED."' THEN 3
                     ELSE 9
                 END
             ")
@@ -136,20 +137,20 @@ class ShipmentController extends Controller
         $archiveRows = $this->shipmentWorklistBaseQuery()
             ->when(
                 $request->filled('supplier_id'),
-                fn($q) => $q->where('sh.supplier_id', $request->integer('supplier_id'))
+                fn ($q) => $q->where('sh.supplier_id', $request->integer('supplier_id'))
             )
             ->when(
                 $request->filled('delivery_note_number'),
-                fn($q) => $q->where('sh.delivery_note_number', 'like', '%' . $request->string('delivery_note_number') . '%')
+                fn ($q) => $q->where('sh.delivery_note_number', 'like', '%'.$request->string('delivery_note_number').'%')
             )
             ->when(
                 $request->filled('invoice_number'),
-                fn($q) => $q->where('sh.invoice_number', 'like', '%' . $request->string('invoice_number') . '%')
+                fn ($q) => $q->where('sh.invoice_number', 'like', '%'.$request->string('invoice_number').'%')
             )
             ->when(
                 $request->filled('keyword'),
                 function ($q) use ($request) {
-                    $keyword = '%' . $request->string('keyword') . '%';
+                    $keyword = '%'.$request->string('keyword').'%';
                     $q->where(function ($inner) use ($keyword) {
                         $inner->where('sh.shipment_number', 'like', $keyword)
                             ->orWhere('sh.delivery_note_number', 'like', $keyword)
@@ -162,7 +163,7 @@ class ShipmentController extends Controller
             )
             ->when(
                 $request->filled('status'),
-                fn($q) => $q->where('sh.status', $request->string('status'))
+                fn ($q) => $q->where('sh.status', $request->string('status'))
             )
             ->whereIn('sh.status', [
                 DocumentTermCodes::SHIPMENT_RECEIVED,
@@ -182,26 +183,26 @@ class ShipmentController extends Controller
             : null;
 
         $draftQuantities = collect($request->session()->get('shipment_shipped_qty', []))
-            ->mapWithKeys(fn($qty, $itemId) => [(int) $itemId => (float) $qty]);
+            ->mapWithKeys(fn ($qty, $itemId) => [(int) $itemId => (float) $qty]);
 
         $draftInvoicePrices = collect($request->session()->get('shipment_invoice_unit_price', []))
-            ->mapWithKeys(fn($price, $itemId) => [(int) $itemId => $price === null ? null : (float) $price]);
+            ->mapWithKeys(fn ($price, $itemId) => [(int) $itemId => $price === null ? null : (float) $price]);
 
         $selectedItemIds = $selectedItems
             ->pluck('purchase_order_item_id')
-            ->map(fn($id) => (int) $id)
+            ->map(fn ($id) => (int) $id)
             ->values()
             ->all();
 
         $candidateItems = $hasSearch
             ? $this->candidateItemsQuery($request)
-            ->when($selectedSupplierId, fn($query) => $query->where('po.supplier_id', $selectedSupplierId))
-            ->when(! empty($selectedItemIds), fn($query) => $query->whereNotIn('poi.id', $selectedItemIds))
-            ->orderBy('s.supplier_name')
-            ->orderBy('po.po_number')
-            ->orderBy('i.item_code')
-            ->limit(100)
-            ->get()
+                ->when($selectedSupplierId, fn ($query) => $query->where('po.supplier_id', $selectedSupplierId))
+                ->when(! empty($selectedItemIds), fn ($query) => $query->whereNotIn('poi.id', $selectedItemIds))
+                ->orderBy('s.supplier_name')
+                ->orderBy('po.po_number')
+                ->orderBy('i.item_code')
+                ->limit(100)
+                ->get()
             : collect();
 
         $splitShipmentBoard = $selectedItems->isNotEmpty()
@@ -234,7 +235,26 @@ class ShipmentController extends Controller
 
         $lines = $this->shipmentLineQuery((int) $shipment->id)->get();
 
-        return view('shipments.show', compact('shipment', 'lines'));
+        $totalShippedQty = (float) $lines->sum('shipped_qty');
+        $totalReceivedQty = (float) $lines->sum('received_qty');
+        $receivingPercent = $totalShippedQty > 0
+            ? (int) round(($totalReceivedQty / $totalShippedQty) * 100)
+            : 0;
+
+        $poNumbers = $lines->pluck('po_number')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return view('shipments.show', compact(
+            'shipment',
+            'lines',
+            'receivingPercent',
+            'totalShippedQty',
+            'totalReceivedQty',
+            'poNumbers'
+        ));
     }
 
     public function edit(string $id): View
@@ -350,7 +370,7 @@ class ShipmentController extends Controller
                 ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
                 ->where('si.shipment_id', $shipment->id)
                 ->pluck('poi.purchase_order_id')
-                ->map(fn($poId) => (int) $poId)
+                ->map(fn ($poId) => (int) $poId)
                 ->unique()
                 ->values();
 
@@ -405,7 +425,7 @@ class ShipmentController extends Controller
                 ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
                 ->where('si.shipment_id', $shipment->id)
                 ->pluck('poi.purchase_order_id')
-                ->map(fn($poId) => (int) $poId)
+                ->map(fn ($poId) => (int) $poId)
                 ->unique()
                 ->values();
 
@@ -437,7 +457,7 @@ class ShipmentController extends Controller
 
         $lines = $this->shipmentLineQuery((int) $shipment->id)->get();
 
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
 
         $headerSheet = $spreadsheet->getActiveSheet();
         $headerSheet->setTitle('HEADER');
@@ -525,91 +545,10 @@ class ShipmentController extends Controller
             }
         }
 
-        $filename = 'shipment-draft-' . $shipment->shipment_number . '.xlsx';
-        $tempPath = storage_path('app/temp/' . uniqid('shipment_export_', true) . '.xlsx');
+        $filename = 'shipment-draft-'.$shipment->shipment_number.'.xlsx';
+        $tempPath = storage_path('app/temp/'.uniqid('shipment_export_', true).'.xlsx');
 
-        if (!is_dir(dirname($tempPath))) {
-            mkdir(dirname($tempPath), 0775, true);
-        }
-
-        $writer = new Xlsx($spreadsheet);
-        $writer->save($tempPath);
-
-        return response()->download($tempPath, $filename)->deleteFileAfterSend(true);
-    }
-
-    public function downloadDraftTemplate()
-    {
-        $spreadsheet = new Spreadsheet();
-
-        $headerSheet = $spreadsheet->getActiveSheet();
-        $headerSheet->setTitle('HEADER');
-
-        $headerColumns = [
-            'shipment_number',
-            'shipment_date',
-            'supplier_name',
-            'delivery_note_number',
-            'invoice_number',
-            'invoice_date',
-            'invoice_currency',
-            'supplier_remark',
-            'status',
-        ];
-
-        foreach ($headerColumns as $index => $column) {
-            $headerSheet->setCellValueByColumnAndRow($index + 1, 1, $column);
-        }
-
-        $headerValues = [
-            'SHP-XXXXX',
-            now()->format('Y-m-d'),
-            '',
-            '',
-            '',
-            '',
-            'IDR',
-            '',
-            DocumentTermCodes::SHIPMENT_DRAFT,
-        ];
-
-        foreach ($headerValues as $index => $value) {
-            $headerSheet->setCellValueByColumnAndRow($index + 1, 2, $value);
-        }
-
-        $lineSheet = $spreadsheet->createSheet();
-        $lineSheet->setTitle('LINES');
-
-        $lineColumns = [
-            'shipment_item_id',
-            'purchase_order_item_id',
-            'po_number',
-            'item_code',
-            'item_name',
-            'po_unit_price',
-            'shipped_qty',
-            'invoice_unit_price',
-            'invoice_line_total',
-            'keep',
-        ];
-
-        foreach ($lineColumns as $index => $column) {
-            $lineSheet->setCellValueByColumnAndRow($index + 1, 1, $column);
-        }
-
-        foreach ([$headerSheet, $lineSheet] as $sheet) {
-            $highestColumn = $sheet->getHighestColumn();
-            $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
-
-            for ($col = 1; $col <= $highestColumnIndex; $col++) {
-                $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($col))->setAutoSize(true);
-            }
-        }
-
-        $filename = 'shipment-draft-template.xlsx';
-        $tempPath = storage_path('app/temp/' . uniqid('shipment_template_', true) . '.xlsx');
-
-        if (!is_dir(dirname($tempPath))) {
+        if (! is_dir(dirname($tempPath))) {
             mkdir(dirname($tempPath), 0775, true);
         }
 
@@ -639,7 +578,7 @@ class ShipmentController extends Controller
 
             $header = $parsed['header'];
             $lines = collect($parsed['lines'])
-                ->filter(fn($row) => (string) ($row['keep'] ?? '1') === '1')
+                ->filter(fn ($row) => (string) ($row['keep'] ?? '1') === '1')
                 ->values();
 
             if ($lines->isEmpty()) {
@@ -648,7 +587,7 @@ class ShipmentController extends Controller
                 ]);
             }
 
-            if (!empty($header['shipment_number']) && trim((string) $header['shipment_number']) !== trim((string) $lockedShipment->shipment_number)) {
+            if (! empty($header['shipment_number']) && trim((string) $header['shipment_number']) !== trim((string) $lockedShipment->shipment_number)) {
                 throw ValidationException::withMessages([
                     'file' => 'Shipment number pada file tidak sesuai dengan draft target.',
                 ]);
@@ -656,12 +595,12 @@ class ShipmentController extends Controller
 
             $supplierName = (string) (
                 DB::table('shipments as sh')
-                ->leftJoin('suppliers as s', 's.id', '=', 'sh.supplier_id')
-                ->where('sh.id', $lockedShipment->id)
-                ->value('s.supplier_name') ?? ''
+                    ->leftJoin('suppliers as s', 's.id', '=', 'sh.supplier_id')
+                    ->where('sh.id', $lockedShipment->id)
+                    ->value('s.supplier_name') ?? ''
             );
 
-            if (!empty($header['supplier_name']) && trim((string) $header['supplier_name']) !== trim($supplierName)) {
+            if (! empty($header['supplier_name']) && trim((string) $header['supplier_name']) !== trim($supplierName)) {
                 throw ValidationException::withMessages([
                     'file' => 'Supplier pada file tidak sesuai dengan shipment draft.',
                 ]);
@@ -674,7 +613,7 @@ class ShipmentController extends Controller
             $shipmentDate = $this->nullableString($header['shipment_date'] ?? null) ?: (string) $lockedShipment->shipment_date;
             $invoiceDate = $this->nullableString($header['invoice_date'] ?? null);
 
-            if (!$deliveryNote) {
+            if (! $deliveryNote) {
                 throw ValidationException::withMessages([
                     'file' => 'delivery_note_number wajib diisi pada sheet HEADER.',
                 ]);
@@ -772,9 +711,9 @@ class ShipmentController extends Controller
 
                 $currentLine = $currentLines->get($shipmentItemId);
 
-                if (!$currentLine) {
+                if (! $currentLine) {
                     throw ValidationException::withMessages([
-                        'file' => 'Ada shipment_item_id yang tidak cocok dengan draft target: ' . $shipmentItemId,
+                        'file' => 'Ada shipment_item_id yang tidak cocok dengan draft target: '.$shipmentItemId,
                     ]);
                 }
 
@@ -826,7 +765,7 @@ class ShipmentController extends Controller
                 ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
                 ->where('si.shipment_id', $lockedShipment->id)
                 ->pluck('poi.purchase_order_id')
-                ->map(fn($poId) => (int) $poId)
+                ->map(fn ($poId) => (int) $poId)
                 ->unique()
                 ->values();
 
@@ -852,6 +791,107 @@ class ShipmentController extends Controller
             ->with('success', 'Draft shipment berhasil diperbarui dari Excel.');
     }
 
+    public function downloadBulkDraftTemplate()
+    {
+        $spreadsheet = new Spreadsheet;
+
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('SHIPMENT IMPORT');
+
+        $columns = ShipmentDraftBulkImport::COLUMNS;
+
+        foreach ($columns as $index => $column) {
+            $sheet->setCellValueByColumnAndRow($index + 1, 1, $column);
+        }
+
+        $sampleRows = [
+            [
+                'Otomatis',
+                now()->format('Y-m-d'),
+                'SUP001',
+                'DN001',
+                'INV001',
+                'Contoh catatan supplier',
+                'PO-0001',
+                'ITM001',
+                '50000',
+                '100',
+            ],
+            [
+                'Otomatis',
+                now()->format('Y-m-d'),
+                'SUP001',
+                'DN001',
+                '',
+                'Contoh catatan supplier',
+                'PO-0001',
+                'ITM002',
+                '75000',
+                '50',
+            ],
+            [
+                'Otomatis',
+                now()->format('Y-m-d'),
+                'SUP002',
+                'DN002',
+                'INV002',
+                '',
+                'PO-0002',
+                'ITM003',
+                '100000',
+                '25',
+            ],
+        ];
+
+        $rowNum = 2;
+        foreach ($sampleRows as $sampleRow) {
+            foreach ($sampleRow as $index => $value) {
+                $sheet->setCellValueByColumnAndRow($index + 1, $rowNum, $value);
+            }
+            $rowNum++;
+        }
+
+        $highestColumn = $sheet->getHighestColumn();
+        $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
+
+        for ($col = 1; $col <= $highestColumnIndex; $col++) {
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($col))->setAutoSize(true);
+        }
+
+        $filename = 'shipment-bulk-draft-template.xlsx';
+        $tempPath = storage_path('app/temp/'.uniqid('shipment_bulk_template_', true).'.xlsx');
+
+        if (! is_dir(dirname($tempPath))) {
+            mkdir(dirname($tempPath), 0775, true);
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        return response()->download($tempPath, $filename)->deleteFileAfterSend(true);
+    }
+
+    public function importBulkDraftExcel(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file'],
+        ], [
+            'file.required' => 'File Excel wajib dipilih.',
+        ]);
+
+        $import = new ShipmentDraftBulkImport;
+
+        try {
+            $import->handle($request->file('file'));
+        } catch (ValidationException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        $message = "Import berhasil. {$import->inserted} shipment draft ditambahkan.";
+
+        return redirect()->route('shipments.index')->with('success', $message);
+    }
+
     private function shipmentWorklistBaseQuery()
     {
         $poNumbersExpression = $this->groupConcatPoNumbersExpression();
@@ -868,7 +908,7 @@ class ShipmentController extends Controller
                 DB::raw('COALESCE(s.supplier_name, anchor_s.supplier_name) as supplier_name'),
                 DB::raw('COUNT(DISTINCT si.id) as line_count'),
                 DB::raw('COUNT(DISTINCT po.id) as po_count'),
-                DB::raw($poNumbersExpression . ' as po_numbers'),
+                DB::raw($poNumbersExpression.' as po_numbers'),
                 DB::raw('COALESCE(SUM(si.shipped_qty),0) as total_shipped_qty'),
                 DB::raw('COALESCE(SUM(si.received_qty),0) as total_received_qty'),
                 DB::raw('COALESCE(SUM(si.shipped_qty - si.received_qty),0) as total_open_qty')
@@ -896,16 +936,16 @@ class ShipmentController extends Controller
     private function groupConcatPoNumbersExpression(): string
     {
         return DB::connection()->getDriverName() === 'sqlite'
-            ? "GROUP_CONCAT(DISTINCT po.po_number)"
+            ? 'GROUP_CONCAT(DISTINCT po.po_number)'
             : "GROUP_CONCAT(DISTINCT po.po_number ORDER BY po.po_number SEPARATOR ', ')";
     }
 
     private function candidateItemsQuery(Request $request)
     {
         return $this->candidateItemsBaseQuery()
-            ->when($request->filled('supplier_id'), fn($q) => $q->where('po.supplier_id', $request->integer('supplier_id')))
+            ->when($request->filled('supplier_id'), fn ($q) => $q->where('po.supplier_id', $request->integer('supplier_id')))
             ->when($request->filled('keyword'), function ($q) use ($request) {
-                $keyword = '%' . $request->string('keyword') . '%';
+                $keyword = '%'.$request->string('keyword').'%';
                 $q->where(function ($inner) use ($keyword) {
                     $inner->where('po.po_number', 'like', $keyword)
                         ->orWhere('i.item_code', 'like', $keyword)
@@ -963,7 +1003,7 @@ class ShipmentController extends Controller
     {
         return DB::table('shipments as sh')
             ->leftJoin('suppliers as s', 's.id', '=', 'sh.supplier_id')
-            ->select('sh.*', 's.supplier_name');
+            ->select('sh.*', 's.supplier_name', 's.supplier_code');
     }
 
     private function shipmentLineQuery(int $shipmentId)
@@ -1020,7 +1060,7 @@ class ShipmentController extends Controller
             ->join('items as i', 'i.id', '=', 'poi.item_id')
             ->whereIn('si.purchase_order_item_id', $purchaseOrderItemIds)
             ->where('sh.status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
-            ->when($excludeShipmentId, fn($query) => $query->where('si.shipment_id', '!=', $excludeShipmentId))
+            ->when($excludeShipmentId, fn ($query) => $query->where('si.shipment_id', '!=', $excludeShipmentId))
             ->select(
                 'si.purchase_order_item_id',
                 'si.shipment_id',
@@ -1047,7 +1087,7 @@ class ShipmentController extends Controller
         $headerSheet = $spreadsheet->getSheetByName('HEADER');
         $lineSheet = $spreadsheet->getSheetByName('LINES');
 
-        if (!$headerSheet || !$lineSheet) {
+        if (! $headerSheet || ! $lineSheet) {
             throw ValidationException::withMessages([
                 'file' => 'File Excel wajib memiliki sheet HEADER dan LINES.',
             ]);
@@ -1068,7 +1108,7 @@ class ShipmentController extends Controller
     private function extractSpreadsheetAssocRow(array $rows, string $sheetName): array
     {
         $rows = array_values(array_filter($rows, function ($row) {
-            return is_array($row) && count(array_filter($row, fn($value) => $value !== null && $value !== '')) > 0;
+            return is_array($row) && count(array_filter($row, fn ($value) => $value !== null && $value !== '')) > 0;
         }));
 
         if (count($rows) < 2) {
@@ -1077,7 +1117,7 @@ class ShipmentController extends Controller
             ]);
         }
 
-        $header = array_map(fn($value) => trim((string) $value), $rows[0]);
+        $header = array_map(fn ($value) => trim((string) $value), $rows[0]);
         $values = array_pad($rows[1], count($header), null);
 
         return array_combine($header, $values);
@@ -1086,7 +1126,7 @@ class ShipmentController extends Controller
     private function extractSpreadsheetAssocRows(array $rows, string $sheetName): array
     {
         $rows = array_values(array_filter($rows, function ($row) {
-            return is_array($row) && count(array_filter($row, fn($value) => $value !== null && $value !== '')) > 0;
+            return is_array($row) && count(array_filter($row, fn ($value) => $value !== null && $value !== '')) > 0;
         }));
 
         if (count($rows) < 2) {
@@ -1095,13 +1135,13 @@ class ShipmentController extends Controller
             ]);
         }
 
-        $header = array_map(fn($value) => trim((string) $value), $rows[0]);
+        $header = array_map(fn ($value) => trim((string) $value), $rows[0]);
         $dataRows = [];
 
         foreach (array_slice($rows, 1) as $row) {
             $padded = array_pad($row, count($header), null);
 
-            if (!array_filter($padded, fn($value) => $value !== null && $value !== '')) {
+            if (! array_filter($padded, fn ($value) => $value !== null && $value !== '')) {
                 continue;
             }
 

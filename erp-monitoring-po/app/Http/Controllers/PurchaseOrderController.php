@@ -51,7 +51,7 @@ class PurchaseOrderController extends Controller
             'Delayed',
         ];
 
-        $summaryChips = collect($canonicalStatusOrder)
+        $poStatusChips = collect($canonicalStatusOrder)
             ->map(fn ($status) => [
                 'value' => $status,
                 'label' => DocumentTermStatus::label(DomainStatus::GROUP_PO_STATUS, $status),
@@ -65,13 +65,54 @@ class PurchaseOrderController extends Controller
             ->values()
             ->all();
 
+        $itemStatusCounts = DB::table('purchase_order_items as poi')
+            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->select('poi.item_status', DB::raw('COUNT(DISTINCT po.id) as count'))
+            ->whereIn('poi.item_status', \App\Support\DocumentTermCodes::poItemStatuses())
+            ->groupBy('poi.item_status')
+            ->get()
+            ->mapWithKeys(fn ($row) => [
+                \App\Support\DomainStatus::legacyValue(\App\Support\DomainStatus::GROUP_PO_ITEM_STATUS, (string) $row->item_status) => (int) $row->count,
+            ])
+            ->all();
+
+        $itemCanonicalOrder = [
+            \App\Support\DocumentTermCodes::ITEM_WAITING,
+            \App\Support\DocumentTermCodes::ITEM_CONFIRMED,
+            \App\Support\DocumentTermCodes::ITEM_LATE,
+            \App\Support\DocumentTermCodes::ITEM_PARTIAL,
+            \App\Support\DocumentTermCodes::ITEM_CLOSED,
+            \App\Support\DocumentTermCodes::ITEM_FORCE_CLOSED,
+            \App\Support\DocumentTermCodes::ITEM_CANCELLED,
+        ];
+
+        $itemStatusChips = collect($itemCanonicalOrder)
+            ->map(fn ($status) => [
+                'value' => $status,
+                'label' => \App\Support\DocumentTermStatus::label(\App\Support\DomainStatus::GROUP_PO_ITEM_STATUS, $status),
+                'count' => $itemStatusCounts[$status] ?? 0,
+            ])
+            ->prepend([
+                'value' => '',
+                'label' => 'Semua',
+                'count' => array_sum($itemStatusCounts),
+            ])
+            ->values()
+            ->all();
+
         $filterPoNumber = $request->query('po_number', '');
         $filterSupplierCode = $request->query('supplier_code', '');
         $filterDateFrom = $request->query('date_from', '');
         $filterDateTo = $request->query('date_to', '');
-        $filterStatus = $request->query('status', '');
+        $filterPoStatus = $request->query('po_status', '');
+        $filterItemStatus = $request->query('item_status', '');
 
-        return view('po.index', compact('rows', 'suppliers', 'summaryChips', 'filterPoNumber', 'filterSupplierCode', 'filterDateFrom', 'filterDateTo', 'filterStatus'));
+        return view('po.index', compact(
+            'rows', 'suppliers', 'poStatusChips', 'itemStatusChips',
+            'filterPoNumber', 'filterSupplierCode', 'filterDateFrom', 'filterDateTo',
+            'filterPoStatus', 'filterItemStatus'
+        ));
     }
 
     public function create(): View

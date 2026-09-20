@@ -18,47 +18,66 @@ use Illuminate\View\View;
 
 class GoodsReceiptController extends Controller
 {
-    public function index(
+    public function dashboard(
         Request $request,
         ReceivingHistoryQuery $receivingHistoryQuery,
         ShipmentReceivingQuery $shipmentReceivingQuery
-    ): View
-    {
-        $mode = $request->route('mode', 'process');
-        $clearSelection = $request->boolean('clear_selection');
-
-        $rows = $receivingHistoryQuery->paginate($request);
+    ): View {
+        $recentRows = $receivingHistoryQuery->paginate($request, 10);
         $shipmentDocuments = $shipmentReceivingQuery->documents($request);
 
-        $selectedShipmentId = $request->integer('shipment_id');
-        if ($mode === 'process' && ! $selectedShipmentId && ! $clearSelection && $shipmentDocuments->isNotEmpty()) {
-            $selectedShipmentId = (int) $shipmentDocuments->first()->id;
-        }
+        $documentCount = $shipmentDocuments->count();
+        $readyCount = $shipmentDocuments->whereNotIn('status', ['Closed', 'Cancelled'])->count();
+        $outstandingQty = $shipmentDocuments->sum('outstanding_qty');
 
-        $selectedShipment = $selectedShipmentId
-            ? $shipmentDocuments->firstWhere('id', $selectedShipmentId)
-            : null;
-
-        if ($mode === 'process' && $selectedShipmentId) {
-            $shipmentDocuments = $shipmentDocuments
-                ->reject(fn($document) => (int) $document->id === $selectedShipmentId)
-                ->values();
-        }
-
-        $shipmentItems = $mode === 'process' && $selectedShipmentId
-            ? $shipmentReceivingQuery->itemsForShipment($selectedShipmentId)
-            : collect();
-
-        $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name']);
+        $recentHistoryCount = DB::table('goods_receipts')->count();
+        $cancelledCount = DB::table('goods_receipts')->where('status', DocumentTermCodes::GR_CANCELLED)->count();
 
         return view('receiving.index', compact(
-            'rows',
+            'recentRows',
             'shipmentDocuments',
-            'shipmentItems',
-            'selectedShipment',
-            'suppliers',
-            'mode'
+            'documentCount',
+            'readyCount',
+            'outstandingQty',
+            'recentHistoryCount',
+            'cancelledCount'
         ));
+    }
+
+    public function pending(
+        Request $request,
+        ShipmentReceivingQuery $shipmentReceivingQuery
+    ): View {
+        $shipmentDocuments = $shipmentReceivingQuery->documents($request);
+        $suppliers = DB::table('suppliers')->orderBy('supplier_name')->get(['id', 'supplier_name']);
+
+        return view('receiving.pending', compact('shipmentDocuments', 'suppliers'));
+    }
+
+    public function create(
+        Request $request,
+        ShipmentReceivingQuery $shipmentReceivingQuery,
+        int $shipment
+    ): View {
+        $shipmentDocuments = $shipmentReceivingQuery->documents($request);
+        $selectedShipment = $shipmentDocuments->firstWhere('id', $shipment);
+
+        if (! $selectedShipment) {
+            abort(404, 'Shipment tidak ditemukan atau tidak tersedia untuk receiving.');
+        }
+
+        $shipmentItems = $shipmentReceivingQuery->itemsForShipment($shipment);
+
+        return view('receiving.create', compact('selectedShipment', 'shipmentItems'));
+    }
+
+    public function history(
+        Request $request,
+        ReceivingHistoryQuery $receivingHistoryQuery
+    ): View {
+        $rows = $receivingHistoryQuery->paginate($request);
+
+        return view('receiving.history', compact('rows'));
     }
 
     public function show(string $id): View
@@ -235,10 +254,10 @@ class GoodsReceiptController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
-        return redirect()->route('receiving.process', [
-            'shipment_id' => $v['shipment_id'],
+        return redirect()->route('receiving.pending', [
             'supplier_id' => $request->input('supplier_id'),
             'document_number' => $request->input('search_document_number', $request->input('document_number')),
+            'keyword' => $request->input('keyword'),
         ])->with('success', 'Goods Receipt berhasil diposting untuk dokumen shipment terpilih.');
     }
 

@@ -166,11 +166,17 @@ return [
             'label' => 'Sampai Tanggal',
             'type' => 'date',
         ],
-        'status' => [
-            'label' => 'Status',
+        'po_status' => [
+            'label' => 'PO Status',
             'type' => 'select',
             'placeholder' => 'Semua status',
             'dynamic_options' => 'po_status',
+        ],
+        'item_status' => [
+            'label' => 'Item Status',
+            'type' => 'select',
+            'placeholder' => 'Semua status',
+            'dynamic_options' => 'po_item_status',
         ],
     ],
 ];

@@ -16,13 +16,22 @@ class PurchaseOrderIndexQuery
             ->leftJoin('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->select('po.*', 's.supplier_name', 's.supplier_code')
             ->when(
-                $request->filled('status'),
+                $request->filled('po_status'),
                 fn (Builder $query) => StatusQuery::whereEquals(
                     $query,
                     'po.status',
                     DomainStatus::GROUP_PO_STATUS,
-                    trim((string) $request->input('status'))
+                    trim((string) $request->input('po_status'))
                 )
+            )
+            ->when(
+                $request->filled('item_status'),
+                fn (Builder $query) => $query->whereExists(function (Builder $q) use ($request) {
+                    $q->select(DB::raw(1))
+                        ->from('purchase_order_items as poi')
+                        ->whereRaw('poi.purchase_order_id = po.id')
+                        ->where('poi.item_status', trim((string) $request->input('item_status')));
+                })
             )
             ->when(
                 $request->filled('po_number'),

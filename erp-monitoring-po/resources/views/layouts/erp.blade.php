@@ -1251,7 +1251,9 @@
                 ['label' => 'Create Draft Shipment', 'description' => 'Susun draft shipment baru', 'route' => route('shipments.create'), 'roles' => ['administrator', 'staff']],
                 ['label' => 'Shipment Worklist', 'description' => 'Lihat draft, shipped, dan partial received', 'route' => route('shipments.index'), 'roles' => ['administrator', 'staff']],
                 ['label' => 'Tracking', 'description' => 'Unified PO & Barang fulfillment tracking', 'route' => route('tracking.index'), 'roles' => ['administrator', 'staff', 'supervisor']],
-                ['label' => 'Open Receiving', 'description' => 'Proses receiving per shipment', 'route' => route('receiving.process'), 'roles' => ['administrator', 'staff']],
+                ['label' => 'Receiving', 'description' => 'Dashboard receiving dan pending shipment', 'route' => route('receiving.index'), 'roles' => ['administrator', 'staff']],
+                ['label' => 'Pending Receiving', 'description' => 'Proses receiving untuk shipment yang siap diterima', 'route' => route('receiving.pending'), 'roles' => ['administrator', 'staff']],
+                ['label' => 'Receiving History', 'description' => 'Riwayat goods receipt yang sudah diposting', 'route' => route('receiving.history'), 'roles' => ['administrator', 'staff']],
                 ['label' => 'Audit Viewer', 'description' => 'Review audit log dan before-after changes', 'route' => route('audit.index'), 'roles' => ['administrator']],
                 ['label' => 'System Parameters', 'description' => 'Pengaturan sistem dan istilah dokumen', 'route' => route('settings.index'), 'roles' => ['administrator']],
                 ['label' => 'Users', 'description' => 'Manajemen user dan akses', 'route' => route('users.index'), 'roles' => ['administrator']],
@@ -1341,36 +1343,9 @@
             }
 
             $shipmentMenuOpen = str_starts_with($currentRouteName, 'shipments.');
-            $receivingMenuOpen = str_starts_with($currentRouteName, 'receiving.');
-
-            $shipmentWorklistActive =
-                (($currentRouteName === 'shipments.index' || $currentRouteName === 'shipments.process') && $shipmentView === 'worklist') ||
-                (request()->routeIs('shipments.show') && in_array($shipmentStatus, [
-                    \App\Support\DocumentTermCodes::SHIPMENT_SHIPPED,
-                    \App\Support\DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED,
-                ], true));
-
-            $shipmentDraftActive =
-                $currentRouteName === 'shipments.create' ||
-                request()->routeIs('shipments.edit') ||
-                (($currentRouteName === 'shipments.index' || $currentRouteName === 'shipments.process') && $shipmentView === 'draft') ||
-                (request()->routeIs('shipments.show') && $shipmentStatus === \App\Support\DocumentTermCodes::SHIPMENT_DRAFT);
-
-            $shipmentArchiveActive =
-                $currentRouteName === 'shipments.history' ||
-                (($currentRouteName === 'shipments.index' || $currentRouteName === 'shipments.process') && $shipmentView === 'history') ||
-                (request()->routeIs('shipments.show') && in_array($shipmentStatus, [
-                    \App\Support\DocumentTermCodes::SHIPMENT_RECEIVED,
-                    \App\Support\DocumentTermCodes::SHIPMENT_CANCELLED,
-                ], true));
-
-            $receivingProcessActive =
-                ($currentRouteName === 'receiving.index' || $currentRouteName === 'receiving.process') && $receivingMode === 'process';
-
-            $receivingHistoryActive =
-                $currentRouteName === 'receiving.history' ||
-                (request()->routeIs('receiving.index') && $receivingMode === 'history') ||
-                request()->routeIs('receiving.show');
+            $receivingPendingActive = $currentRouteName === 'receiving.pending' || $currentRouteName === 'receiving.create';
+            $receivingHistoryActive = $currentRouteName === 'receiving.history' || $currentRouteName === 'receiving.show';
+            $receivingDashboardActive = $currentRouteName === 'receiving.index';
         @endphp
 
         <nav class="main-header navbar navbar-expand">
@@ -1449,21 +1424,21 @@
                         @if ($currentUser?->hasAnyRole(['administrator', 'staff']))
                             <li class="nav-header">Master Data</li>
 
-                            <li class="nav-item">
-                                <a href="{{ route('suppliers.index') }}"
-                                    class="nav-link {{ request()->routeIs('suppliers.*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-truck"></i>
-                                    <p>Suppliers</p>
-                                </a>
-                            </li>
+<li class="nav-item">
+                            <a href="{{ route('suppliers.index') }}"
+                                class="nav-link {{ request()->routeIs('suppliers.*') ? 'active' : '' }}">
+                                <i class="nav-icon fas fa-truck"></i>
+                                <p>Suppliers</p>
+                            </a>
+                        </li>
 
-                            <li class="nav-item">
-                                <a href="{{ route('items.index') }}"
-                                    class="nav-link {{ request()->routeIs('items.*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-tags"></i>
-                                    <p>Items</p>
-                                </a>
-                            </li>
+                        <li class="nav-item">
+                            <a href="{{ route('items.index') }}"
+                                class="nav-link {{ request()->routeIs('items.*') ? 'active' : '' }}">
+                                <i class="nav-icon fas fa-tags"></i>
+                                <p>Items</p>
+                            </a>
+                        </li>
 
                             <li class="nav-item">
                                 <a href="{{ route('item-categories.index') }}"
@@ -1511,33 +1486,12 @@
                                 </a>
                             </li>
 
-                            <li class="nav-item has-treeview {{ $receivingMenuOpen ? 'menu-open' : '' }}">
-                                <a href="#"
-                                    class="nav-link {{ $receivingMenuOpen ? 'active' : '' }}">
+                            <li class="nav-item">
+                                <a href="{{ route('receiving.index') }}"
+                                    class="nav-link {{ $receivingDashboardActive ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-box-open"></i>
-                                    <p>
-                                        Receiving
-                                        <i class="right fas fa-angle-left"></i>
-                                    </p>
+                                    <p>Receiving</p>
                                 </a>
-
-                                <ul class="nav nav-treeview">
-                                    <li class="nav-item">
-                                        <a href="{{ route('receiving.process') }}"
-                                            class="nav-link {{ $receivingProcessActive ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>Open Receiving</p>
-                                        </a>
-                                    </li>
-
-                                    <li class="nav-item">
-                                        <a href="{{ route('receiving.history') }}"
-                                            class="nav-link {{ $receivingHistoryActive ? 'active' : '' }}">
-                                            <i class="far fa-circle nav-icon"></i>
-                                            <p>History</p>
-                                        </a>
-                                    </li>
-                                </ul>
                             </li>
                         @endif
 

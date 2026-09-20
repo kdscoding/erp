@@ -48,12 +48,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tracking', [DashboardController::class, 'tracking'])->name('tracking.index');
 
     Route::middleware('role:administrator|staff')->group(function () {
-        Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
-        Route::get('/suppliers/create', [SupplierController::class, 'create'])->name('suppliers.create');
-        Route::post('/suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
-        Route::get('/suppliers/{id}/edit', [SupplierController::class, 'edit'])->name('suppliers.edit');
-        Route::put('/suppliers/{id}', [SupplierController::class, 'update'])->name('suppliers.update');
-        Route::patch('/suppliers/{id}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle-status');
 
         Route::get('/masters/item-categories', [ItemCategoryController::class, 'index'])->name('item-categories.index');
         Route::get('/masters/item-categories/create', [ItemCategoryController::class, 'create'])->name('item-categories.create');
@@ -77,6 +71,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/masters/items/excel/template', [ItemController::class, 'downloadTemplate'])->name('items.template');
         Route::post('/masters/items/import', [ItemController::class, 'import'])->name('items.import');
 
+        Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
+        Route::get('/suppliers/create', [SupplierController::class, 'create'])->name('suppliers.create');
+        Route::post('/suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
+        Route::get('/suppliers/{id}/edit', [SupplierController::class, 'edit'])->name('suppliers.edit');
+        Route::put('/suppliers/{id}', [SupplierController::class, 'update'])->name('suppliers.update');
+        Route::patch('/suppliers/{id}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle-status');
+
         Route::get('/po/create', [PurchaseOrderController::class, 'create'])->name('po.create');
         Route::post('/po', [PurchaseOrderController::class, 'store'])->name('po.store');
         Route::get('/po/import-template', [PurchaseOrderController::class, 'downloadTemplate'])->name('po.import-template');
@@ -99,7 +100,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/shipments/{id}/cancel-draft', [ShipmentController::class, 'cancelDraft'])->name('shipments.cancel-draft');
         Route::get('/shipments/{id}/export-excel', [ShipmentController::class, 'exportDraftExcel'])->name('shipments.export-excel');
         Route::post('/shipments/import-draft-excel', [ShipmentController::class, 'importDraftExcel'])->name('shipments.import-excel');
-        Route::get('/shipments/template/draft-excel', [ShipmentController::class, 'downloadDraftTemplate'])->name('shipments.template');
+        Route::get('/shipments/template/bulk-draft-excel', [ShipmentController::class, 'downloadBulkDraftTemplate'])->name('shipments.bulk-template');
+        Route::post('/shipments/import-bulk-draft-excel', [ShipmentController::class, 'importBulkDraftExcel'])->name('shipments.bulk-import');
     });
 
     Route::get('/po/{id}', [PurchaseOrderController::class, 'show'])->middleware('role:administrator|staff|supervisor')->name('po.show');
@@ -115,11 +117,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::middleware('role:administrator|staff')->group(function () {
-        Route::get('/receiving', [GoodsReceiptController::class, 'index'])->defaults('mode', 'process')->name('receiving.index');
+        Route::get('/receiving', [GoodsReceiptController::class, 'dashboard'])->name('receiving.index');
         Route::get('/receiving/process', [GoodsReceiptController::class, 'index'])->defaults('mode', 'process')->name('receiving.process');
-        Route::get('/receiving/history', [GoodsReceiptController::class, 'index'])->defaults('mode', 'history')->name('receiving.history');
-        Route::get('/receiving/history/{id}', [GoodsReceiptController::class, 'show'])->name('receiving.show');
+        Route::get('/receiving/pending', [GoodsReceiptController::class, 'pending'])->name('receiving.pending');
+        Route::get('/receiving/pending/{shipment}', [GoodsReceiptController::class, 'create'])->name('receiving.create');
         Route::post('/receiving', [GoodsReceiptController::class, 'store'])->name('receiving.store');
+        Route::get('/receiving/history', [GoodsReceiptController::class, 'history'])->name('receiving.history');
+        Route::get('/receiving/history/{id}', [GoodsReceiptController::class, 'show'])->name('receiving.show');
         Route::patch('/receiving/history/{id}/cancel', [GoodsReceiptController::class, 'cancel'])->name('receiving.cancel');
     });
 

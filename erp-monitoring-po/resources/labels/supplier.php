@@ -6,7 +6,7 @@ return [
         'plural' => 'Suppliers',
         'title' => 'Manajemen Supplier',
         'description' => 'Kelola data supplier untuk procurement',
-        'create_title' => 'Tambah Supplier',
+        'create_title' => ' tambah Supplier',
         'create_subtitle' => 'Input data supplier baru.',
         'edit_title' => 'Edit Supplier',
         'edit_subtitle' => 'Perbarui identitas supplier.',
@@ -22,6 +22,26 @@ return [
             'label' => 'Nama Supplier',
             'placeholder' => 'Nama perusahaan supplier',
             'help' => 'Nama lengkap perusahaan supplier',
+        ],
+        'address' => [
+            'label' => 'alamat',
+            'placeholder' => 'alamat supplier',
+            'help' => 'alamat lengkap supplier',
+        ],
+        'phone' => [
+            'label' => 'Telepon',
+            'placeholder' => 'Nomor telepon',
+            'help' => 'Nomor telepon yang dapat dihubungi',
+        ],
+        'email' => [
+            'label' => 'Email',
+            'placeholder' => 'email@contoh.com',
+            'help' => 'Email aktif untuk komunikasi',
+        ],
+        'contact_person' => [
+            'label' => 'Contact Person',
+            'placeholder' => 'Nama contact person',
+            'help' => 'Nama orang yang dapat dihubungi',
         ],
         'status' => [
             'label' => 'Status',
@@ -67,7 +87,7 @@ return [
     ],
 
     'actions' => [
-        'create' => 'Tambah Supplier',
+        'create' => ':Tambah Supplier',
         'edit' => 'Edit',
         'delete' => 'Hapus',
         'view' => 'Detail',
