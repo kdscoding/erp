@@ -45,6 +45,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/traceability', [TraceabilityController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('traceability.index');
 
     Route::get('/tracking', [DashboardController::class, 'tracking'])->name('tracking.index');
+    Route::get('/tracking/data', [DashboardController::class, 'trackingData'])->name('tracking.data');
 
     Route::middleware('role:administrator|staff')->group(function () {
 

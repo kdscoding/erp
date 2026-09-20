@@ -984,7 +984,6 @@ $metrics = [
     {
         $supplierId = $this->resolveSupplierId($request);
         ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
-        $currentDateSql = $this->currentDateExpression();
 
         $suppliers = DB::table('suppliers')
             ->orderBy('supplier_name')
@@ -997,19 +996,113 @@ $metrics = [
         $filterItemStatus = $request->query('item_status', 'all');
         $filterCategory = $request->query('category_id', 'all');
 
+        $categories = DB::table('item_categories')
+            ->where('is_active', true)
+            ->orderBy('category_name')
+            ->get(['id', 'category_name']);
+
+        $itemRows = $this->buildTrackingRows($request);
+
+        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+            $itemRows->forPage(1, 25)->values(),
+            $itemRows->count(),
+            25,
+            1,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        return view('tracking', compact(
+            'suppliers',
+            'categories',
+            'filterSupplierId',
+            'filterDateFrom',
+            'filterDateTo',
+            'filterPoStatus',
+            'filterItemStatus',
+            'filterCategory',
+            'itemRows',
+            'paginator'
+        ));
+    }
+
+    public function trackingData(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $itemRows = $this->buildTrackingRows($request);
+
+        $search = trim($request->query('search', ''));
+        if ($search !== '') {
+            $itemRows = $itemRows->filter(function ($item) use ($search) {
+                $fields = [
+                    $item['po_number'] ?? '',
+                    $item['item_code'] ?? '',
+                    $item['item_name'] ?? '',
+                    $item['item_category_name'] ?? '',
+                    $item['item_status'] ?? '',
+                    $item['monitoring_status'] ?? '',
+                    $item['supplier_name'] ?? '',
+                    $item['stage'] ?? '',
+                ];
+                foreach ($fields as $field) {
+                    if (stripos((string) $field, $search) !== false) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
+
+        $perPage = (int) $request->query('per_page', 25);
+        $page = (int) $request->query('page', 1);
+        $total = $itemRows->count();
+
+        $pageItems = $itemRows->forPage($page, $perPage);
+
+        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+            $pageItems->values(),
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        $rowsHtml = view('tracking.rows', ['itemRows' => $pageItems])->render();
+        $paginationHtml = $paginator->render();
+
+        return response()->json([
+            'rows' => $rowsHtml,
+            'pagination' => $paginationHtml,
+            'total' => $total,
+            'per_page' => $perPage,
+            'current_page' => $page,
+            'last_page' => $paginator->lastPage(),
+        ]);
+    }
+
+    protected function buildTrackingRows(Request $request): \Illuminate\Support\Collection
+    {
+        $supplierId = $this->resolveSupplierId($request);
+        ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
         $currentDateSql = ErpFlow::currentDateExpression();
+
+        $filterSupplierId = $supplierId;
+        $filterDateFrom = $dateFrom;
+        $filterDateTo = $dateTo;
+        $filterPoStatus = $request->query('po_status', 'all');
+        $filterItemStatus = $request->query('item_status', 'all');
+        $filterCategory = $request->query('category_id', 'all');
 
         $activePoSql = StatusQuery::sqlNotEquals('po.status', DomainStatus::GROUP_PO_STATUS, DocumentTermCodes::PO_CLOSED)
             . ' AND '
             . StatusQuery::sqlNotEquals('po.status', DomainStatus::GROUP_PO_STATUS, DocumentTermCodes::PO_CANCELLED);
         $activeItemSql = StatusQuery::sqlNotEquals('poi.item_status', DomainStatus::GROUP_PO_ITEM_STATUS, DocumentTermCodes::ITEM_CANCELLED);
 
-        $categories = DB::table('item_categories')
-            ->where('is_active', true)
-            ->orderBy('category_name')
-            ->get(['id', 'category_name']);
-
-                $itemRows = DB::table('purchase_order_items as poi')
+        $itemRows = DB::table('purchase_order_items as poi')
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->join('items as i', 'i.id', '=', 'poi.item_id')
@@ -1079,7 +1172,7 @@ $metrics = [
             ])
             ->groupBy('item_id');
 
-        $itemRows = $itemRows->map(function ($group) use ($currentDateSql) {
+        return $itemRows->map(function ($group) use ($currentDateSql) {
             $first = (object) $group->first();
             $shipments = [];
             foreach ($group as $row) {
@@ -1096,7 +1189,6 @@ $metrics = [
                 }
             }
 
-            // Compute monitoring_status matching PO page logic
             $monitoringStatus = match (true) {
                 $first->item_status === DocumentTermCodes::ITEM_CANCELLED => DocumentTermCodes::ITEM_CANCELLED,
                 $first->item_status === DocumentTermCodes::ITEM_FORCE_CLOSED => DocumentTermCodes::ITEM_FORCE_CLOSED,
@@ -1168,21 +1260,9 @@ $metrics = [
                 'shipments' => $shipments,
             ];
         });
-
-        return view('tracking', compact(
-            'suppliers',
-            'categories',
-            'filterSupplierId',
-            'filterDateFrom',
-            'filterDateTo',
-            'filterPoStatus',
-            'filterItemStatus',
-            'filterCategory',
-            'itemRows'
-        ));
     }
 
-private function resolveDateRange(Request $request): array
+    private function resolveDateRange(Request $request): array
     {
         $today = Carbon::today();
         $savedView = (string) $request->query('saved_view', 'default');

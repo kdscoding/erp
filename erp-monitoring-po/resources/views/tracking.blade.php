@@ -46,6 +46,12 @@
         .progress-bar-cell { display: flex; align-items: center; gap: 6px; justify-content: center; }
         .progress-bar-cell .progress { height: 8px; }
         .progress-bar-cell .progress-bar { transition: width .3s ease; }
+
+        .tracking-row-progress-fully { background-color: #d4edda !important; }
+        .tracking-row-progress-partial { background-color: #fff3cd !important; }
+        .tracking-row-progress-none { background-color: #f0f0f0 !important; }
+
+        .tracking-pagination-wrap { margin-top: 14px; text-align: center; }
     </style>
 
     <div class="page-shell">
@@ -153,7 +159,7 @@
                         </thead>
                         <tbody id="tracking-tbody">
                             @forelse($itemRows as $item)
-                                <tr class="tracking-row" data-po-id="{{ $item['po_id'] }}" data-po-number="{{ strtolower($item['po_number'] ?? '') }}" data-item-code="{{ strtolower($item['item_code'] ?? '') }}" data-item-name="{{ strtolower($item['item_name'] ?? '') }}" data-status-po="{{ strtolower($item['stage'] ?? '') }}" data-status-barang="{{ strtolower($item['monitoring_status'] ?? $item['item_status'] ?? '') }}" data-supplier="{{ strtolower($item['supplier_name'] ?? '') }}" data-item-category="{{ strtolower($item['item_category_name'] ?? '') }}">
+                                <tr class="tracking-row tracking-row-{{ $item['progress_class'] }}" data-po-id="{{ $item['po_id'] }}" data-po-number="{{ strtolower($item['po_number'] ?? '') }}" data-item-code="{{ strtolower($item['item_code'] ?? '') }}" data-item-name="{{ strtolower($item['item_name'] ?? '') }}" data-status-po="{{ strtolower($item['stage'] ?? '') }}" data-status-barang="{{ strtolower($item['monitoring_status'] ?? $item['item_status'] ?? '') }}" data-supplier="{{ strtolower($item['supplier_name'] ?? '') }}" data-item-category="{{ strtolower($item['item_category_name'] ?? '') }}">
                                     <td>
                                         <a href="{{ route($item['ref_type'], $item['ref_param']) }}" class="doc-number text-decoration-none">
                                             {{ $item['po_number'] }}
@@ -269,6 +275,11 @@
                         </tbody>
                     </table>
             </div>
+            <div id="tracking-pagination" class="tracking-pagination-wrap">
+                @isset($paginator)
+                    {{ $paginator->links() }}
+                @endisset
+            </div>
         </section>
     </div>
 
@@ -282,6 +293,61 @@
             if (icon) {
                 icon.className = isHidden ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
             }
+        }
+
+        let trackingDebounceTimer = null;
+
+        function fetchTrackingData(params) {
+            const tbody = document.getElementById('tracking-tbody');
+            const paginationWrap = document.getElementById('tracking-pagination');
+            if (!tbody || !paginationWrap) return;
+
+            tbody.innerHTML = '<tr><td colspan="15" class="text-center text-muted py-4"><i class="fas fa-spinner fa-spin"></i> Memuat data...</td></tr>';
+
+            const queryString = new URLSearchParams(params).toString();
+            const url = '{{ route('tracking.data') }}?' + queryString;
+
+            fetch(url)
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    tbody.innerHTML = data.rows;
+                    paginationWrap.innerHTML = data.pagination;
+                    bindPaginationEvents();
+                })
+                .catch(function () {
+                    tbody.innerHTML = '<tr><td colspan="15" class="text-center text-muted py-4">Gagal memuat data. Silakan coba lagi.</td></tr>';
+                });
+        }
+
+        function bindPaginationEvents() {
+            const paginationContainer = document.getElementById('tracking-pagination');
+            if (!paginationContainer) return;
+            paginationContainer.querySelectorAll('a.page-link').forEach(function (link) {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var href = this.getAttribute('href');
+                    var urlParams = new URLSearchParams(href.split('?')[1] || '');
+                    fetchTrackingData(urlParams);
+                });
+            });
+        }
+
+        function getFilterParams() {
+            const form = document.getElementById('trackingFilterForm');
+            const params = new URLSearchParams();
+            if (form) {
+                const formData = new FormData(form);
+                formData.forEach(function (value, key) {
+                    if (value !== '') {
+                        params.set(key, value);
+                    }
+                });
+            }
+            const searchInput = document.getElementById('tracking-search');
+            if (searchInput && searchInput.value.trim() !== '') {
+                params.set('search', searchInput.value.trim());
+            }
+            return params;
         }
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -299,34 +365,25 @@
                 });
             }
 
+            const filterForm = document.getElementById('trackingFilterForm');
+            if (filterForm) {
+                filterForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    fetchTrackingData(getFilterParams());
+                });
+            }
+
             const searchInput = document.getElementById('tracking-search');
             if (searchInput) {
                 searchInput.addEventListener('input', function () {
-                    const query = this.value.toLowerCase().trim();
-                    const itemRows = document.querySelectorAll('#tracking-table tbody tr[data-po-id]');
-
-                    itemRows.forEach(function (row) {
-                        const poNumber = (row.getAttribute('data-po-number') || row.querySelector('td:nth-child(1) a')?.textContent || '').toLowerCase();
-                        const itemCode = row.getAttribute('data-item-code') || '';
-                        const itemName = row.getAttribute('data-item-name') || '';
-                        const itemCategory = row.getAttribute('data-item-category') || '';
-                        const statusPo = row.getAttribute('data-status-po') || '';
-                        const statusBarang = row.getAttribute('data-status-barang') || '';
-                        const supplier = row.getAttribute('data-supplier') || '';
-
-                        const matches = !query ||
-                            poNumber.includes(query) ||
-                            itemCode.includes(query) ||
-                            itemName.includes(query) ||
-                            itemCategory.includes(query) ||
-                            statusPo.includes(query) ||
-                            statusBarang.includes(query) ||
-                            supplier.includes(query);
-
-                        row.style.display = matches ? '' : 'none';
-                    });
+                    clearTimeout(trackingDebounceTimer);
+                    trackingDebounceTimer = setTimeout(function () {
+                        fetchTrackingData(getFilterParams());
+                    }, 300);
                 });
             }
+
+            bindPaginationEvents();
         });
     </script>
-@endsection
+    @endsection
