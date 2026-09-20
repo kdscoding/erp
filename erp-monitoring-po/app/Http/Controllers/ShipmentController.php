@@ -227,6 +227,19 @@ class ShipmentController extends Controller
         ));
     }
 
+    public function preview(string $id): View
+    {
+        $shipment = $this->shipmentHeaderQuery()
+            ->where('sh.id', $id)
+            ->firstOrFail();
+
+        abort_if($shipment->status !== DocumentTermCodes::SHIPMENT_DRAFT, 404);
+
+        $lines = $this->shipmentLineQuery((int) $shipment->id)->get();
+
+        return view('shipments.preview', compact('shipment', 'lines'));
+    }
+
     public function edit(string $id): View
     {
         $shipment = $this->shipmentHeaderQuery()

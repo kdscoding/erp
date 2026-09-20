@@ -93,6 +93,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/shipments/create', [ShipmentController::class, 'index'])->defaults('view', 'draft')->name('shipments.create');
         Route::get('/shipments/history', [ShipmentController::class, 'index'])->defaults('view', 'history')->name('shipments.history');
         Route::get('/shipments/{id}/edit', [ShipmentController::class, 'edit'])->name('shipments.edit');
+        Route::get('/shipments/{id}/preview', [ShipmentController::class, 'preview'])->name('shipments.preview');
         Route::post('/shipments', [ShipmentController::class, 'store'])->name('shipments.store');
         Route::put('/shipments/{id}', [ShipmentController::class, 'update'])->name('shipments.update');
         Route::patch('/shipments/{id}/mark-shipped', [ShipmentController::class, 'markShipped'])->name('shipments.mark-shipped');

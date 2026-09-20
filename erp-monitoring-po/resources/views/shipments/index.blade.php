@@ -307,6 +307,7 @@
                                     <td class="text-end" onclick="event.stopPropagation()">
                                         <div class="action-stack">
                                             @if ($r->status === \App\Support\DocumentTermCodes::SHIPMENT_DRAFT)
+                                                <a href="{{ route('shipments.preview', $r->id) }}" class="btn btn-sm btn-outline-info inline-action-btn" title="Preview" onclick="event.stopPropagation()"><i class="fas fa-eye"></i></a>
                                                 <a href="{{ route('shipments.edit', $r->id) }}" class="btn btn-sm btn-outline-primary inline-action-btn" title="Edit" onclick="event.stopPropagation()"><i class="fas fa-edit"></i></a>
                                                 <a href="{{ route('shipments.export-excel', $r->id) }}" class="btn btn-sm btn-outline-success inline-action-btn" title="Export" onclick="event.stopPropagation()"><i class="fas fa-download"></i></a>
                                                 <button type="button" class="btn btn-sm btn-outline-primary inline-action-btn" title="Import" data-toggle="modal" data-target="#importDraftModal{{ $r->id }}" onclick="event.stopPropagation()"><i class="fas fa-upload"></i></button>
