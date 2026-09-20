@@ -19,6 +19,7 @@ class ShipmentDraftBulkImport
         'supplier_code',
         'DN',
         'invoice_number',
+        'invoice_date',
         'supplier_remark',
         'po_number',
         'item_code',
@@ -116,6 +117,7 @@ class ShipmentDraftBulkImport
             $supplierCode = strtoupper(trim((string) ($row['supplier_code'] ?? '')));
             $deliveryNote = trim((string) ($row['DN'] ?? ''));
             $invoiceNumber = trim((string) ($row['invoice_number'] ?? ''));
+            $invoiceDate = trim((string) ($row['invoice_date'] ?? ''));
             $supplierRemark = trim((string) ($row['supplier_remark'] ?? ''));
             $poNumber = trim((string) ($row['po_number'] ?? ''));
             $itemCode = strtoupper(trim((string) ($row['item_code'] ?? '')));
@@ -128,6 +130,10 @@ class ShipmentDraftBulkImport
                 $this->errors[] = "Baris {$rowNum}: shipment_date wajib diisi.";
             } elseif (! $this->isValidDate($shipmentDate)) {
                 $this->errors[] = "Baris {$rowNum}: shipment_date tidak valid.";
+            }
+
+            if ($invoiceDate !== '' && ! $this->isValidDate($invoiceDate)) {
+                $this->errors[] = "Baris {$rowNum}: invoice_date tidak valid.";
             }
 
             if ($supplierCode === '') {
@@ -239,6 +245,7 @@ class ShipmentDraftBulkImport
                 'supplier_id' => (int) $supplier->id,
                 'delivery_note_number' => $deliveryNote,
                 'invoice_number' => $invoiceNumber !== '' ? $invoiceNumber : null,
+                'invoice_date' => $invoiceDate !== '' ? Carbon::parse($invoiceDate)->format('Y-m-d') : null,
                 'supplier_remark' => $supplierRemark !== '' ? $supplierRemark : null,
                 'po_number' => $poNumber,
                 'item_code' => $itemCode,
@@ -276,6 +283,7 @@ class ShipmentDraftBulkImport
                     'shipment_date' => $row['shipment_date'],
                     'delivery_note_number' => $row['delivery_note_number'],
                     'invoice_number' => $row['invoice_number'],
+                    'invoice_date' => $row['invoice_date'],
                     'supplier_remark' => $row['supplier_remark'],
                 ];
             }
@@ -357,7 +365,7 @@ class ShipmentDraftBulkImport
                     'shipment_date' => $groupHeader['shipment_date'],
                     'delivery_note_number' => $groupHeader['delivery_note_number'],
                     'invoice_number' => $groupHeader['invoice_number'],
-                    'invoice_date' => null,
+                    'invoice_date' => $groupHeader['invoice_date'],
                     'invoice_currency' => 'IDR',
                     'supplier_remark' => $groupHeader['supplier_remark'],
                     'created_by' => $userId,
@@ -414,6 +422,7 @@ class ShipmentDraftBulkImport
                             'supplier_id' => $groupHeader['supplier_id'],
                             'delivery_note_number' => $groupHeader['delivery_note_number'],
                             'invoice_number' => $groupHeader['invoice_number'],
+                            'invoice_date' => $groupHeader['invoice_date'],
                             'supplier_remark' => $groupHeader['supplier_remark'],
                             'status' => DocumentTermCodes::SHIPMENT_DRAFT,
                             'lines' => collect($groupRows)->map(fn ($r) => [
@@ -454,6 +463,7 @@ class ShipmentDraftBulkImport
             .$row['shipment_date'].'|'
             .$row['delivery_note_number'].'|'
             .($row['invoice_number'] ?? '').'|'
+            .($row['invoice_date'] ?? '').'|'
             .($row['supplier_remark'] ?? '');
     }
 

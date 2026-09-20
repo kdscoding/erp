@@ -22,6 +22,7 @@ class ShipmentDraftBulkImportTest extends TestCase
         'supplier_code',
         'DN',
         'invoice_number',
+        'invoice_date',
         'supplier_remark',
         'po_number',
         'item_code',
@@ -123,7 +124,8 @@ class ShipmentDraftBulkImportTest extends TestCase
         $fp = fopen($path, 'w');
         fputcsv($fp, self::COLUMNS);
         foreach ($dataRows as $data) {
-            fputcsv($fp, array_map(fn ($v) => (string) ($v ?? ''), $data));
+            $rowValues = array_map(fn ($col) => (string) ($data[$col] ?? ''), self::COLUMNS);
+            fputcsv($fp, $rowValues);
         }
         fclose($fp);
 
@@ -160,6 +162,7 @@ class ShipmentDraftBulkImportTest extends TestCase
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
                 'invoice_number' => 'INV001',
+                'invoice_date' => $dateStr,
                 'supplier_remark' => 'Remark test',
                 'po_number' => 'PO-0001',
                 'item_code' => 'ITM001',
@@ -172,6 +175,7 @@ class ShipmentDraftBulkImportTest extends TestCase
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
                 'invoice_number' => 'INV001',
+                'invoice_date' => $dateStr,
                 'supplier_remark' => 'Remark test',
                 'po_number' => 'PO-0001',
                 'item_code' => 'ITM002',
@@ -191,6 +195,7 @@ class ShipmentDraftBulkImportTest extends TestCase
         $this->assertDatabaseHas('shipments', [
             'delivery_note_number' => 'DN001',
             'invoice_number' => 'INV001',
+            'invoice_date' => date('Y-m-d'),
             'supplier_id' => DB::table('suppliers')->where('supplier_code', 'SUP001')->value('id'),
             'status' => DocumentTermCodes::SHIPMENT_DRAFT,
         ]);
