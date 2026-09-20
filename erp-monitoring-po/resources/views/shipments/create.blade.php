@@ -144,6 +144,31 @@
             </div>
         </div>
 
+        @if (session('import_errors'))
+            @php($errorCount = count(session('import_errors')))
+            <div class="alert alert-danger mb-3" role="alert">
+                Import dibatalkan — ditemukan {{ $errorCount }} error. Perbaiki error pada tabel di bawah dan coba lagi.
+            </div>
+            <div class="table-responsive mb-3">
+                <table class="table table-sm table-bordered table-danger mb-0" style="max-width: 900px">
+                    <thead class="table-light">
+                        <tr><th>Baris</th><th>Kolom</th><th>Kesalahan</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (session('import_errors') as $error)
+                        <tr>
+                            <td>{{ $error['row'] }}</td>
+                            <td>{{ $error['field'] }}</td>
+                            <td>{{ $error['message'] }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+        <a href="{{ route('shipments.bulk-template') }}" class="btn btn-light btn-sm mb-3"><i class="fas fa-download"></i> Download Bulk Import Template</a>
+
         <form method="POST" action="{{ route('shipments.store') }}" id="draftForm">
             @csrf
 

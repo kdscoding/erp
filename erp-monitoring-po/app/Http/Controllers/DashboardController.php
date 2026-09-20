@@ -598,6 +598,8 @@ $metrics = [
         $chartSupplierDelay = DB::table('purchase_order_items as poi')
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
+            ->leftJoin('items as i', 'i.id', '=', 'poi.item_id')
+            ->leftJoin('item_categories as ic', 'ic.id', '=', 'i.category_id')
             ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
             ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
             ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
@@ -609,7 +611,8 @@ $metrics = [
             ->select('s.supplier_name')
             ->selectRaw('COUNT(poi.id) as late_item_count')
             ->selectRaw('SUM(poi.outstanding_qty) as outstanding_qty')
-            ->groupBy('s.supplier_name')
+            ->selectRaw('ic.category_name as category_name')
+            ->groupBy('s.supplier_name', 'ic.category_name')
             ->orderByDesc('late_item_count')
             ->limit(8)
             ->get();
@@ -644,6 +647,54 @@ $metrics = [
             ->mapWithKeys(fn ($row) => [$row->status => (int) $row->po_count])
             ->toArray();
 
+        $chartShipmentStatusDist = DB::table('shipments as sh')
+            ->when($supplierId, fn ($query) => $query->where('sh.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('sh.shipment_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('sh.shipment_date', '<=', $dateTo))
+            ->whereNotIn('sh.status', [DocumentTermCodes::SHIPMENT_CANCELLED])
+            ->select('status')
+            ->selectRaw('COUNT(*) as shipment_count')
+            ->groupBy('status')
+            ->get()
+            ->mapWithKeys(fn ($row) => [$row->status => (int) $row->shipment_count])
+            ->toArray();
+
+        $chartShipmentMonthlyTrend = DB::table('shipments as sh')
+            ->when($supplierId, fn ($query) => $query->where('sh.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('sh.shipment_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('sh.shipment_date', '<=', $dateTo))
+            ->whereNotIn('sh.status', [DocumentTermCodes::SHIPMENT_CANCELLED])
+            ->when(config('database.default') === 'sqlite', function ($query) {
+                $query->selectRaw("strftime('%Y-%m', sh.shipment_date) as month_key");
+            }, function ($query) {
+                $query->selectRaw("DATE_FORMAT(sh.shipment_date, '%Y-%m') as month_key");
+            })
+            ->selectRaw('COUNT(DISTINCT sh.id) as shipment_count')
+            ->groupBy('month_key')
+            ->orderBy('month_key')
+            ->limit(6)
+            ->get()
+            ->mapWithKeys(fn ($row) => [$row->month_key => (int) $row->shipment_count])
+            ->toArray();
+
+        $receivingMonthlyTrend = DB::table('goods_receipts as gr')
+            ->join('purchase_orders as po', 'po.id', '=', 'gr.purchase_order_id')
+            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
+            ->when($dateFrom, fn ($query) => $query->whereDate('gr.receipt_date', '>=', $dateFrom))
+            ->when($dateTo, fn ($query) => $query->whereDate('gr.receipt_date', '<=', $dateTo))
+            ->when(config('database.default') === 'sqlite', function ($query) {
+                $query->selectRaw("strftime('%Y-%m', gr.receipt_date) as month_key");
+            }, function ($query) {
+                $query->selectRaw("DATE_FORMAT(gr.receipt_date, '%Y-%m') as month_key");
+            })
+            ->selectRaw('COUNT(DISTINCT gr.id) as receipt_count')
+            ->groupBy('month_key')
+            ->orderBy('month_key')
+            ->limit(6)
+            ->get()
+            ->mapWithKeys(fn ($row) => [$row->month_key => (int) $row->receipt_count])
+            ->toArray();
+
         return view('dashboard', compact(
             'metrics',
             'suppliers',
@@ -675,7 +726,10 @@ $metrics = [
             'chartStatusBreakdown',
             'chartSupplierDelay',
             'chartMonthlyTrend',
-            'chartPoStatusDist'
+            'chartPoStatusDist',
+            'chartShipmentStatusDist',
+            'chartShipmentMonthlyTrend',
+            'receivingMonthlyTrend'
         ));
     }
 
@@ -726,127 +780,6 @@ $metrics = [
             'summaryMetrics',
             'outstandingPoRows',
             'outstandingItemRows'
-        ));
-    }
-
-    public function supplierPerformance(Request $request): View
-    {
-        $supplierId = $this->resolveSupplierId($request);
-        ['date_from' => $dateFrom, 'date_to' => $dateTo] = $this->resolveDateRange($request);
-        $currentDateSql = $this->currentDateExpression();
-        $shipmentToReceivingDaysSql = $this->dateDiffExpression('gr.receipt_date', 'sh.shipment_date');
-
-        $suppliers = DB::table('suppliers')
-            ->orderBy('supplier_name')
-            ->get(['id', 'supplier_name']);
-
-        $receiptSummary = DB::table('goods_receipt_items as gri')
-            ->join('goods_receipts as gr', 'gr.id', '=', 'gri.goods_receipt_id')
-            ->select('gri.purchase_order_item_id')
-            ->selectRaw('MAX(gr.receipt_date) as last_receipt_date')
-            ->selectRaw('MIN(gr.receipt_date) as first_receipt_date')
-            ->selectRaw('COUNT(DISTINCT gr.id) as gr_count')
-            ->groupBy('gri.purchase_order_item_id');
-
-        $shipmentLeadSummary = DB::table('shipment_items as si')
-            ->join('shipments as sh', 'sh.id', '=', 'si.shipment_id')
-            ->leftJoin('goods_receipt_items as gri', 'gri.shipment_item_id', '=', 'si.id')
-            ->leftJoin('goods_receipts as gr', 'gr.id', '=', 'gri.goods_receipt_id')
-            ->join('purchase_order_items as poi', 'poi.id', '=', 'si.purchase_order_item_id')
-            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
-            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
-            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
-            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
-            ->whereNotNull('gr.receipt_date')
-            ->select('po.supplier_id')
-            ->selectRaw("AVG({$shipmentToReceivingDaysSql}) as avg_shipment_to_receiving_days")
-            ->selectRaw('COUNT(DISTINCT si.id) as shipment_line_with_receipt')
-            ->groupBy('po.supplier_id');
-
-        $supplierScorecard = DB::table('purchase_order_items as poi')
-            ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
-            ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
-            ->leftJoinSub($receiptSummary, 'receipt_summary', function ($join) {
-                $join->on('receipt_summary.purchase_order_item_id', '=', 'poi.id');
-            })
-            ->leftJoinSub($shipmentLeadSummary, 'shipment_lead_summary', function ($join) {
-                $join->on('shipment_lead_summary.supplier_id', '=', 'po.supplier_id');
-            })
-            ->when($supplierId, fn ($query) => $query->where('po.supplier_id', $supplierId))
-            ->when($dateFrom, fn ($query) => $query->whereDate('po.po_date', '>=', $dateFrom))
-            ->when($dateTo, fn ($query) => $query->whereDate('po.po_date', '<=', $dateTo))
-            ->when(true, fn ($query) => StatusQuery::whereNotEquals(
-                $query,
-                'poi.item_status',
-                DomainStatus::GROUP_PO_ITEM_STATUS,
-                DocumentTermCodes::ITEM_CANCELLED
-            ))
-            ->select('po.supplier_id', 's.supplier_name')
-            ->selectRaw('COUNT(DISTINCT po.id) as total_po')
-            ->selectRaw('COUNT(poi.id) as total_items')
-            ->selectRaw('SUM(CASE WHEN poi.received_qty > 0 THEN 1 ELSE 0 END) as received_items')
-            ->selectRaw('SUM(CASE WHEN poi.outstanding_qty <= 0 THEN 1 ELSE 0 END) as closed_items')
-            ->selectRaw("SUM(CASE
-                WHEN poi.outstanding_qty <= 0
-                    AND receipt_summary.last_receipt_date IS NOT NULL
-                    AND DATE(receipt_summary.last_receipt_date) <= COALESCE(DATE(poi.eta_date), DATE(poi.etd_date), DATE(receipt_summary.last_receipt_date))
-                THEN 1 ELSE 0 END) as on_time_full_items")
-            ->selectRaw("SUM(CASE
-                WHEN poi.outstanding_qty > 0
-                    AND poi.etd_date IS NOT NULL
-                    AND DATE(poi.etd_date) < {$currentDateSql}
-                THEN 1 ELSE 0 END) as delayed_open_items")
-            ->selectRaw('MIN(CASE WHEN poi.outstanding_qty > 0 THEN poi.etd_date ELSE NULL END) as nearest_open_etd')
-            ->selectRaw('COALESCE(MAX(shipment_lead_summary.avg_shipment_to_receiving_days), 0) as avg_shipment_to_receiving_days')
-            ->groupBy('po.supplier_id', 's.supplier_name')
-            ->orderBy('s.supplier_name')
-            ->get()
-            ->map(function ($row) {
-                $denominator = max((int) $row->received_items, 1);
-                $row->otif_percent = (int) $row->received_items > 0
-                    ? round(((int) $row->on_time_full_items / $denominator) * 100, 1)
-                    : 0.0;
-                $row->delay_rate = (int) $row->total_items > 0
-                    ? round(((int) $row->delayed_open_items / (int) $row->total_items) * 100, 1)
-                    : 0.0;
-
-                return $row;
-            })
-            ->sortByDesc('otif_percent')
-            ->values();
-
-        $performanceMetrics = [
-            'supplier_count' => (int) $supplierScorecard->count(),
-            'received_items' => (int) $supplierScorecard->sum('received_items'),
-            'on_time_full_items' => (int) $supplierScorecard->sum('on_time_full_items'),
-            'overall_otif_percent' => (int) $supplierScorecard->sum('received_items') > 0
-                ? round(((int) $supplierScorecard->sum('on_time_full_items') / (int) $supplierScorecard->sum('received_items')) * 100, 1)
-                : 0.0,
-            'avg_shipment_to_receiving_days' => $supplierScorecard->count() > 0
-                ? round((float) $supplierScorecard->avg('avg_shipment_to_receiving_days'), 1)
-                : 0.0,
-        ];
-
-        $topDelayedSuppliers = $supplierScorecard
-            ->sortByDesc('delayed_open_items')
-            ->values()
-            ->take(5);
-
-        $bestOtiFSuppliers = $supplierScorecard
-            ->filter(fn ($row) => (int) $row->received_items > 0)
-            ->sortByDesc('otif_percent')
-            ->values()
-            ->take(5);
-
-        return view('supplier-performance', compact(
-            'suppliers',
-            'supplierId',
-            'dateFrom',
-            'dateTo',
-            'performanceMetrics',
-            'supplierScorecard',
-            'topDelayedSuppliers',
-            'bestOtiFSuppliers'
         ));
     }
 
@@ -1062,6 +995,7 @@ $metrics = [
         $filterDateTo = $dateTo;
         $filterPoStatus = $request->query('po_status', 'all');
         $filterItemStatus = $request->query('item_status', 'all');
+        $filterCategory = $request->query('category_id', 'all');
 
         $currentDateSql = ErpFlow::currentDateExpression();
 
@@ -1070,10 +1004,16 @@ $metrics = [
             . StatusQuery::sqlNotEquals('po.status', DomainStatus::GROUP_PO_STATUS, DocumentTermCodes::PO_CANCELLED);
         $activeItemSql = StatusQuery::sqlNotEquals('poi.item_status', DomainStatus::GROUP_PO_ITEM_STATUS, DocumentTermCodes::ITEM_CANCELLED);
 
+        $categories = DB::table('item_categories')
+            ->where('is_active', true)
+            ->orderBy('category_name')
+            ->get(['id', 'category_name']);
+
                 $itemRows = DB::table('purchase_order_items as poi')
             ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
             ->join('suppliers as s', 's.id', '=', 'po.supplier_id')
             ->join('items as i', 'i.id', '=', 'poi.item_id')
+            ->leftJoin('item_categories as ic', 'ic.id', '=', 'i.category_id')
             ->leftJoin('shipment_items as si', 'si.purchase_order_item_id', '=', 'poi.id')
             ->leftJoin('shipments as sh', 'sh.id', '=', 'si.shipment_id')
             ->when($filterSupplierId, fn ($q) => $q->where('po.supplier_id', $filterSupplierId))
@@ -1081,6 +1021,7 @@ $metrics = [
             ->when($filterDateTo, fn ($q) => $q->whereDate('po.po_date', '<=', $filterDateTo))
             ->when($filterPoStatus !== 'all', fn ($q) => $q->where('po.status', $filterPoStatus))
             ->when($filterItemStatus !== 'all', fn ($q) => $q->where('poi.item_status', $filterItemStatus))
+            ->when($filterCategory !== 'all', fn ($q) => $q->where('i.category_id', $filterCategory))
             ->whereRaw($activePoSql)
             ->whereRaw($activeItemSql)
             ->select(
@@ -1092,6 +1033,8 @@ $metrics = [
                 's.supplier_code',
                 'i.item_code',
                 'i.item_name',
+                'ic.category_name',
+                'ic.id as category_id',
                 'poi.id as item_id',
                 'poi.ordered_qty',
                 'poi.received_qty',
@@ -1116,6 +1059,8 @@ $metrics = [
                 'item_id' => $row->item_id,
                 'item_code' => $row->item_code,
                 'item_name' => $row->item_name,
+                'item_category_id' => $row->category_id,
+                'item_category_name' => $row->category_name ?? 'Tanpa Kategori',
                 'item_status' => $row->item_status,
                 'etd_date' => $row->etd_date,
                 'supplier_name' => $row->supplier_name,
@@ -1162,6 +1107,28 @@ $metrics = [
                 default => DocumentTermCodes::ITEM_CONFIRMED,
             };
 
+            $orderedQty = (float) ($first->ordered_qty ?? 0);
+            $receivedQty = (float) ($first->item_received_qty ?? 0);
+            $outstandingQty = (float) ($first->outstanding_qty ?? 0);
+            $shippedQty = (float) ($first->item_shipped_qty ?? 0);
+
+            $shipmentProgress = match (true) {
+                $outstandingQty <= 0 => 'Fully Shipped',
+                $shippedQty > 0 || $receivedQty > 0 => 'Partially Shipped',
+                default => 'Not Shipped',
+            };
+
+            $progressClass = match ($shipmentProgress) {
+                'Fully Shipped' => 'progress-fully',
+                'Partially Shipped' => 'progress-partial',
+                'Not Shipped' => 'progress-none',
+                default => 'progress-none',
+            };
+
+            $progressPercent = $orderedQty > 0
+                ? min(100, (int) round(($receivedQty / $orderedQty) * 100))
+                : 0;
+
             return [
                 'po_id' => $first->po_id,
                 'po_number' => $first->po_number,
@@ -1170,14 +1137,19 @@ $metrics = [
                 'item_id' => $first->item_id,
                 'item_code' => $first->item_code,
                 'item_name' => $first->item_name,
+                'item_category_id' => $first->item_category_id ?? null,
+                'item_category_name' => $first->item_category_name ?? 'Tanpa Kategori',
                 'item_status' => $first->item_status,
                 'monitoring_status' => $monitoringStatus,
                 'supplier_name' => $first->supplier_name,
                 'supplier_code' => $first->supplier_code ?? '-',
-                'ordered_qty' => (float) ($first->ordered_qty ?? 0),
-                'shipped_qty' => (float) ($first->item_shipped_qty ?? 0),
-                'received_qty' => (float) ($first->item_received_qty ?? 0),
-                'outstanding_qty' => (float) ($first->outstanding_qty ?? 0),
+                'ordered_qty' => $orderedQty,
+                'shipped_qty' => $shippedQty,
+                'received_qty' => $receivedQty,
+                'outstanding_qty' => $outstandingQty,
+                'shipment_progress' => $shipmentProgress,
+                'progress_class' => $progressClass,
+                'progress_percent' => $progressPercent,
                 'stage' => $first->po_status,
                 'stage_class' => match ($first->po_status) {
                     'PO Issued' => 'stage-confirmed',
@@ -1199,11 +1171,13 @@ $metrics = [
 
         return view('tracking', compact(
             'suppliers',
+            'categories',
             'filterSupplierId',
             'filterDateFrom',
             'filterDateTo',
             'filterPoStatus',
             'filterItemStatus',
+            'filterCategory',
             'itemRows'
         ));
     }

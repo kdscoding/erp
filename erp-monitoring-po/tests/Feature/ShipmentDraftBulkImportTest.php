@@ -17,7 +17,6 @@ class ShipmentDraftBulkImportTest extends TestCase
     use RefreshDatabase;
 
     private const COLUMNS = [
-        'shipment_number',
         'shipment_date',
         'supplier_code',
         'DN',
@@ -157,7 +156,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -170,7 +168,6 @@ class ShipmentDraftBulkImportTest extends TestCase
                 'qty_pengiriman' => 60,
             ],
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -188,7 +185,7 @@ class ShipmentDraftBulkImportTest extends TestCase
 
         $this->actingAs($user)
             ->post('/shipments/import-bulk-draft-excel', ['file' => $file])
-            ->assertSessionHas('success');
+            ->assertSessionHas('import_success');
 
         $this->assertDatabaseCount('shipments', 1);
         $this->assertDatabaseCount('shipment_items', 2);
@@ -201,8 +198,8 @@ class ShipmentDraftBulkImportTest extends TestCase
         ]);
 
         $shipmentNumber = DB::table('shipments')->value('shipment_number');
-        $this->assertStringStartsWith('SHP-', $shipmentNumber);
-        $this->assertStringContainsString(date('Ymd'), $shipmentNumber);
+        $this->assertIsNumeric($shipmentNumber);
+        $this->assertGreaterThan(0, (int) $shipmentNumber);
 
         $shipmentId = DB::table('shipments')->value('id');
         $itm001ItemId = DB::table('items')->where('item_code', 'ITM001')->value('id');
@@ -241,7 +238,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -253,7 +249,6 @@ class ShipmentDraftBulkImportTest extends TestCase
                 'qty_pengiriman' => 80,
             ],
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP002',
                 'DN' => 'DN002',
@@ -270,7 +265,7 @@ class ShipmentDraftBulkImportTest extends TestCase
 
         $this->actingAs($user)
             ->post('/shipments/import-bulk-draft-excel', ['file' => $file])
-            ->assertSessionHas('success');
+            ->assertSessionHas('import_success');
 
         $this->assertDatabaseCount('shipments', 2);
         $this->assertDatabaseCount('shipment_items', 2);
@@ -289,7 +284,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -306,7 +300,7 @@ class ShipmentDraftBulkImportTest extends TestCase
 
         $this->actingAs($user)
             ->post('/shipments/import-bulk-draft-excel', ['file' => $file])
-            ->assertSessionHas('success');
+            ->assertSessionHas('import_success');
 
         $this->assertDatabaseCount('shipments', 1);
         $this->assertDatabaseCount('shipment_items', 1);
@@ -327,7 +321,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'INVALID',
                 'DN' => 'DN001',
@@ -359,7 +352,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP003',
                 'DN' => 'DN001',
@@ -391,7 +383,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -423,7 +414,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -455,7 +445,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -487,7 +476,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -519,7 +507,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -551,7 +538,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -563,7 +549,6 @@ class ShipmentDraftBulkImportTest extends TestCase
                 'qty_pengiriman' => 80,
             ],
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN002',
@@ -596,7 +581,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr2 = now()->subDay()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr1,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -608,7 +592,6 @@ class ShipmentDraftBulkImportTest extends TestCase
                 'qty_pengiriman' => 50,
             ],
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr2,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -665,7 +648,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -696,7 +678,6 @@ class ShipmentDraftBulkImportTest extends TestCase
 
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => 'invalid-date',
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -791,7 +772,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -803,7 +783,6 @@ class ShipmentDraftBulkImportTest extends TestCase
                 'qty_pengiriman' => 50,
             ],
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'INVALID',
                 'DN' => 'DN002',
@@ -836,7 +815,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -848,7 +826,6 @@ class ShipmentDraftBulkImportTest extends TestCase
                 'qty_pengiriman' => 30,
             ],
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -880,7 +857,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => 'USER-FILLED-VALUE',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -897,11 +873,12 @@ class ShipmentDraftBulkImportTest extends TestCase
 
         $this->actingAs($user)
             ->post('/shipments/import-bulk-draft-excel', ['file' => $file])
-            ->assertSessionHas('success');
+            ->assertSessionHas('import_success');
 
         $shipmentNumber = DB::table('shipments')->value('shipment_number');
-        $this->assertNotEquals('USER-FILLED-VALUE', $shipmentNumber);
-        $this->assertStringStartsWith('SHP-'.date('Ymd').'-', $shipmentNumber);
+        $this->assertIsNumeric($shipmentNumber);
+        $this->assertGreaterThanOrEqual(1000000000, (int) $shipmentNumber);
+        $this->assertLessThanOrEqual(9999999999, (int) $shipmentNumber);
     }
 
     public function test_import_requires_authentication(): void
@@ -913,7 +890,6 @@ class ShipmentDraftBulkImportTest extends TestCase
         $dateStr = now()->toDateString();
         $path = $this->createFlatFile([
             [
-                'shipment_number' => '',
                 'shipment_date' => $dateStr,
                 'supplier_code' => 'SUP001',
                 'DN' => 'DN001',
@@ -930,5 +906,380 @@ class ShipmentDraftBulkImportTest extends TestCase
 
         $this->post('/shipments/import-bulk-draft-excel', ['file' => $file])
             ->assertRedirect('/login');
+    }
+
+    public function test_import_collects_all_errors_before_rollback(): void
+    {
+        $this->seedBasic();
+        $user = $this->adminUser();
+
+        $this->createPo('PO-0001', 'SUP001', ['ITM001' => 100]);
+
+        $dateStr = now()->toDateString();
+        $path = $this->createFlatFile([
+            [
+                'shipment_date' => 'invalid',
+                'supplier_code' => 'INVALID',
+                'DN' => '',
+                'invoice_number' => '',
+                'invoice_date' => '',
+                'supplier_remark' => '',
+                'po_number' => 'NOTFOUND',
+                'item_code' => 'NOPE',
+                'invoice_unit_price' => '',
+                'qty_pengiriman' => -1,
+            ],
+            [
+                'shipment_date' => $dateStr,
+                'supplier_code' => 'SUP001',
+                'DN' => 'DN002',
+                'invoice_number' => '',
+                'invoice_date' => 'bad-date',
+                'supplier_remark' => '',
+                'po_number' => 'PO-0001',
+                'item_code' => 'ITM001',
+                'invoice_unit_price' => '',
+                'qty_pengiriman' => 200,
+            ],
+        ]);
+
+        $file = $this->uploadFile($path, 'test.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $response = $this->actingAs($user)
+            ->post('/shipments/import-bulk-draft-excel', ['file' => $file]);
+
+        $response->assertSessionHas('error');
+
+        $this->assertDatabaseCount('shipments', 0);
+        $this->assertDatabaseCount('shipment_items', 0);
+    }
+
+    public function test_import_structured_error_table_format(): void
+    {
+        $this->seedBasic();
+        $user = $this->adminUser();
+
+        $dateStr = now()->toDateString();
+        $path = $this->createFlatFile([
+            [
+                'shipment_date' => $dateStr,
+                'supplier_code' => 'INVALID',
+                'DN' => 'DN001',
+                'invoice_number' => '',
+                'invoice_date' => '',
+                'supplier_remark' => '',
+                'po_number' => 'PO-0001',
+                'item_code' => 'ITM001',
+                'invoice_unit_price' => '',
+                'qty_pengiriman' => 50,
+            ],
+            [
+                'shipment_date' => $dateStr,
+                'supplier_code' => 'SUP001',
+                'DN' => 'DN002',
+                'invoice_number' => '',
+                'invoice_date' => '',
+                'supplier_remark' => '',
+                'po_number' => 'PO-0001',
+                'item_code' => 'ITM001',
+                'invoice_unit_price' => '',
+                'qty_pengiriman' => 0,
+            ],
+        ]);
+
+        $file = $this->uploadFile($path, 'test.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $response = $this->actingAs($user)
+            ->post('/shipments/import-bulk-draft-excel', ['file' => $file]);
+
+        $response->assertSessionHas('error');
+        $response->assertSessionHas('import_errors');
+        $errors = $response->getSession()->get('import_errors');
+
+        $this->assertCount(2, $errors);
+        $this->assertEquals(2, $errors[0]['row']);
+        $this->assertEquals('supplier_code', $errors[0]['field']);
+        $this->assertEquals(3, $errors[1]['row']);
+        $this->assertEquals('qty_pengiriman', $errors[1]['field']);
+    }
+
+    public function test_import_invalid_invoice_date(): void
+    {
+        $this->seedBasic();
+        $user = $this->adminUser();
+
+        $this->createPo('PO-0001', 'SUP001', ['ITM001' => 100]);
+
+        $dateStr = now()->toDateString();
+        $path = $this->createFlatFile([
+            [
+                'shipment_date' => $dateStr,
+                'supplier_code' => 'SUP001',
+                'DN' => 'DN001',
+                'invoice_number' => 'INV001',
+                'invoice_date' => 'not-a-date',
+                'supplier_remark' => '',
+                'po_number' => 'PO-0001',
+                'item_code' => 'ITM001',
+                'invoice_unit_price' => '',
+                'qty_pengiriman' => 50,
+            ],
+        ]);
+
+        $file = $this->uploadFile($path, 'test.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $this->actingAs($user)
+            ->post('/shipments/import-bulk-draft-excel', ['file' => $file])
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('shipments', 0);
+    }
+
+    public function test_import_all_or_nothing_with_duplicate_dn_and_invalid_row(): void
+    {
+        $this->seedBasic();
+        $user = $this->adminUser();
+
+        $this->createPo('PO-0001', 'SUP001', ['ITM001' => 100, 'ITM002' => 50]);
+
+        $existingSupplierId = DB::table('suppliers')->where('supplier_code', 'SUP001')->value('id');
+        $poId = DB::table('purchase_orders')->where('po_number', 'PO-0001')->value('id');
+        $poiId1 = DB::table('purchase_order_items')->where('purchase_order_id', $poId)->where('item_id', DB::table('items')->where('item_code', 'ITM001')->value('id'))->value('id');
+
+        $shipmentId = DB::table('shipments')->insertGetId([
+            'purchase_order_id' => $poId,
+            'supplier_id' => $existingSupplierId,
+            'shipment_number' => 'SHP-'.date('Ymd').'-0001',
+            'shipment_date' => now()->toDateString(),
+            'delivery_note_number' => 'DN001',
+            'invoice_number' => null,
+            'supplier_remark' => null,
+            'status' => DocumentTermCodes::SHIPMENT_DRAFT,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('shipment_items')->insert([
+            'shipment_id' => $shipmentId,
+            'purchase_order_item_id' => $poiId1,
+            'shipped_qty' => 0,
+            'received_qty' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $dateStr = now()->toDateString();
+        $path = $this->createFlatFile([
+            [
+                'shipment_date' => $dateStr,
+                'supplier_code' => 'INVALID',
+                'DN' => 'DN002',
+                'invoice_number' => '',
+                'invoice_date' => '',
+                'supplier_remark' => '',
+                'po_number' => 'PO-0001',
+                'item_code' => 'ITM001',
+                'invoice_unit_price' => '',
+                'qty_pengiriman' => 50,
+            ],
+            [
+                'shipment_date' => $dateStr,
+                'supplier_code' => 'SUP001',
+                'DN' => 'DN001',
+                'invoice_number' => '',
+                'invoice_date' => '',
+                'supplier_remark' => '',
+                'po_number' => 'PO-0001',
+                'item_code' => 'ITM002',
+                'invoice_unit_price' => '',
+                'qty_pengiriman' => 30,
+            ],
+        ]);
+
+        $file = $this->uploadFile($path, 'test.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $response = $this->actingAs($user)
+            ->post('/shipments/import-bulk-draft-excel', ['file' => $file]);
+
+        $response->assertSessionHas('error');
+        $response->assertSessionHas('import_errors');
+        $errors = $response->getSession()->get('import_errors');
+
+        $hasSupplierError = collect($errors)->contains(fn ($e) => $e['field'] === 'supplier_code');
+        $hasDnError = collect($errors)->contains(fn ($e) => str_contains($e['message'], 'DN001 sudah dipakai'));
+
+        $this->assertTrue($hasSupplierError, 'Structured errors should contain supplier_code error');
+        $this->assertTrue($hasDnError, 'Structured errors should contain duplicate DN error');
+
+        $this->assertDatabaseCount('shipments', 1);
+    }
+
+    public function test_import_same_invoice_different_dn_succeeds(): void
+    {
+        $this->seedBasic();
+        $user = $this->adminUser();
+
+        $this->createPo('PO-0001', 'SUP001', ['ITM001' => 100]);
+        $this->createPo('PO-0002', 'SUP001', ['ITM002' => 50]);
+
+        $dateStr = now()->toDateString();
+        $path = $this->createFlatFile([
+            [
+                'shipment_date' => $dateStr,
+                'supplier_code' => 'SUP001',
+                'DN' => 'DN001',
+                'invoice_number' => 'DMT 01.02.04.26',
+                'invoice_date' => $dateStr,
+                'supplier_remark' => '',
+                'po_number' => 'PO-0001',
+                'item_code' => 'ITM001',
+                'invoice_unit_price' => '50000',
+                'qty_pengiriman' => 60,
+            ],
+            [
+                'shipment_date' => $dateStr,
+                'supplier_code' => 'SUP001',
+                'DN' => 'DN002',
+                'invoice_number' => 'DMT 01.02.04.26',
+                'invoice_date' => $dateStr,
+                'supplier_remark' => '',
+                'po_number' => 'PO-0002',
+                'item_code' => 'ITM002',
+                'invoice_unit_price' => '75000',
+                'qty_pengiriman' => 30,
+            ],
+        ]);
+
+        $file = $this->uploadFile($path, 'test.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $this->actingAs($user)
+            ->post('/shipments/import-bulk-draft-excel', ['file' => $file])
+            ->assertSessionHas('import_success');
+
+        $this->assertDatabaseCount('shipments', 2);
+        $this->assertDatabaseCount('shipment_items', 2);
+
+        $this->assertDatabaseHas('shipments', [
+            'delivery_note_number' => 'DN001',
+            'invoice_number' => 'DMT 01.02.04.26',
+        ]);
+        $this->assertDatabaseHas('shipments', [
+            'delivery_note_number' => 'DN002',
+            'invoice_number' => 'DMT 01.02.04.26',
+        ]);
+    }
+
+    public function test_import_same_invoice_multiple_pos_items_succeeds(): void
+    {
+        $this->seedBasic();
+        $user = $this->adminUser();
+
+        $this->createPo('PO-0001', 'SUP001', ['ITM001' => 100, 'ITM002' => 50]);
+
+        $dateStr = now()->toDateString();
+        $path = $this->createFlatFile([
+            [
+                'shipment_date' => $dateStr,
+                'supplier_code' => 'SUP001',
+                'DN' => 'DN001',
+                'invoice_number' => 'DMT 01.02.04.26',
+                'invoice_date' => $dateStr,
+                'supplier_remark' => 'Remark 1',
+                'po_number' => 'PO-0001',
+                'item_code' => 'ITM001',
+                'invoice_unit_price' => '50000',
+                'qty_pengiriman' => 60,
+            ],
+            [
+                'shipment_date' => $dateStr,
+                'supplier_code' => 'SUP001',
+                'DN' => 'DN001',
+                'invoice_number' => 'DMT 01.02.04.26',
+                'invoice_date' => $dateStr,
+                'supplier_remark' => 'Remark 2',
+                'po_number' => 'PO-0001',
+                'item_code' => 'ITM002',
+                'invoice_unit_price' => '75000',
+                'qty_pengiriman' => 30,
+            ],
+        ]);
+
+        $file = $this->uploadFile($path, 'test.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $this->actingAs($user)
+            ->post('/shipments/import-bulk-draft-excel', ['file' => $file])
+            ->assertSessionHas('import_success');
+
+        $this->assertDatabaseCount('shipments', 1);
+        $this->assertDatabaseCount('shipment_items', 2);
+
+        $this->assertDatabaseHas('shipments', [
+            'delivery_note_number' => 'DN001',
+            'invoice_number' => 'DMT 01.02.04.26',
+            'status' => DocumentTermCodes::SHIPMENT_DRAFT,
+        ]);
+
+        $shipmentId = DB::table('shipments')->where('delivery_note_number', 'DN001')->value('id');
+        $itm001PoiId = DB::table('purchase_order_items')->where('item_id', DB::table('items')->where('item_code', 'ITM001')->value('id'))->where('purchase_order_id', DB::table('purchase_orders')->where('po_number', 'PO-0001')->value('id'))->value('id');
+        $itm002PoiId = DB::table('purchase_order_items')->where('item_id', DB::table('items')->where('item_code', 'ITM002')->value('id'))->where('purchase_order_id', DB::table('purchase_orders')->where('po_number', 'PO-0001')->value('id'))->value('id');
+
+        $this->assertDatabaseHas('shipment_items', [
+            'shipment_id' => $shipmentId,
+            'purchase_order_item_id' => $itm001PoiId,
+            'shipped_qty' => 60,
+        ]);
+        $this->assertDatabaseHas('shipment_items', [
+            'shipment_id' => $shipmentId,
+            'purchase_order_item_id' => $itm002PoiId,
+            'shipped_qty' => 30,
+        ]);
+    }
+
+    public function test_import_same_invoice_same_dn_different_invoice_date_succeeds(): void
+    {
+        $this->seedBasic();
+        $user = $this->adminUser();
+
+        $this->createPo('PO-0001', 'SUP001', ['ITM001' => 100, 'ITM002' => 50]);
+
+        $dateStr = now()->toDateString();
+        $invoiceDate1 = now()->subDays(2)->toDateString();
+        $invoiceDate2 = now()->subDay()->toDateString();
+
+        $path = $this->createFlatFile([
+            [
+                'shipment_date' => $dateStr,
+                'supplier_code' => 'SUP001',
+                'DN' => 'DN001',
+                'invoice_number' => 'DMT 01.02.04.26',
+                'invoice_date' => $invoiceDate1,
+                'supplier_remark' => '',
+                'po_number' => 'PO-0001',
+                'item_code' => 'ITM001',
+                'invoice_unit_price' => '50000',
+                'qty_pengiriman' => 60,
+            ],
+            [
+                'shipment_date' => $dateStr,
+                'supplier_code' => 'SUP001',
+                'DN' => 'DN001',
+                'invoice_number' => 'DMT 01.02.04.26',
+                'invoice_date' => $invoiceDate2,
+                'supplier_remark' => 'Remark',
+                'po_number' => 'PO-0001',
+                'item_code' => 'ITM002',
+                'invoice_unit_price' => '75000',
+                'qty_pengiriman' => 30,
+            ],
+        ]);
+
+        $file = $this->uploadFile($path, 'test.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $this->actingAs($user)
+            ->post('/shipments/import-bulk-draft-excel', ['file' => $file])
+            ->assertSessionHas('import_success');
+
+        $this->assertDatabaseCount('shipments', 1);
+        $this->assertDatabaseCount('shipment_items', 2);
     }
 }

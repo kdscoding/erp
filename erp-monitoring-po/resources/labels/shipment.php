@@ -171,8 +171,16 @@ return [
         'shipped_qty.required' => 'Qty draft wajib diisi.',
         'shipped_qty.numeric' => 'Qty draft harus berupa angka.',
         'shipped_qty.min' => 'Qty draft minimal 0.01.',
+        'shipped_qty.*.required' => 'Qty kirim wajib diisi untuk setiap item.',
+        'shipped_qty.*.numeric' => 'Qty kirim harus berupa angka.',
+        'shipped_qty.*.min' => 'Qty kirim minimal 0.01.',
         'invoice_unit_price.numeric' => 'Harga invoice harus berupa angka.',
         'invoice_unit_price.min' => 'Harga invoice minimal 0.',
+        'invoice_unit_price.*.numeric' => 'Harga invoice harus berupa angka.',
+        'invoice_unit_price.*.min' => 'Harga invoice tidak boleh negatif.',
+        'item.active' => 'Item tidak ditemukan atau tidak aktif.',
+        'po.status' => 'PO tidak dalam status yang dapat dikirim.',
+        'price.nonnegative' => 'Harga invoice tidak boleh negatif.',
     ],
 
     'filter_fields' => [

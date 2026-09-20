@@ -37,10 +37,11 @@ $emptyStateContent = $emptyState ?? [
                 @foreach ($resolvedColumns as $key => $column)
                     @php
                         $label = is_array($column) ? ($column['label'] ?? $column['title'] ?? \App\Support\LabelRegistry::columnLabel($entity, $key, $view)) : $column;
-                        $colAttributes = is_array($column) ? ($column['attributes'] ?? []) : [];
+                        $colAttributes = is_array($column) && is_array($column['attributes'] ?? null) ? $column['attributes'] : [];
+                        $colAttributesBag = (new \Illuminate\View\ComponentAttributeBag())->merge($colAttributes);
                         $isSortable = $sortable && (is_array($column) ? ($column['sortable'] ?? true) : true);
                     @endphp
-                    <th {{ $colAttributes }} {{ $isSortable ? 'data-sortable="true"' : '' }}>
+                    <th {{ $colAttributesBag }} {{ $isSortable ? 'data-sortable="true"' : '' }}>
                         {{ $label }}
                     </th>
                 @endforeach
@@ -57,9 +58,10 @@ $emptyStateContent = $emptyState ?? [
                         @php
                             $render = is_array($column) ? ($column['render'] ?? null) : null;
                             $value = $render ? $render($row) : ($row->{$key} ?? ($row[$key] ?? '-'));
-                            $tdAttributes = is_array($column) ? ($column['tdAttributes'] ?? []) : [];
+                            $tdAttributes = is_array($column) && is_array($column['tdAttributes'] ?? null) ? $column['tdAttributes'] : [];
+                            $tdAttributesBag = (new \Illuminate\View\ComponentAttributeBag())->merge($tdAttributes);
                         @endphp
-                        <td {{ $tdAttributes }}>
+                        <td {{ $tdAttributesBag }}>
                             {!! $value !!}
                         </td>
                     @endforeach

@@ -54,10 +54,30 @@ class TrackingDashboardTest extends TestCase
 
         $this->unitId = DB::table('units')->value('id');
 
+        DB::table('item_categories')->insert([
+            [
+                'category_code' => 'CAT-PRIM',
+                'category_name' => 'Primary',
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'category_code' => 'CAT-CONS',
+                'category_name' => 'Consumable',
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->categoryId = DB::table('item_categories')->value('id');
+
         DB::table('items')->insert([
             [
                 'item_code' => 'ITM001',
                 'item_name' => 'Label A',
+                'category_id' => $this->categoryId,
                 'unit_id' => $this->unitId,
                 'active' => 1,
                 'created_at' => now(),
@@ -66,6 +86,7 @@ class TrackingDashboardTest extends TestCase
             [
                 'item_code' => 'ITM002',
                 'item_name' => 'Label B',
+                'category_id' => null,
                 'unit_id' => $this->unitId,
                 'active' => 1,
                 'created_at' => now(),
@@ -74,6 +95,7 @@ class TrackingDashboardTest extends TestCase
             [
                 'item_code' => 'ITM003',
                 'item_name' => 'Label C',
+                'category_id' => null,
                 'unit_id' => $this->unitId,
                 'active' => 1,
                 'created_at' => now(),
@@ -351,6 +373,94 @@ class TrackingDashboardTest extends TestCase
             ->assertSee('Open');
     }
 
+    public function test_tracking_page_shows_shipment_progress(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TRK-PROG-001',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Item fully received = Fully Shipped
+        DB::table('purchase_order_items')->insert([
+            [
+                'purchase_order_id' => $poId,
+                'item_id' => $this->itemAId,
+                'ordered_qty' => 100,
+                'received_qty' => 100,
+                'outstanding_qty' => 0,
+                'item_status' => 'Closed',
+                'etd_date' => now()->toDateString(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        // Item partially received = Partially Shipped
+        $poId2 = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TRK-PROG-002',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('purchase_order_items')->insert([
+            [
+                'purchase_order_id' => $poId2,
+                'item_id' => $this->itemBId,
+                'ordered_qty' => 50,
+                'received_qty' => 20,
+                'outstanding_qty' => 30,
+                'item_status' => 'Partial',
+                'etd_date' => now()->addDays(2)->toDateString(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        // Item not shipped at all = Not Shipped
+        $poId3 = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TRK-PROG-003',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('purchase_order_items')->insert([
+            [
+                'purchase_order_id' => $poId3,
+                'item_id' => $this->itemCId,
+                'ordered_qty' => 30,
+                'received_qty' => 0,
+                'outstanding_qty' => 30,
+                'item_status' => 'Waiting',
+                'etd_date' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get('/tracking')
+            ->assertOk()
+            ->assertSee('Fully Shipped')
+            ->assertSee('Partially Shipped')
+            ->assertSee('Not Shipped')
+            ->assertSee('PO-TRK-PROG-001')
+            ->assertSee('PO-TRK-PROG-002')
+            ->assertSee('PO-TRK-PROG-003');
+    }
+
     public function test_tracking_page_shows_shipped_stage(): void
     {
         $user = $this->makeUserWithRole('administrator');
@@ -483,5 +593,130 @@ class TrackingDashboardTest extends TestCase
 
         $this->actingAs($staff)->get('/tracking')->assertOk();
         $this->actingAs($supervisor)->get('/tracking')->assertOk();
+    }
+
+    public function test_tracking_page_shows_category_filter(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+
+        $this->actingAs($user)
+            ->get('/tracking')
+            ->assertOk()
+            ->assertSee('Kategori Barang')
+            ->assertSee('Semua Kategori')
+            ->assertSee('Primary')
+            ->assertSee('Consumable');
+    }
+
+    public function test_tracking_page_shows_category_column(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $primaryCategoryId = DB::table('item_categories')->where('category_name', 'Primary')->value('id');
+        $itemAId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+        $itemBId = DB::table('items')->where('item_code', 'ITM002')->value('id');
+
+        $poId = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TRK-CAT-001',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('purchase_order_items')->insert([
+            [
+                'purchase_order_id' => $poId,
+                'item_id' => $itemAId,
+                'ordered_qty' => 50,
+                'received_qty' => 0,
+                'outstanding_qty' => 50,
+                'item_status' => 'Waiting',
+                'etd_date' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'purchase_order_id' => $poId,
+                'item_id' => $itemBId,
+                'ordered_qty' => 30,
+                'received_qty' => 0,
+                'outstanding_qty' => 30,
+                'item_status' => 'Waiting',
+                'etd_date' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get('/tracking')
+            ->assertOk()
+            ->assertSee('Kategori')
+            ->assertSee('Primary')
+            ->assertSee('Tanpa Kategori');
+    }
+
+    public function test_tracking_page_filters_by_category(): void
+    {
+        $user = $this->makeUserWithRole('administrator');
+        $supplierId = DB::table('suppliers')->value('id');
+        $primaryCategoryId = DB::table('item_categories')->where('category_name', 'Primary')->value('id');
+        $itemAId = DB::table('items')->where('item_code', 'ITM001')->value('id');
+        $itemBId = DB::table('items')->where('item_code', 'ITM002')->value('id');
+
+        $poId1 = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TRK-CAT-002',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('purchase_order_items')->insert([
+            [
+                'purchase_order_id' => $poId1,
+                'item_id' => $itemAId,
+                'ordered_qty' => 50,
+                'received_qty' => 0,
+                'outstanding_qty' => 50,
+                'item_status' => 'Waiting',
+                'etd_date' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $poId2 = DB::table('purchase_orders')->insertGetId([
+            'po_number' => 'PO-TRK-CAT-003',
+            'po_date' => now()->toDateString(),
+            'supplier_id' => $supplierId,
+            'status' => 'Open',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('purchase_order_items')->insert([
+            [
+                'purchase_order_id' => $poId2,
+                'item_id' => $itemBId,
+                'ordered_qty' => 30,
+                'received_qty' => 0,
+                'outstanding_qty' => 30,
+                'item_status' => 'Waiting',
+                'etd_date' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->get('/tracking?category_id=' . $primaryCategoryId)
+            ->assertOk()
+            ->assertSee('PO-TRK-CAT-002')
+            ->assertSee('ITM001')
+            ->assertSee('Primary');
     }
 }

@@ -40,7 +40,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/summary/item/export-excel', [DashboardController::class, 'exportSummaryItemExcel'])->name('summary.item.export-excel');
     Route::get('/monitoring', [DashboardController::class, 'monitoring'])->name('monitoring.index');
     Route::get('/monitoring/export-excel', [DashboardController::class, 'exportMonitoringExcel'])->name('monitoring.export-excel');
-    Route::get('/monitoring/suppliers', [DashboardController::class, 'supplierPerformance'])->name('supplier-performance.index');
     Route::get('/po', [PurchaseOrderController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('po.index');
     Route::get('/po/export-excel', [PurchaseOrderController::class, 'exportIndexExcel'])->middleware('role:administrator|staff|supervisor')->name('po.export-excel');
     Route::get('/traceability', [TraceabilityController::class, 'index'])->middleware('role:administrator|staff|supervisor')->name('traceability.index');
@@ -62,6 +61,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/masters/units/{id}/edit', [UnitController::class, 'edit'])->name('units.edit');
         Route::put('/masters/units/{id}', [UnitController::class, 'update'])->name('units.update');
 
+        Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
+        Route::get('/suppliers/create', [SupplierController::class, 'create'])->name('suppliers.create');
+        Route::post('/suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
+        Route::get('/suppliers/{id}/edit', [SupplierController::class, 'edit'])->name('suppliers.edit');
+        Route::put('/suppliers/{id}', [SupplierController::class, 'update'])->name('suppliers.update');
+        Route::patch('/suppliers/{id}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle-status');
+
         Route::get('/masters/items', [ItemController::class, 'index'])->name('items.index');
         Route::get('/masters/items/create', [ItemController::class, 'create'])->name('items.create');
         Route::post('/masters/items', [ItemController::class, 'store'])->name('items.store');
@@ -70,13 +76,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/masters/items/{id}/toggle-status', [ItemController::class, 'toggleStatus'])->name('items.toggle-status');
         Route::get('/masters/items/excel/template', [ItemController::class, 'downloadTemplate'])->name('items.template');
         Route::post('/masters/items/import', [ItemController::class, 'import'])->name('items.import');
-
-        Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
-        Route::get('/suppliers/create', [SupplierController::class, 'create'])->name('suppliers.create');
-        Route::post('/suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
-        Route::get('/suppliers/{id}/edit', [SupplierController::class, 'edit'])->name('suppliers.edit');
-        Route::put('/suppliers/{id}', [SupplierController::class, 'update'])->name('suppliers.update');
-        Route::patch('/suppliers/{id}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('suppliers.toggle-status');
 
         Route::get('/po/create', [PurchaseOrderController::class, 'create'])->name('po.create');
         Route::post('/po', [PurchaseOrderController::class, 'store'])->name('po.store');

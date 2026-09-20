@@ -1245,7 +1245,6 @@
             $staticCommandPaletteItems = collect([
                 ['label' => 'Dashboard', 'description' => 'Ringkasan outstanding dan action center', 'route' => route('dashboard'), 'roles' => ['administrator', 'staff', 'supervisor']],
                 ['label' => 'Monitoring PO', 'description' => 'Monitoring summary dan detail item', 'route' => route('monitoring.index'), 'roles' => ['administrator', 'staff', 'supervisor']],
-                ['label' => 'Supplier Performance', 'description' => 'OTIF, delay supplier, dan scorecard', 'route' => route('supplier-performance.index'), 'roles' => ['administrator', 'staff', 'supervisor']],
                 ['label' => 'Traceability', 'description' => 'Timeline PO, shipment, dan receiving', 'route' => route('traceability.index'), 'roles' => ['administrator', 'staff', 'supervisor']],
                 ['label' => 'Purchase Orders', 'description' => 'List dan detail PO aktif', 'route' => route('po.index'), 'roles' => ['administrator', 'staff', 'supervisor']],
                 ['label' => 'Create Draft Shipment', 'description' => 'Susun draft shipment baru', 'route' => route('shipments.create'), 'roles' => ['administrator', 'staff']],
@@ -1285,21 +1284,9 @@
                         'route' => route('shipments.show', $shipment->id),
                     ]);
 
-                $supplierPaletteItems = \Illuminate\Support\Facades\DB::table('suppliers')
-                    ->select('id', 'supplier_name', 'supplier_code')
-                    ->orderBy('supplier_name')
-                    ->limit(5)
-                    ->get()
-                    ->map(fn ($supplier) => [
-                        'label' => 'Supplier · ' . $supplier->supplier_name,
-                        'description' => 'Filter supplier ' . ($supplier->supplier_code ?: '-') . ' di Supplier Performance',
-                        'route' => route('supplier-performance.index', ['supplier_code' => $supplier->supplier_code]),
-                    ]);
-
                 $dynamicCommandPaletteItems = $dynamicCommandPaletteItems
                     ->concat($recentPoPaletteItems)
-                    ->concat($recentShipmentPaletteItems)
-                    ->concat($supplierPaletteItems);
+                    ->concat($recentShipmentPaletteItems);
             }
 
             if ($currentUser?->hasAnyRole(['administrator', 'staff'])) {
@@ -1424,14 +1411,6 @@
                         @if ($currentUser?->hasAnyRole(['administrator', 'staff']))
                             <li class="nav-header">Master Data</li>
 
-<li class="nav-item">
-                            <a href="{{ route('suppliers.index') }}"
-                                class="nav-link {{ request()->routeIs('suppliers.*') ? 'active' : '' }}">
-                                <i class="nav-icon fas fa-truck"></i>
-                                <p>Suppliers</p>
-                            </a>
-                        </li>
-
                         <li class="nav-item">
                             <a href="{{ route('items.index') }}"
                                 class="nav-link {{ request()->routeIs('items.*') ? 'active' : '' }}">
@@ -1453,6 +1432,14 @@
                                     class="nav-link {{ request()->routeIs('units.*') ? 'active' : '' }}">
                                     <i class="nav-icon fas fa-ruler"></i>
                                     <p>Units</p>
+                                </a>
+                            </li>
+
+                            <li class="nav-item">
+                                <a href="{{ route('suppliers.index') }}"
+                                    class="nav-link {{ request()->routeIs('suppliers.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-building"></i>
+                                    <p>Suppliers</p>
                                 </a>
                             </li>
                         @endif
@@ -1514,14 +1501,6 @@
                                 </a>
                             </li>
 
-                            <li class="nav-item">
-                                <a href="{{ route('supplier-performance.index') }}"
-                                    class="nav-link {{ request()->routeIs('supplier-performance.*') ? 'active' : '' }}">
-                                    <i class="nav-icon fas fa-industry"></i>
-                                    <p>Supplier Performance</p>
-                                </a>
-                            </li>
-
                         @endif
 
                         @if ($currentUser?->hasRole('administrator'))
@@ -1576,11 +1555,11 @@
 
             <section class="content">
                 <div class="container-fluid">
-                    @if (session('success'))
+                    @if (session('success') && !session('import_success'))
                         <div class="alert alert-success">{{ session('success') }}</div>
                     @endif
 
-                    @if (session('error'))
+                    @if (session('error') && !session('import_errors'))
                         <div class="alert alert-danger">{{ session('error') }}</div>
                     @endif
 

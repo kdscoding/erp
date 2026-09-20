@@ -5,11 +5,7 @@ return [
         'singular' => 'Supplier',
         'plural' => 'Suppliers',
         'title' => 'Manajemen Supplier',
-        'description' => 'Kelola data supplier untuk procurement',
-        'create_title' => ' tambah Supplier',
-        'create_subtitle' => 'Input data supplier baru.',
-        'edit_title' => 'Edit Supplier',
-        'edit_subtitle' => 'Perbarui identitas supplier.',
+        'description' => 'Kelola data master supplier',
     ],
 
     'fields' => [
@@ -24,24 +20,24 @@ return [
             'help' => 'Nama lengkap perusahaan supplier',
         ],
         'address' => [
-            'label' => 'alamat',
-            'placeholder' => 'alamat supplier',
-            'help' => 'alamat lengkap supplier',
+            'label' => 'Alamat',
+            'placeholder' => 'Alamat lengkap supplier',
+            'help' => 'Alamat domicile supplier',
         ],
         'phone' => [
             'label' => 'Telepon',
-            'placeholder' => 'Nomor telepon',
-            'help' => 'Nomor telepon yang dapat dihubungi',
+            'placeholder' => 'No. telepon supplier',
+            'help' => 'Nomor telepon kontak supplier',
         ],
         'email' => [
             'label' => 'Email',
-            'placeholder' => 'email@contoh.com',
-            'help' => 'Email aktif untuk komunikasi',
+            'placeholder' => 'Email supplier',
+            'help' => 'Alamat email supplier',
         ],
         'contact_person' => [
-            'label' => 'Contact Person',
-            'placeholder' => 'Nama contact person',
-            'help' => 'Nama orang yang dapat dihubungi',
+            'label' => 'Kontak',
+            'placeholder' => 'Nama PIC supplier',
+            'help' => 'Nama orang kontak di supplier',
         ],
         'status' => [
             'label' => 'Status',
@@ -66,6 +62,10 @@ return [
         'index' => [
             'supplier_code' => 'Kode',
             'supplier_name' => 'Nama Supplier',
+            'address' => 'Alamat',
+            'phone' => 'Telepon',
+            'email' => 'Email',
+            'contact_person' => 'Kontak',
             'updated_at' => 'Terakhir Diubah',
             'status' => 'Status',
             'actions' => 'Aksi',
@@ -73,28 +73,23 @@ return [
         'detail' => [
             'supplier_code' => 'Kode Supplier',
             'supplier_name' => 'Nama Supplier',
+            'address' => 'Alamat',
+            'phone' => 'Telepon',
+            'email' => 'Email',
+            'contact_person' => 'Kontak',
             'status' => 'Status',
             'created_at' => 'Dibuat Pada',
             'updated_at' => 'Diubah Pada',
         ],
-        'export' => [
-            'supplier_code' => 'Kode Supplier',
-            'supplier_name' => 'Nama Supplier',
-            'status' => 'Status',
-            'created_at' => 'Tanggal Dibuat',
-            'updated_at' => 'Tanggal Diubah',
-        ],
     ],
 
     'actions' => [
-        'create' => ':Tambah Supplier',
+        'create' => 'Tambah Supplier',
         'edit' => 'Edit',
         'delete' => 'Hapus',
         'view' => 'Detail',
         'activate' => 'Aktifkan',
         'deactivate' => 'Nonaktifkan',
-        'export' => 'Export Excel',
-        'import' => 'Import Excel',
     ],
 
     'validation' => [
@@ -103,8 +98,11 @@ return [
         'supplier_code.max' => 'Kode supplier maksimal 50 karakter.',
         'supplier_name.required' => 'Nama supplier wajib diisi.',
         'supplier_name.max' => 'Nama supplier maksimal 255 karakter.',
-        'status.required' => 'Status wajib dipilih.',
-        'status.boolean' => 'Status tidak valid.',
+        'email.email' => 'Format email tidak valid.',
+        'email.max' => 'Email maksimal 255 karakter.',
+        'address.max' => 'Alamat maksimal 500 karakter.',
+        'phone.max' => 'Telepon maksimal 50 karakter.',
+        'contact_person.max' => 'Kontak maksimal 255 karakter.',
     ],
 
     'filter_fields' => [
@@ -122,15 +120,5 @@ return [
                 0 => 'Nonaktif',
             ],
         ],
-    ],
-
-    'search' => [
-        'placeholder' => 'Cari kode atau nama supplier...',
-        'aria_label' => 'Cari supplier',
-    ],
-
-    'empty' => [
-        'title' => 'Belum ada data supplier',
-        'subtitle' => 'Mulai tambah supplier baru untuk melihat data di sini.',
     ],
 ];

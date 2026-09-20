@@ -25,8 +25,10 @@ class StoreShipmentDraft
 
         $deliveryNote = trim((string) $validated['delivery_note_number']);
         $invoiceNumber = trim((string) ($validated['invoice_number'] ?? '')) ?: null;
+        $invoiceDate = $validated['invoice_date'] ?? null;
+        $shipmentDate = $validated['shipment_date'];
 
-        return DB::transaction(function () use ($selectedIds, $request, $deliveryNote, $invoiceNumber, $remark, $userId, $validated) {
+        return DB::transaction(function () use ($selectedIds, $request, $deliveryNote, $invoiceNumber, $invoiceDate, $remark, $userId, $validated, $shipmentDate) {
             $items = $this->candidateItemsBaseQuery()
                 ->whereIn('poi.id', $selectedIds)
                 ->lockForUpdate()
@@ -45,6 +47,78 @@ class StoreShipmentDraft
             }
 
             $supplierId = (int) $items->first()->supplier_id;
+
+            $supplier = DB::table('suppliers')
+                ->where('id', $supplierId)
+                ->where('status', 1)
+                ->first();
+
+            if (! $supplier) {
+                throw ValidationException::withMessages([
+                    'supplier_id' => 'Supplier tidak ditemukan atau tidak aktif.',
+                ]);
+            }
+
+            $supplierCode = trim((string) $supplier->supplier_code);
+
+            foreach ($items as $item) {
+                $itemRecord = DB::table('items')
+                    ->where('id', DB::table('purchase_order_items')->where('id', $item->purchase_order_item_id)->value('item_id'))
+                    ->where('active', 1)
+                    ->first();
+
+                if (! $itemRecord) {
+                    throw ValidationException::withMessages([
+                        'selected_items' => "Item {$item->item_code} tidak ditemukan atau tidak aktif.",
+                    ]);
+                }
+
+                if ($item->item_status === DocumentTermCodes::ITEM_CANCELLED) {
+                    throw ValidationException::withMessages([
+                        'selected_items' => "Item {$item->item_code} pada PO {$item->po_number} telah dibatalkan.",
+                    ]);
+                }
+
+                if (! in_array($item->po_status, [
+                    DocumentTermCodes::PO_ISSUED,
+                    DocumentTermCodes::PO_OPEN,
+                    DocumentTermCodes::PO_LATE,
+                ])) {
+                    throw ValidationException::withMessages([
+                        'selected_items' => "PO {$item->po_number} tidak dalam status yang dapat dikirim.",
+                    ]);
+                }
+
+                if ((float) $item->outstanding_qty <= 0) {
+                    throw ValidationException::withMessages([
+                        'selected_items' => "PO {$item->po_number} item {$item->item_code} tidak memiliki outstanding qty.",
+                    ]);
+                }
+
+                $qty = (float) ($request->input("shipped_qty.{$item->purchase_order_item_id}") ?? 0);
+                $invoiceUnitPrice = $request->input("invoice_unit_price.{$item->purchase_order_item_id}");
+                $invoiceUnitPrice = ($invoiceUnitPrice === null || $invoiceUnitPrice === '') ? null : (float) $invoiceUnitPrice;
+
+                if ($qty <= 0) {
+                    throw ValidationException::withMessages([
+                        'shipped_qty' => 'Qty kirim wajib diisi dan harus lebih besar dari 0.',
+                    ]);
+                }
+
+                if ($invoiceUnitPrice !== null && $invoiceUnitPrice < 0) {
+                    throw ValidationException::withMessages([
+                        'invoice_unit_price.' . $item->purchase_order_item_id => 'Harga invoice tidak boleh negatif.',
+                    ]);
+                }
+
+                $availableToShipQty = $this->computeAvailableToShipQty($item->purchase_order_item_id);
+
+                if ($qty > $availableToShipQty) {
+                    throw ValidationException::withMessages([
+                        'shipped_qty.' . $item->purchase_order_item_id => "Qty kirim untuk {$item->item_code} melebihi sisa qty yang masih bisa dialokasikan (tersedia: {$availableToShipQty}).",
+                    ]);
+                }
+            }
 
             $duplicateShipment = DB::table('shipments')
                 ->where('supplier_id', $supplierId)
@@ -83,18 +157,6 @@ class StoreShipmentDraft
                 $qty = (float) ($request->input("shipped_qty.{$item->purchase_order_item_id}") ?? 0);
                 $invoiceUnitPrice = $request->input("invoice_unit_price.{$item->purchase_order_item_id}");
                 $invoiceUnitPrice = ($invoiceUnitPrice === null || $invoiceUnitPrice === '') ? null : (float) $invoiceUnitPrice;
-
-                if ($qty <= 0) {
-                    throw ValidationException::withMessages([
-                        'shipped_qty' => 'Qty kirim harus diisi untuk setiap item yang dipilih.',
-                    ]);
-                }
-
-                if ($qty > (float) $item->available_to_ship_qty) {
-                    throw ValidationException::withMessages([
-                        'shipped_qty.' . $item->purchase_order_item_id => "Qty kirim untuk {$item->item_code} melebihi sisa qty yang masih bisa dialokasikan.",
-                    ]);
-                }
 
                 $linePayloads[] = [
                     'purchase_order_item_id' => $item->purchase_order_item_id,
@@ -148,6 +210,7 @@ class StoreShipmentDraft
             ErpFlow::audit('shipments', $shipmentId, 'create', null, [
                 'shipment' => [
                     'shipment_date' => $validated['shipment_date'],
+                    'supplier_code' => $supplierCode,
                     'delivery_note_number' => $deliveryNote,
                     'invoice_number' => $invoiceNumber,
                     'invoice_date' => $validated['invoice_date'] ?? null,
@@ -160,6 +223,21 @@ class StoreShipmentDraft
 
             return (int) $shipmentId;
         });
+    }
+
+    private function computeAvailableToShipQty(int $purchaseOrderItemId): float
+    {
+        $outstandingQty = (float) DB::table('purchase_order_items')
+            ->where('id', $purchaseOrderItemId)
+            ->value('outstanding_qty');
+
+        $openShipmentQty = (float) DB::table('shipment_items as si')
+            ->join('shipments as sh', 'sh.id', '=', 'si.shipment_id')
+            ->where('si.purchase_order_item_id', $purchaseOrderItemId)
+            ->where('sh.status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
+            ->sum(DB::raw('COALESCE(si.shipped_qty - si.received_qty, 0)'));
+
+        return $outstandingQty - $openShipmentQty;
     }
 
     private function candidateItemsBaseQuery()
@@ -184,7 +262,8 @@ class StoreShipmentDraft
                 'i.item_name',
                 'poi.outstanding_qty',
                 'poi.etd_date',
-                'poi.unit_price'
+                'poi.unit_price',
+                'poi.item_status'
             )
             ->selectRaw('(poi.outstanding_qty - COALESCE(SUM(CASE WHEN sh_alloc.id IS NOT NULL THEN si.shipped_qty - si.received_qty ELSE 0 END), 0)) as available_to_ship_qty')
             ->whereIn('po.status', [
@@ -204,7 +283,8 @@ class StoreShipmentDraft
                 'i.item_name',
                 'poi.outstanding_qty',
                 'poi.etd_date',
-                'poi.unit_price'
+                'poi.unit_price',
+                'poi.item_status'
             );
     }
 }

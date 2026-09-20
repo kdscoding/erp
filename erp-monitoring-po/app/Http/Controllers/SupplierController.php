@@ -12,16 +12,20 @@ class SupplierController extends Controller
 {
     public function index(Request $request): View
     {
-        $suppliers = DB::table('suppliers')
+        $rows = DB::table('suppliers as s')
             ->when($request->filled('q'), function ($query) use ($request) {
                 $q = trim((string) $request->input('q'));
                 $query->where(function ($qBuilder) use ($q) {
-                    $qBuilder->where('supplier_code', 'like', "%{$q}%")
-                        ->orWhere('supplier_name', 'like', "%{$q}%");
+                    $qBuilder->where('s.supplier_code', 'like', "%{$q}%")
+                        ->orWhere('s.supplier_name', 'like', "%{$q}%")
+                        ->orWhere('s.address', 'like', "%{$q}%")
+                        ->orWhere('s.phone', 'like', "%{$q}%")
+                        ->orWhere('s.email', 'like', "%{$q}%")
+                        ->orWhere('s.contact_person', 'like', "%{$q}%");
                 });
             })
-            ->when($request->filled('status'), fn ($query) => $query->where('status', (int) $request->input('status')))
-            ->orderBy('supplier_name')
+            ->when($request->filled('status'), fn ($query) => $query->where('s.status', (int) $request->input('status')))
+            ->orderBy('s.supplier_name')
             ->get();
 
         $stats = [
@@ -30,12 +34,12 @@ class SupplierController extends Controller
             'inactive' => DB::table('suppliers')->where('status', false)->count(),
         ];
 
-        return view('suppliers.index', compact('suppliers', 'stats'));
+        return view('masters.suppliers.index', compact('rows', 'stats'));
     }
 
     public function create(): View
     {
-        return view('suppliers.create');
+        return view('masters.suppliers.create');
     }
 
     public function store(Request $request): RedirectResponse
@@ -47,13 +51,13 @@ class SupplierController extends Controller
             'supplier_code' => ['required', 'string', 'max:50', Rule::unique('suppliers', 'supplier_code')],
             'supplier_name' => 'required|string|max:255',
             'address' => 'nullable|string|max:500',
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:255',
             'contact_person' => 'nullable|string|max:255',
         ], [
             'supplier_code.required' => 'Kode supplier wajib diisi.',
-            'supplier_code.unique' => 'Kode supplier sudah digunakan',
-            'supplier_name.required' => 'Nama supplier wajib diisi',
+            'supplier_code.unique' => 'Kode supplier sudah digunakan.',
+            'supplier_name.required' => 'Nama supplier wajib diisi.',
         ]);
 
         DB::table('suppliers')->insert([
@@ -63,18 +67,19 @@ class SupplierController extends Controller
             'phone' => $v['phone'] ?? null,
             'email' => $v['email'] ?? null,
             'contact_person' => $v['contact_person'] ?? null,
-            'status' => 1,
+            'status' => true,
             'updated_at' => now(),
             'created_at' => now(),
         ]);
 
-        return back()->with('success', 'Supplier Successfully added.');
+        return back()->with('success', 'Supplier berhasil ditambahkan.');
     }
 
     public function edit(string $id): View
     {
         $supplier = DB::table('suppliers')->where('id', $id)->firstOrFail();
-        return view('suppliers.edit', compact('supplier'));
+
+        return view('masters.suppliers.edit', compact('supplier'));
     }
 
     public function update(Request $request, string $id): RedirectResponse
@@ -88,13 +93,13 @@ class SupplierController extends Controller
             'supplier_code' => ['required', 'string', 'max:50', Rule::unique('suppliers', 'supplier_code')->ignore($supplier->id)],
             'supplier_name' => 'required|string|max:255',
             'address' => 'nullable|string|max:500',
-            'phone' => 'nullable|string|max:20',
+            'phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:255',
             'contact_person' => 'nullable|string|max:255',
         ], [
             'supplier_code.required' => 'Kode supplier wajib diisi.',
-            'supplier_code.unique' => 'Kode supplier sudah digunakan',
-            'supplier_name.required' => 'Nama supplier wajib diisi',
+            'supplier_code.unique' => 'Kode supplier sudah digunakan.',
+            'supplier_name.required' => 'Nama supplier wajib diisi.',
         ]);
 
         DB::table('suppliers')->where('id', $id)->update([
@@ -107,7 +112,7 @@ class SupplierController extends Controller
             'updated_at' => now(),
         ]);
 
-        return redirect()->route('suppliers.index')->with('success', 'Supplier Successfully updated.');
+        return redirect()->route('suppliers.index')->with('success', 'Supplier berhasil diperbarui.');
     }
 
     public function toggleStatus(string $id): RedirectResponse
@@ -119,6 +124,6 @@ class SupplierController extends Controller
             'updated_at' => now(),
         ]);
 
-        return back()->with('success', 'Status supplier Successfully updated.');
+        return back()->with('success', 'Status supplier berhasil diperbarui.');
     }
 }

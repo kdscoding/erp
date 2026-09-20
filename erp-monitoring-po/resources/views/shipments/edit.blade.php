@@ -31,7 +31,7 @@
         <section class="page-head">
             <div class="page-head-main">
                 <h2 class="page-section-title">{{ $shipment->shipment_number }}</h2>
-                <p class="page-section-subtitle">Draft masih bisa direvisi sebelum dikonfirmasi.</p>
+                <p class="page-section-subtitle">Draft masih bisa direvisi sebelum dikonfirmasi. &nbsp;<span class="doc-meta">Supplier: {{ $shipment->supplier_name ?? '-' }} &nbsp;|&nbsp; Kode: {{ $shipment->supplier_code ?? '-' }}</span></p>
             </div>
             <div class="page-actions">
                 <a href="{{ route('shipments.show', $shipment->id) }}" class="btn btn-sm btn-light">View</a>
@@ -45,7 +45,7 @@
 
         <section class="info-grid mb-3">
             <div class="info-box"><div class="info-label">No Shipment</div><div class="info-value">{{ $shipment->shipment_number }}</div></div>
-            <div class="info-box"><div class="info-label">Supplier</div><div class="info-value">{{ $shipment->supplier_name }}</div></div>
+            <div class="info-box"><div class="info-label">Supplier</div><div class="info-value">{{ $shipment->supplier_name }} ({{ $shipment->supplier_code }})</div></div>
             <div class="info-box"><div class="info-label">Status</div><div class="info-value">{{ $shipment->status }}</div></div>
         </section>
 

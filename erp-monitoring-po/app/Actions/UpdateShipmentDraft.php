@@ -24,6 +24,21 @@ class UpdateShipmentDraft
                 ]);
             }
 
+            $supplierId = (int) $shipment->supplier_id;
+
+            $supplier = DB::table('suppliers')
+                ->where('id', $supplierId)
+                ->where('status', 1)
+                ->first();
+
+            if (! $supplier) {
+                throw ValidationException::withMessages([
+                    'shipment' => 'Supplier tidak ditemukan atau tidak aktif.',
+                ]);
+            }
+
+            $supplierCode = trim((string) $supplier->supplier_code);
+
             $duplicateShipment = DB::table('shipments')
                 ->where('supplier_id', $shipment->supplier_id)
                 ->where('id', '!=', $shipment->id)
@@ -79,11 +94,60 @@ class UpdateShipmentDraft
                     ]);
                 }
 
-                $maxQty = (float) $existing->available_to_ship_qty;
+                $item = DB::table('items')
+                    ->where('id', DB::table('purchase_order_items')->where('id', $existing->purchase_order_item_id)->value('item_id'))
+                    ->where('active', 1)
+                    ->first();
 
-                if ((float) $line['shipped_qty'] > $maxQty) {
+                if (! $item) {
                     throw ValidationException::withMessages([
-                        'shipment_items' => "Qty kirim untuk {$existing->item_code} melebihi batas yang masih tersedia.",
+                        'shipment_items' => "Item pada line {$line['id']} tidak ditemukan atau tidak aktif.",
+                    ]);
+                }
+
+                $poItem = DB::table('purchase_order_items as poi')
+                    ->join('purchase_orders as po', 'po.id', '=', 'poi.purchase_order_id')
+                    ->select('poi.outstanding_qty', 'po.status as po_status')
+                    ->where('poi.id', $existing->purchase_order_item_id)
+                    ->first();
+
+                if (! $poItem) {
+                    throw ValidationException::withMessages([
+                        'shipment_items' => "PO item pada line {$line['id']} tidak ditemukan.",
+                    ]);
+                }
+
+                if (! in_array($poItem->po_status, [
+                    DocumentTermCodes::PO_ISSUED,
+                    DocumentTermCodes::PO_OPEN,
+                    DocumentTermCodes::PO_LATE,
+                ])) {
+                    throw ValidationException::withMessages([
+                        'shipment_items' => "PO pada line {$line['id']} tidak dalam status yang dapat dikirim.",
+                    ]);
+                }
+
+                if ((float) $poItem->outstanding_qty <= 0) {
+                    throw ValidationException::withMessages([
+                        'shipment_items' => "PO pada line {$line['id']} tidak memiliki outstanding qty.",
+                    ]);
+                }
+
+                if ((float) $line['shipped_qty'] > (float) $existing->available_to_ship_qty) {
+                    throw ValidationException::withMessages([
+                        'shipment_items' => "Qty kirim untuk item pada line {$line['id']} melebihi batas yang masih tersedia.",
+                    ]);
+                }
+            }
+
+            foreach ($keptLines as $line) {
+                $invoiceUnitPriceCheck = array_key_exists('invoice_unit_price', $line) && $line['invoice_unit_price'] !== null && $line['invoice_unit_price'] !== ''
+                    ? (float) $line['invoice_unit_price']
+                    : null;
+
+                if ($invoiceUnitPriceCheck !== null && $invoiceUnitPriceCheck < 0) {
+                    throw ValidationException::withMessages([
+                        'shipment_items' => 'Harga invoice tidak boleh negatif.',
                     ]);
                 }
             }

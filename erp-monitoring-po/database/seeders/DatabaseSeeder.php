@@ -12,7 +12,6 @@ class DatabaseSeeder extends Seeder
             RolesSeeder::class,
             UsersSeeder::class,
             SettingsSeeder::class,
-            SuppliersSeeder::class,
             UserRolesSeeder::class,
             DocumentTermSeeder::class,
             MasterDataSeeder::class,

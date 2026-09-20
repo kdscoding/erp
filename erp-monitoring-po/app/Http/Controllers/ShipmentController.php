@@ -286,7 +286,9 @@ class ShipmentController extends Controller
             'selected_items' => 'required|array|min:1',
             'selected_items.*' => 'integer|exists:purchase_order_items,id',
             'shipped_qty' => 'required|array',
+            'shipped_qty.*' => 'numeric|min:0.01',
             'invoice_unit_price' => 'nullable|array',
+            'invoice_unit_price.*' => 'nullable|numeric|min:0',
         ], ['required' => ':attribute wajib diisi.']);
 
         $shipmentId = $storeShipmentDraft->handle($v, optional($request->user())->id, $request);
@@ -806,7 +808,6 @@ class ShipmentController extends Controller
 
         $sampleRows = [
             [
-                'Otomatis',
                 now()->format('Y-m-d'),
                 'SUP001',
                 'DN001',
@@ -819,7 +820,6 @@ class ShipmentController extends Controller
                 '100',
             ],
             [
-                'Otomatis',
                 now()->format('Y-m-d'),
                 'SUP001',
                 'DN001',
@@ -832,7 +832,6 @@ class ShipmentController extends Controller
                 '50',
             ],
             [
-                'Otomatis',
                 now()->format('Y-m-d'),
                 'SUP002',
                 'DN002',
@@ -887,12 +886,18 @@ class ShipmentController extends Controller
         try {
             $import->handle($request->file('file'));
         } catch (ValidationException $e) {
-            return back()->with('error', $e->getMessage());
+            if (! empty($import->errors)) {
+                return redirect()->route('shipments.index', ['tab' => 'worklist'])
+                    ->with('error', $e->getMessage())
+                    ->with('import_errors', $import->errors);
+            }
+
+            return redirect()->route('shipments.index', ['tab' => 'worklist'])->with('error', $e->getMessage());
         }
 
         $message = "Import berhasil. {$import->inserted} shipment draft ditambahkan.";
 
-        return redirect()->route('shipments.index')->with('success', $message);
+        return redirect()->route('shipments.index', ['tab' => 'worklist'])->with('import_success', $message);
     }
 
     private function shipmentWorklistBaseQuery()

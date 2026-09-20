@@ -19,6 +19,7 @@ $filterFields = $fields ?: \App\Support\LabelRegistry::filterFields($module);
 $contextFields = $filterFields[$context] ?? $filterFields;
 $formAction = $action ?? request()->url();
 $hasActiveFilters = count(request()->query()) > 0;
+$formAttributesBag = (new \Illuminate\View\ComponentAttributeBag())->merge(is_array($formAttributes) ? $formAttributes : []);
 ?>
 
 @if ($hasActiveFilters)
@@ -38,7 +39,7 @@ $hasActiveFilters = count(request()->query()) > 0;
     </div>
 @endif
 
-<form method="{{ $method }}" action="{{ $formAction }}" class="filter-form {{ $inline ? 'filter-inline' : 'filter-grid' }} {{ $class }}" {{ $formAttributes }}>
+<form method="{{ $method }}" action="{{ $formAction }}" class="filter-form {{ $inline ? 'filter-inline' : 'filter-grid' }} {{ $class }}" {{ $formAttributesBag }}>
     @foreach ($contextFields as $key => $field)
         @php
             $fieldName = $field['name'] ?? $key;
@@ -50,6 +51,7 @@ $hasActiveFilters = count(request()->query()) > 0;
             $fieldRequired = $field['required'] ?? false;
             $fieldClass = $field['class'] ?? '';
             $fieldAttributes = $field['attributes'] ?? [];
+            $fieldAttributesBag = (new \Illuminate\View\ComponentAttributeBag())->merge(is_array($fieldAttributes) ? $fieldAttributes : []);
             $fieldSpan = $field['span'] ?? 'auto';
         @endphp
 
@@ -58,7 +60,7 @@ $hasActiveFilters = count(request()->query()) > 0;
 
             @switch ($fieldType)
                 @case ('select')
-                    <select name="{{ $fieldName }}" id="filter_{{ $fieldName }}" class="form-control form-control-sm" {{ $fieldAttributes }}>
+                    <select name="{{ $fieldName }}" id="filter_{{ $fieldName }}" class="form-control form-control-sm" {{ $fieldAttributesBag }}>
                         @if (is_array($fieldOptions) && (isset($fieldOptions['placeholder']) || empty($fieldOptions)))
                             <option value="">{{ $fieldOptions['placeholder'] ?? 'Semua' }}</option>
                         @endif
@@ -76,15 +78,15 @@ $hasActiveFilters = count(request()->query()) > 0;
                     @break
 
                 @case ('date')
-                    <input type="date" name="{{ $fieldName }}" id="filter_{{ $fieldName }}" class="form-control form-control-sm" value="{{ $fieldValue }}" {{ $fieldAttributes }}>
+                    <input type="date" name="{{ $fieldName }}" id="filter_{{ $fieldName }}" class="form-control form-control-sm" value="{{ $fieldValue }}" {{ $fieldAttributesBag }}>
                     @break
 
                 @case ('number')
-                    <input type="number" name="{{ $fieldName }}" id="filter_{{ $fieldName }}" class="form-control form-control-sm" value="{{ $fieldValue }}" placeholder="{{ $fieldPlaceholder }}" {{ $fieldAttributes }}>
+                    <input type="number" name="{{ $fieldName }}" id="filter_{{ $fieldName }}" class="form-control form-control-sm" value="{{ $fieldValue }}" placeholder="{{ $fieldPlaceholder }}" {{ $fieldAttributesBag }}>
                     @break
 
                 @default
-                    <input type="text" name="{{ $fieldName }}" id="filter_{{ $fieldName }}" class="form-control form-control-sm" value="{{ $fieldValue }}" placeholder="{{ $fieldPlaceholder }}" {{ $fieldAttributes }}>
+                    <input type="text" name="{{ $fieldName }}" id="filter_{{ $fieldName }}" class="form-control form-control-sm" value="{{ $fieldValue }}" placeholder="{{ $fieldPlaceholder }}" {{ $fieldAttributesBag }}>
             @endswitch
         </div>
     @endforeach

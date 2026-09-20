@@ -151,21 +151,6 @@
         </nav>
 
         @if ($isWorklist)
-            <section class="summary-chips">
-                <div class="summary-chip">
-                    <div class="summary-chip-label">Draft</div>
-                    <div class="summary-chip-value">{{ $activeCollection->where('status', \App\Support\DocumentTermCodes::SHIPMENT_DRAFT)->count() }}</div>
-                </div>
-                <div class="summary-chip">
-                    <div class="summary-chip-label">Shipped</div>
-                    <div class="summary-chip-value">{{ $activeCollection->where('status', \App\Support\DocumentTermCodes::SHIPMENT_SHIPPED)->count() }}</div>
-                </div>
-                <div class="summary-chip">
-                    <div class="summary-chip-label">Partial</div>
-                    <div class="summary-chip-value">{{ $activeCollection->where('status', \App\Support\DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED)->count() }}</div>
-                </div>
-            </section>
-
             <section class="ui-surface">
                 <div class="ui-surface-body">
                     <button type="button" class="filter-toggle-btn" id="filterToggle">
@@ -229,6 +214,37 @@
                             <button type="submit" class="btn btn-primary btn-sm">Bulk Import</button>
                         </form>
                     </div>
+                    @if (session('import_success'))
+                        <div class="alert alert-success mb-2" role="alert">
+                            {{ session('import_success') }}
+                        </div>
+                    @endif
+                    @if (session('import_errors'))
+                    @php($errorCount = count(session('import_errors')))
+                    <div class="alert alert-danger mb-2" role="alert">
+                        Import dibatalkan — ditemukan {{ $errorCount }} error. Perbaiki error pada tabel di bawah dan coba lagi.
+                    </div>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-bordered table-danger mb-0" style="max-width: 900px">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Baris</th>
+                                    <th>Kolom</th>
+                                    <th>Kesalahan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (session('import_errors') as $error)
+                                <tr>
+                                    <td>{{ $error['row'] }}</td>
+                                    <td>{{ $error['field'] }}</td>
+                                    <td>{{ $error['message'] }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    @endif
                     <div class="po-search-wrap">
                         <i class="fas fa-search"></i>
                         <input type="text" id="shipment-search" class="form-control form-control-sm" placeholder="Cari shipment, supplier, PO..." aria-label="Cari shipment">
@@ -363,10 +379,34 @@
                     @if ($selectedItems->isNotEmpty())
                         <div class="d-flex justify-content-end mt-3">
                             <a href="{{ route('shipments.index', ['tab' => 'create', 'clear_selection' => 1]) }}" class="btn btn-light btn-sm">Reset Builder</a>
+                            <a href="{{ route('shipments.bulk-template') }}" class="btn btn-light btn-sm ml-1">Download Template</a>
                         </div>
                     @endif
                 </div>
             </section>
+
+            @if (session('import_errors'))
+                @php($errorCount = count(session('import_errors')))
+                <div class="alert alert-danger mb-2" role="alert">
+                    Import dibatalkan — ditemukan {{ $errorCount }} error. Perbaiki error pada tabel di bawah dan coba lagi.
+                </div>
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-bordered table-danger mb-0" style="max-width: 900px">
+                        <thead class="table-light">
+                            <tr><th>Baris</th><th>Kolom</th><th>Kesalahan</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (session('import_errors') as $error)
+                            <tr>
+                                <td>{{ $error['row'] }}</td>
+                                <td>{{ $error['field'] }}</td>
+                                <td>{{ $error['message'] }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
 
             <section class="ui-surface">
                 <div class="ui-surface-head">

@@ -149,21 +149,6 @@
         </nav>
 
         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($isWorklist): ?>
-            <section class="summary-chips">
-                <div class="summary-chip">
-                    <div class="summary-chip-label">Draft</div>
-                    <div class="summary-chip-value"><?php echo e($activeCollection->where('status', \App\Support\DocumentTermCodes::SHIPMENT_DRAFT)->count()); ?></div>
-                </div>
-                <div class="summary-chip">
-                    <div class="summary-chip-label">Shipped</div>
-                    <div class="summary-chip-value"><?php echo e($activeCollection->where('status', \App\Support\DocumentTermCodes::SHIPMENT_SHIPPED)->count()); ?></div>
-                </div>
-                <div class="summary-chip">
-                    <div class="summary-chip-label">Partial</div>
-                    <div class="summary-chip-value"><?php echo e($activeCollection->where('status', \App\Support\DocumentTermCodes::SHIPMENT_PARTIAL_RECEIVED)->count()); ?></div>
-                </div>
-            </section>
-
             <section class="ui-surface">
                 <div class="ui-surface-body">
                     <button type="button" class="filter-toggle-btn" id="filterToggle">
@@ -228,6 +213,38 @@
                             <button type="submit" class="btn btn-primary btn-sm">Bulk Import</button>
                         </form>
                     </div>
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(session('import_success')): ?>
+                        <div class="alert alert-success mb-2" role="alert">
+                            <?php echo e(session('import_success')); ?>
+
+                        </div>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(session('import_errors')): ?>
+                    <?php ($errorCount = count(session('import_errors'))); ?>
+                    <div class="alert alert-danger mb-2" role="alert">
+                        Import dibatalkan — ditemukan <?php echo e($errorCount); ?> error. Perbaiki error pada tabel di bawah dan coba lagi.
+                    </div>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-bordered table-danger mb-0" style="max-width: 900px">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Baris</th>
+                                    <th>Kolom</th>
+                                    <th>Kesalahan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = session('import_errors'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
+                                <tr>
+                                    <td><?php echo e($error['row']); ?></td>
+                                    <td><?php echo e($error['field']); ?></td>
+                                    <td><?php echo e($error['message']); ?></td>
+                                </tr>
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                     <div class="po-search-wrap">
                         <i class="fas fa-search"></i>
                         <input type="text" id="shipment-search" class="form-control form-control-sm" placeholder="Cari shipment, supplier, PO..." aria-label="Cari shipment">
@@ -362,10 +379,34 @@
                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($selectedItems->isNotEmpty()): ?>
                         <div class="d-flex justify-content-end mt-3">
                             <a href="<?php echo e(route('shipments.index', ['tab' => 'create', 'clear_selection' => 1])); ?>" class="btn btn-light btn-sm">Reset Builder</a>
+                            <a href="<?php echo e(route('shipments.bulk-template')); ?>" class="btn btn-light btn-sm ml-1">Download Template</a>
                         </div>
                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                 </div>
             </section>
+
+            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(session('import_errors')): ?>
+                <?php ($errorCount = count(session('import_errors'))); ?>
+                <div class="alert alert-danger mb-2" role="alert">
+                    Import dibatalkan — ditemukan <?php echo e($errorCount); ?> error. Perbaiki error pada tabel di bawah dan coba lagi.
+                </div>
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-bordered table-danger mb-0" style="max-width: 900px">
+                        <thead class="table-light">
+                            <tr><th>Baris</th><th>Kolom</th><th>Kesalahan</th></tr>
+                        </thead>
+                        <tbody>
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = session('import_errors'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
+                            <tr>
+                                <td><?php echo e($error['row']); ?></td>
+                                <td><?php echo e($error['field']); ?></td>
+                                <td><?php echo e($error['message']); ?></td>
+                            </tr>
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
             <section class="ui-surface">
                 <div class="ui-surface-head">

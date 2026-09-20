@@ -14,7 +14,6 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 class ShipmentDraftBulkImport
 {
     public const COLUMNS = [
-        'shipment_number',
         'shipment_date',
         'supplier_code',
         'DN',
@@ -63,7 +62,7 @@ class ShipmentDraftBulkImport
 
         if (! empty($this->errors)) {
             throw ValidationException::withMessages([
-                'file' => implode(' ', $this->errors),
+                'file' => $this->formatErrors(),
             ]);
         }
     }
@@ -124,52 +123,42 @@ class ShipmentDraftBulkImport
             $qty = trim((string) ($row['qty_pengiriman'] ?? ''));
             $invoiceUnitPrice = trim((string) ($row['invoice_unit_price'] ?? ''));
 
-            $rowHasCriticalError = false;
-
             if ($shipmentDate === '') {
-                $this->errors[] = "Baris {$rowNum}: shipment_date wajib diisi.";
+                $this->addError($rowNum, 'shipment_date', 'shipment_date wajib diisi.');
             } elseif (! $this->isValidDate($shipmentDate)) {
-                $this->errors[] = "Baris {$rowNum}: shipment_date tidak valid.";
+                $this->addError($rowNum, 'shipment_date', 'shipment_date tidak valid.');
             }
 
             if ($invoiceDate !== '' && ! $this->isValidDate($invoiceDate)) {
-                $this->errors[] = "Baris {$rowNum}: invoice_date tidak valid.";
+                $this->addError($rowNum, 'invoice_date', 'invoice_date tidak valid.');
             }
 
             if ($supplierCode === '') {
-                $this->errors[] = "Baris {$rowNum}: supplier_code wajib diisi.";
+                $this->addError($rowNum, 'supplier_code', 'supplier_code wajib diisi.');
             }
 
             if ($deliveryNote === '') {
-                $this->errors[] = "Baris {$rowNum}: DN (delivery_note_number) wajib diisi.";
+                $this->addError($rowNum, 'DN', 'DN (delivery_note_number) wajib diisi.');
             }
 
             if ($poNumber === '') {
-                $this->errors[] = "Baris {$rowNum}: po_number wajib diisi.";
+                $this->addError($rowNum, 'po_number', 'po_number wajib diisi.');
             }
 
             if ($itemCode === '') {
-                $this->errors[] = "Baris {$rowNum}: item_code wajib diisi.";
+                $this->addError($rowNum, 'item_code', 'item_code wajib diisi.');
             }
 
-            if ($qty === '' || ! is_numeric($qty) || (float) $qty <= 0) {
-                $this->errors[] = "Baris {$rowNum}: qty_pengiriman harus numerik dan lebih besar dari 0.";
-                $rowHasCriticalError = true;
-            }
-
-            if ($rowHasCriticalError) {
-                continue;
+            $qtyValid = ($qty !== '' && is_numeric($qty) && (float) $qty > 0);
+            if (! $qtyValid) {
+                $this->addError($rowNum, 'qty_pengiriman', 'qty_pengiriman harus numerik dan lebih besar dari 0.');
             }
 
             if ($invoiceUnitPrice !== '' && (is_numeric($invoiceUnitPrice) === false || (float) $invoiceUnitPrice < 0)) {
-                $this->errors[] = "Baris {$rowNum}: invoice_unit_price tidak boleh negatif.";
+                $this->addError($rowNum, 'invoice_unit_price', 'invoice_unit_price tidak boleh negatif.');
             }
 
-            if (! $this->isValidDate($shipmentDate)) {
-                continue;
-            }
-
-            if ($supplierCode === '' || $poNumber === '' || $itemCode === '') {
+            if (! $qtyValid || ! $this->isValidDate($shipmentDate) || $supplierCode === '' || $poNumber === '' || $itemCode === '') {
                 continue;
             }
 
@@ -179,7 +168,7 @@ class ShipmentDraftBulkImport
                 ->first();
 
             if (! $supplier) {
-                $this->errors[] = "Baris {$rowNum}: supplier_code '{$supplierCode}' tidak ditemukan atau tidak aktif.";
+                $this->addError($rowNum, 'supplier_code', "supplier_code '{$supplierCode}' tidak ditemukan atau tidak aktif.");
 
                 continue;
             }
@@ -190,7 +179,7 @@ class ShipmentDraftBulkImport
                 ->first();
 
             if (! $item) {
-                $this->errors[] = "Baris {$rowNum}: item_code '{$itemCode}' tidak ditemukan atau tidak aktif.";
+                $this->addError($rowNum, 'item_code', "item_code '{$itemCode}' tidak ditemukan atau tidak aktif.");
 
                 continue;
             }
@@ -220,7 +209,7 @@ class ShipmentDraftBulkImport
                 ->first();
 
             if (! $purchaseOrderItem) {
-                $this->errors[] = "Baris {$rowNum}: PO '{$poNumber}' dengan item '{$itemCode}' untuk supplier '{$supplierCode}' tidak ditemukan, tidak active, atau tidak dapat dikirim.";
+                $this->addError($rowNum, 'po_number', "PO '{$poNumber}' dengan item '{$itemCode}' untuk supplier '{$supplierCode}' tidak ditemukan, tidak active, atau tidak dapat dikirim.");
 
                 continue;
             }
@@ -232,7 +221,7 @@ class ShipmentDraftBulkImport
             $effectiveAvailable = $availableToShipQty - $allocatedInFile;
 
             if ($qtyValue > $effectiveAvailable) {
-                $this->errors[] = "Baris {$rowNum}: qty_pengiriman {$qty} untuk item {$itemCode} melebihi sisa qty yang tersedia ({$effectiveAvailable}).";
+                $this->addError($rowNum, 'qty_pengiriman', "qty_pengiriman {$qty} untuk item {$itemCode} melebihi sisa qty yang tersedia ({$effectiveAvailable}).");
 
                 continue;
             }
@@ -240,12 +229,13 @@ class ShipmentDraftBulkImport
             $allocatedQtyByPoi[$poItemId] = $allocatedInFile + $qtyValue;
 
             $validatedRows[] = [
+                'row_number' => $rowNum,
                 'shipment_date' => Carbon::parse($shipmentDate)->format('Y-m-d'),
                 'supplier_code' => $supplierCode,
                 'supplier_id' => (int) $supplier->id,
                 'delivery_note_number' => $deliveryNote,
                 'invoice_number' => $invoiceNumber !== '' ? $invoiceNumber : null,
-                'invoice_date' => $invoiceDate !== '' ? Carbon::parse($invoiceDate)->format('Y-m-d') : null,
+                'invoice_date' => ($invoiceDate !== '' && $this->isValidDate($invoiceDate)) ? Carbon::parse($invoiceDate)->format('Y-m-d') : null,
                 'supplier_remark' => $supplierRemark !== '' ? $supplierRemark : null,
                 'po_number' => $poNumber,
                 'item_code' => $itemCode,
@@ -257,9 +247,9 @@ class ShipmentDraftBulkImport
             ];
         }
 
-        if (! empty($this->errors)) {
+        if (empty($validatedRows) && ! empty($this->errors)) {
             throw ValidationException::withMessages([
-                'file' => implode(' ', $this->errors),
+                'file' => $this->formatErrors(),
             ]);
         }
 
@@ -271,6 +261,7 @@ class ShipmentDraftBulkImport
 
         $groups = [];
         $groupKeys = [];
+        $groupRowNumbers = [];
 
         foreach ($validatedRows as $row) {
             $groupKey = $this->buildGroupKey($row);
@@ -286,77 +277,84 @@ class ShipmentDraftBulkImport
                     'invoice_date' => $row['invoice_date'],
                     'supplier_remark' => $row['supplier_remark'],
                 ];
+                $groupRowNumbers[$groupKey] = [];
             }
 
             $groups[$groupKey][] = $row;
+            $groupRowNumbers[$groupKey][] = $row['row_number'];
         }
 
         foreach ($groups as $groupKey => $groupRows) {
             $poiIds = collect($groupRows)->pluck('purchase_order_item_id')->toArray();
 
             if (count($poiIds) !== count(array_unique($poiIds))) {
-                throw ValidationException::withMessages([
-                    'file' => "Delivery note {$groupKeys[$groupKey]['delivery_note_number']}: ada PO item yang sama muncul lebih dari sekali dalam satu shipment.",
-                ]);
+                $this->addError(
+                    min($groupRowNumbers[$groupKey]),
+                    'DN',
+                    "Delivery note {$groupKeys[$groupKey]['delivery_note_number']}: ada PO item yang sama muncul lebih dari sekali dalam satu shipment."
+                );
             }
         }
 
-        DB::transaction(function () use ($groups, $groupKeys, $userId, $ip) {
-            $createdShipments = [];
+        $seenDnInvoice = [];
+        foreach ($groupKeys as $groupKey => $groupHeader) {
+            $lockedSupplierId = $groupHeader['supplier_id'];
 
-            foreach ($groupKeys as $groupKey => $groupHeader) {
-                $groupRows = $groups[$groupKey];
-                $lockedSupplierId = $groupHeader['supplier_id'];
+            $duplicateShipment = DB::table('shipments')
+                ->where('supplier_id', $lockedSupplierId)
+                ->whereRaw('LOWER(TRIM(delivery_note_number)) = ?', [mb_strtolower($groupHeader['delivery_note_number'])])
+                ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
+                ->exists();
 
-                $duplicateShipment = DB::table('shipments')
+            if ($duplicateShipment) {
+                $this->addError(
+                    min($groupRowNumbers[$groupKey]),
+                    'DN',
+                    "Delivery note {$groupHeader['delivery_note_number']} sudah dipakai oleh shipment lain untuk supplier ini."
+                );
+            }
+
+            if ($groupHeader['invoice_number'] !== null) {
+                $duplicateInvoice = DB::table('shipments')
                     ->where('supplier_id', $lockedSupplierId)
-                    ->whereRaw('LOWER(TRIM(delivery_note_number)) = ?', [mb_strtolower($groupHeader['delivery_note_number'])])
+                    ->whereRaw('LOWER(TRIM(invoice_number)) = ?', [mb_strtolower($groupHeader['invoice_number'])])
                     ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
                     ->exists();
 
-                if ($duplicateShipment) {
-                    throw ValidationException::withMessages([
-                        'file' => "Delivery note {$groupHeader['delivery_note_number']} sudah dipakai oleh shipment lain untuk supplier ini.",
-                    ]);
+                if ($duplicateInvoice) {
+                    $this->addError(
+                        min($groupRowNumbers[$groupKey]),
+                        'invoice_number',
+                        "Invoice {$groupHeader['invoice_number']} sudah dipakai oleh shipment lain untuk supplier ini."
+                    );
                 }
+            }
 
-                if ($groupHeader['invoice_number'] !== null) {
-                    $duplicateInvoice = DB::table('shipments')
-                        ->where('supplier_id', $lockedSupplierId)
-                        ->whereRaw('LOWER(TRIM(invoice_number)) = ?', [mb_strtolower($groupHeader['invoice_number'])])
-                        ->where('status', '!=', DocumentTermCodes::SHIPMENT_CANCELLED)
-                        ->exists();
+            $dupInFileKey = $groupHeader['supplier_id'].'|'.mb_strtolower($groupHeader['delivery_note_number']);
+            if (isset($seenDnInvoice[$dupInFileKey])) {
+                $this->addError(
+                    min($groupRowNumbers[$groupKey]),
+                    'DN',
+                    "Delivery note {$groupHeader['delivery_note_number']} muncul lebih dari sekali untuk supplier yang sama dalam file yang sama."
+                );
+            } else {
+                $seenDnInvoice[$dupInFileKey] = true;
+            }
+        }
 
-                    if ($duplicateInvoice) {
-                        throw ValidationException::withMessages([
-                            'file' => "Invoice {$groupHeader['invoice_number']} sudah dipakai oleh shipment lain untuk supplier ini.",
-                        ]);
-                    }
-                }
+        if (! empty($this->errors)) {
+            throw ValidationException::withMessages([
+                'file' => $this->formatErrors(),
+            ]);
+        }
 
-                foreach ($createdShipments as $existing) {
-                    if (
-                        $existing['supplier_id'] === $groupHeader['supplier_id']
-                        && $this->normalizeForCompare($existing['delivery_note_number']) === $this->normalizeForCompare($groupHeader['delivery_note_number'])
-                    ) {
-                        throw ValidationException::withMessages([
-                            'file' => "Delivery note {$groupHeader['delivery_note_number']} muncul lebih dari sekali untuk supplier yang sama dalam file yang sama.",
-                        ]);
-                    }
+        DB::transaction(function () use ($groups, $groupKeys, $userId, $ip) {
+            foreach ($groupKeys as $groupKey => $groupHeader) {
+                $groupRows = $groups[$groupKey];
 
-                    if (
-                        $groupHeader['invoice_number'] !== null
-                        && $existing['invoice_number'] !== null
-                        && $existing['supplier_id'] === $groupHeader['supplier_id']
-                        && $this->normalizeForCompare($existing['invoice_number']) === $this->normalizeForCompare($groupHeader['invoice_number'])
-                    ) {
-                        throw ValidationException::withMessages([
-                            'file' => "Invoice {$groupHeader['invoice_number']} muncul lebih dari sekali untuk supplier yang sama dalam file yang sama.",
-                        ]);
-                    }
-                }
-
-                $shipmentNumber = ErpFlow::generateNumber('SHP', 'shipments', 'shipment_number');
+                do {
+                    $shipmentNumber = (string) mt_rand(1000000000, 9999999999);
+                } while (DB::table('shipments')->where('shipment_number', $shipmentNumber)->exists());
 
                 $shipmentId = DB::table('shipments')->insertGetId([
                     'purchase_order_id' => $groupRows[0]['purchase_order_id'],
@@ -372,12 +370,6 @@ class ShipmentDraftBulkImport
                     'created_at' => now(),
                     'updated_at' => now(),
                 ] + DomainStatus::payload(DomainStatus::GROUP_SHIPMENT_STATUS, 'status', DocumentTermCodes::SHIPMENT_DRAFT));
-
-                $createdShipments[] = [
-                    'supplier_id' => $groupHeader['supplier_id'],
-                    'delivery_note_number' => $groupHeader['delivery_note_number'],
-                    'invoice_number' => $groupHeader['invoice_number'],
-                ];
 
                 $lineRows = [];
                 foreach ($groupRows as $line) {
@@ -462,9 +454,27 @@ class ShipmentDraftBulkImport
         return $row['supplier_code'].'|'
             .$row['shipment_date'].'|'
             .$row['delivery_note_number'].'|'
-            .($row['invoice_number'] ?? '').'|'
-            .($row['invoice_date'] ?? '').'|'
-            .($row['supplier_remark'] ?? '');
+            .($row['invoice_number'] ?? '');
+    }
+
+    private function addError(int $rowNum, string $field, string $message): void
+    {
+        $this->errors[] = [
+            'row' => $rowNum,
+            'field' => $field,
+            'message' => $message,
+        ];
+    }
+
+    private function formatErrors(): string
+    {
+        if (empty($this->errors)) {
+            return 'Terjadi kesalahan tidak diketahui.';
+        }
+
+        $errorCount = count($this->errors);
+
+        return "Import dibatalkan — ditemukan {$errorCount} error. Perbaiki error pada tabel di bawah dan coba lagi.";
     }
 
     private function normalizeForCompare(?string $value): string

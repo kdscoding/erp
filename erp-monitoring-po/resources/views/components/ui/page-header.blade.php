@@ -52,9 +52,10 @@ $entitySingular = \App\Support\LabelRegistry::entity($entity, 'singular');
                         $actionUrl = $action['url'] ?? '#';
                         $actionClass = $action['class'] ?? 'btn btn-primary btn-sm';
                         $actionIcon = $action['icon'] ?? '';
-                        $actionAttrs = $action['attributes'] ?? [];
+                        $actionAttrs = is_array($action['attributes'] ?? null) ? $action['attributes'] : [];
+                        $actionAttrsBag = (new \Illuminate\View\ComponentAttributeBag())->merge($actionAttrs);
                     @endphp
-                    <a href="{{ $actionUrl }}" class="{{ $actionClass }}" {{ $actionAttrs ? \Illuminate\Support\Arr::toHtmlAttributes($actionAttrs) : '' }}>
+                    <a href="{{ $actionUrl }}" class="{{ $actionClass }}" {{ $actionAttrsBag }}>
                         @if ($actionIcon)
                             <i class="{{ $actionIcon }}"></i>
                         @endif

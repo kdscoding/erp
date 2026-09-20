@@ -8,9 +8,9 @@
     $totalShippedQty = $totalShippedQty ?? 0;
     $totalReceivedQty = $totalReceivedQty ?? 0;
     $poNumbers = $poNumbers ?? [];
-    $shipmentDate = \Carbon\Carbon::parse($shipment->shipment_date)->format('d-m-Y');
     $totalInvoiceAmount = \App\Support\NumberFormatter::trim($lines->sum('invoice_line_total'));
     $lineCount = $lines->count();
+    $shipmentDate = $shipment->shipment_date ? \Carbon\Carbon::parse($shipment->shipment_date)->format('d-m-Y') : '-';
 @endphp
 
 @push('styles')
@@ -428,11 +428,11 @@
                         <div class="r-meta">Change history</div>
                     </div>
                 </a>
-                <a href="{{ route('supplier-performance.index', ['supplier_code' => $shipment->supplier_code ?? '']) }}" class="related-card">
+                <a href="{{ route('shipments.index', ['supplier_id' => $shipment->supplier_id ?? 0] + request()->query()) }}" class="related-card">
                     <div class="r-icon"><i class="fas fa-truck"></i></div>
                     <div>
                         <div class="r-title">{{ $shipment->supplier_name }}</div>
-                        <div class="r-meta">Supplier Performance</div>
+                        <div class="r-meta">Supplier Shipments</div>
                     </div>
                 </a>
                 <a href="{{ route('tracking.index', ['q' => $shipment->shipment_number]) }}" class="related-card">
